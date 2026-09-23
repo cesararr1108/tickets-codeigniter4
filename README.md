@@ -51,6 +51,55 @@ Además:
 - `GET /api/tickets/{id}/messages` y `POST /api/tickets/{id}/messages`
 - `GET /api/tickets/{id}/attachments` y `POST /api/tickets/{id}/attachments`
 
+## Panel web (dashboard)
+
+Panel para agentes en `/panel` (con `index.php`: `/index.php/panel`).
+
+| Página | Ruta | Contenido |
+|---|---|---|
+| Inicio | `/panel` | Indicadores, pendientes por categoría, top 5 urgentes, tendencia semanal, actividad reciente |
+| Tickets | `/panel/tickets` | Listado con búsqueda, filtros (estado, prioridad, compañía, categoría, agente) y paginación |
+| Detalle | `/panel/tickets/{id}` | Chat con el cliente (`TicketMessages`), cambio de estado/prioridad/agente, adjuntos |
+| Nueva solicitud | `/panel/tickets/nuevo` | Alta de ticket con matriz impacto × urgencia |
+| Reportes | `/panel/reportes` | Volumen por compañía, agente, categoría y prioridad por periodo |
+| Catálogo | `/panel/catalogo` | Categorías y subcategorías con su volumen |
+
+### Acceso
+
+Se inicia sesión en `/login` con un usuario activo de la tabla `Users`
+(`Email` + contraseña verificada contra `PasswordHash` con `password_verify`).
+Para asignar o cambiar la contraseña de un usuario:
+
+```bash
+php spark user:password karen@empresa.com
+```
+
+### Configuración
+
+`app/Config/Tickets.php`:
+
+- `targetHours`: meta de atención por prioridad (la BD no guarda SLA). Un ticket
+  pendiente que la supera se marca "fuera de meta".
+- `displayTimezone`: zona horaria para mostrar fechas (`CreatedAt` se guarda en UTC).
+- `perPage`, `chatPollSeconds`.
+
+### Chat
+
+El chat usa la tabla `TicketMessages`. Si no existe, créala con
+`app/Database/sql/TicketMessages.sql`. Las respuestas del panel se guardan con
+`SenderType = 'agente'`; el chat consulta mensajes nuevos cada `chatPollSeconds` segundos.
+
+### Archivos
+
+```text
+app/Controllers/Panel/   Auth, Dashboard, Tickets, Reports, Catalog, Lookups
+app/Libraries/           TicketRepository (listado/detalle), TicketStats (indicadores)
+app/Views/panel/         layout, vistas y parciales (gráficos SVG sin librerías)
+app/Helpers/panel_helper.php
+app/Filters/PanelAuthFilter.php
+public/panel/            panel.css, panel.js
+```
+
 ## What is CodeIgniter?
 
 CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.

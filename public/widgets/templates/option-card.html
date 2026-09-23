@@ -1,0 +1,24 @@
+<!--
+  Card seleccionable (compañías y categorías).
+  Variables: value, title, description, meta, color, icon (HTML sin escapar), search
+-->
+<button
+    type="button"
+    class="tw-card"
+    data-value="{{value}}"
+    data-search="{{search}}"
+    aria-pressed="false"
+    style="--accent: {{color}}">
+
+    <span class="tw-card-check" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+    </span>
+
+    <span class="tw-card-icon">{{{icon}}}</span>
+
+    <span class="tw-card-title">{{title}}</span>
+
+    <span class="tw-card-desc">{{description}}</span>
+
+    <span class="tw-card-meta">{{meta}}</span>
+</button>

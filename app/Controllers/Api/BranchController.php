@@ -8,10 +8,16 @@ class BranchController extends BaseApiController
 {
     /**
      * GET /api/branches
+     * GET /api/branches?company={codCompanies}
      */
     public function index()
     {
-        $model = model(BranchModel::class);
+        $model   = model(BranchModel::class);
+        $company = $this->request->getGet('company');
+
+        if ($company !== null && $company !== '') {
+            $model->where('CodCompanies', $company);
+        }
 
         return $this->respond($model->findAll());
     }

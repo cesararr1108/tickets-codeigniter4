@@ -1,0 +1,189 @@
+<!--
+  Estructura principal del widget (se inserta dentro del Shadow DOM).
+  Los ids son los que usa js/app.js para conectar el comportamiento.
+-->
+<div class="tw-root">
+
+    <button type="button" id="ticketFab" class="tw-fab" aria-label="Abrir soporte">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+            <path d="M8 10h8"/>
+            <path d="M8 14h5"/>
+        </svg>
+    </button>
+
+    <div id="ticketOverlay" class="tw-overlay" aria-hidden="true">
+        <section class="tw-modal" role="dialog" aria-modal="true" aria-labelledby="ticketTitle">
+
+            <header class="tw-header">
+                <div>
+                    <h2 id="ticketTitle" class="tw-title">Nueva solicitud</h2>
+                    <p class="tw-subtitle">Un solo canal para reportar incidentes y solicitudes de soporte.</p>
+                </div>
+
+                <button type="button" id="ticketClose" class="tw-close" aria-label="Cerrar">×</button>
+            </header>
+
+            <nav class="tw-tabs">
+                <button type="button" class="tw-tab tw-active" data-tab="new">Nuevo ticket</button>
+                <button type="button" class="tw-tab" data-tab="mine">Mis tickets</button>
+            </nav>
+
+            <!-- ============ NUEVO TICKET ============ -->
+            <div id="panelNew" class="tw-panel tw-active">
+
+                <ol class="tw-stepper" id="ticketStepper">
+                    <li class="tw-stepper-item" data-step="1">
+                        <span class="tw-stepper-num">1</span>
+                        <span class="tw-stepper-label">Compañía</span>
+                    </li>
+                    <li class="tw-stepper-item" data-step="2">
+                        <span class="tw-stepper-num">2</span>
+                        <span class="tw-stepper-label">Categoría</span>
+                    </li>
+                    <li class="tw-stepper-item" data-step="3">
+                        <span class="tw-stepper-num">3</span>
+                        <span class="tw-stepper-label">Detalle</span>
+                    </li>
+                    <li class="tw-stepper-item" data-step="4">
+                        <span class="tw-stepper-num">4</span>
+                        <span class="tw-stepper-label">Revisión y envío</span>
+                    </li>
+                </ol>
+
+                <div class="tw-content">
+
+                    <div id="ticketAlert" class="tw-alert" role="alert"></div>
+
+                    <!-- PASO 1: COMPAÑÍA Y SUCURSAL -->
+                    <section class="tw-step" data-step="1">
+                        <div class="tw-section-head">
+                            <div>
+                                <h3 class="tw-section-title">¿Para qué compañía es la solicitud?</h3>
+                                <p class="tw-section-hint">Selecciona la compañía y luego la sucursal.</p>
+                            </div>
+
+                            <label class="tw-search" id="companySearchWrap" hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                                <input type="search" id="companySearch" placeholder="Buscar compañía..." autocomplete="off">
+                            </label>
+                        </div>
+
+                        <div id="companyGrid" class="tw-grid"></div>
+
+                        <div id="branchBlock" class="tw-subsection" hidden>
+                            <h4 class="tw-section-label">Sucursal</h4>
+                            <div id="branchList" class="tw-chips"></div>
+                        </div>
+                    </section>
+
+                    <!-- PASO 2: CATEGORÍA Y SUBCATEGORÍA -->
+                    <section class="tw-step" data-step="2" hidden>
+                        <div class="tw-section-head">
+                            <div>
+                                <h3 class="tw-section-title">¿Qué tipo de solicitud es?</h3>
+                                <p class="tw-section-hint">Elige la categoría que mejor describa el caso.</p>
+                            </div>
+                        </div>
+
+                        <div id="categoryGrid" class="tw-grid"></div>
+
+                        <div id="subcategoryBlock" class="tw-subsection" hidden>
+                            <h4 class="tw-section-label">Subcategoría <span class="tw-optional">(opcional)</span></h4>
+                            <div id="subcategoryList" class="tw-chips"></div>
+                        </div>
+                    </section>
+
+                    <!-- PASO 3: DETALLE -->
+                    <section class="tw-step" data-step="3" hidden>
+                        <div class="tw-form-grid">
+                            <div class="tw-field">
+                                <label class="tw-label" for="ticketEmail">Correo del solicitante</label>
+                                <input id="ticketEmail" class="tw-input" type="email" placeholder="nombre@empresa.com" maxlength="180" autocomplete="email">
+                            </div>
+
+                            <div class="tw-field">
+                                <label class="tw-label" for="ticketSubject">Asunto</label>
+                                <input id="ticketSubject" class="tw-input" type="text" placeholder="Resumen corto del problema" maxlength="150">
+                            </div>
+                        </div>
+
+                        <div class="tw-field">
+                            <span class="tw-label">Prioridad</span>
+                            <div id="priorityList" class="tw-priority">
+                                <button type="button" class="tw-priority-card" data-value="alta" aria-pressed="false" style="--accent:#d64545">
+                                    <span class="tw-priority-title">Alta</span>
+                                    <span class="tw-priority-desc">Detiene la operación o afecta a muchas personas.</span>
+                                </button>
+                                <button type="button" class="tw-priority-card" data-value="media" aria-pressed="false" style="--accent:#e8a200">
+                                    <span class="tw-priority-title">Media</span>
+                                    <span class="tw-priority-desc">Afecta el trabajo pero existe una alternativa.</span>
+                                </button>
+                                <button type="button" class="tw-priority-card" data-value="baja" aria-pressed="false" style="--accent:#1a9e55">
+                                    <span class="tw-priority-title">Baja</span>
+                                    <span class="tw-priority-desc">Consulta o mejora, sin impacto inmediato.</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="tw-field">
+                            <label class="tw-label" for="ticketDescription">Descripción</label>
+                            <textarea id="ticketDescription" class="tw-textarea" placeholder="Describe qué ocurre, desde cuándo y qué pasos seguiste..." maxlength="4000"></textarea>
+                            <span class="tw-counter" id="descriptionCounter">0 / 4000</span>
+                        </div>
+
+                        <div class="tw-field">
+                            <span class="tw-label">Archivo adjunto <span class="tw-optional">(opcional)</span></span>
+                            <label class="tw-dropzone" id="ticketDropzone">
+                                <input id="ticketFile" type="file" hidden>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                                <span id="ticketFileName">Arrastra un archivo o haz clic para seleccionarlo</span>
+                            </label>
+                        </div>
+                    </section>
+
+                    <!-- PASO 4: REVISIÓN -->
+                    <section class="tw-step" data-step="4" hidden>
+                        <div class="tw-section-head">
+                            <div>
+                                <h3 class="tw-section-title">Revisa tu solicitud</h3>
+                                <p class="tw-section-hint">Confirma que la información es correcta antes de enviarla.</p>
+                            </div>
+                        </div>
+
+                        <div id="reviewBox"></div>
+                    </section>
+
+                </div>
+
+                <footer class="tw-footer">
+                    <button type="button" id="stepBack" class="tw-btn tw-btn-ghost">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><path d="M11 18l-6-6 6-6"/></svg>
+                        Atrás
+                    </button>
+
+                    <div class="tw-footer-right">
+                        <button type="button" id="stepCancel" class="tw-btn tw-btn-outline">Cancelar</button>
+                        <button type="button" id="stepNext" class="tw-btn tw-btn-primary">
+                            <span id="stepNextLabel">Siguiente</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                        </button>
+                    </div>
+                </footer>
+            </div>
+
+            <!-- ============ MIS TICKETS ============ -->
+            <div id="panelMine" class="tw-panel">
+                <div class="tw-content">
+                    <div id="ticketsList"></div>
+                </div>
+
+                <footer class="tw-footer">
+                    <span></span>
+                    <button type="button" id="refreshTickets" class="tw-btn tw-btn-outline">Actualizar</button>
+                </footer>
+            </div>
+
+        </section>
+    </div>
+</div>

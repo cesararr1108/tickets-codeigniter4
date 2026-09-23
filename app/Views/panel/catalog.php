@@ -5,6 +5,9 @@
         <h1>Catálogo de servicios</h1>
         <p class="muted">Categorías y subcategorías disponibles para registrar tickets.</p>
     </div>
+    <?php if (panel_is_admin()): ?>
+        <a href="<?= site_url('panel/admin/categories') ?>" class="btn btn-outline"><?= icon('settings') ?> Administrar</a>
+    <?php endif ?>
 </div>
 
 <?php if ($categories === []): ?>

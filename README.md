@@ -63,6 +63,7 @@ Panel para agentes en `/panel` (con `index.php`: `/index.php/panel`).
 | Nueva solicitud | `/panel/tickets/nuevo` | Alta de ticket con matriz impacto × urgencia |
 | Reportes | `/panel/reportes` | Volumen por compañía, agente, categoría y prioridad por periodo |
 | Catálogo | `/panel/catalogo` | Categorías y subcategorías con su volumen |
+| Administración | `/panel/admin` | Alta, edición y baja de compañías, sucursales, categorías y subcategorías |
 
 ### Acceso
 
@@ -83,6 +84,23 @@ php spark user:password karen@empresa.com
 - `displayTimezone`: zona horaria para mostrar fechas (`CreatedAt` se guarda en UTC).
 - `perPage`, `chatPollSeconds`.
 
+### Administración de catálogos
+
+En `/panel/admin` se crean, editan y eliminan compañías, sucursales, categorías
+y subcategorías. No se puede eliminar un registro que esté en uso (por ejemplo,
+una compañía con sucursales o tickets) y los códigos (`CodCompanies`,
+`CodBranches`) no se cambian una vez creados.
+
+Por defecto cualquier usuario con sesión puede administrar. Para limitarlo a
+ciertos roles (`Roles.Descripcion`), edita `adminRoles` en `app/Config/Tickets.php`:
+
+```php
+public array $adminRoles = ['Administrador'];
+```
+
+Los catálogos se definen en `app/Libraries/CatalogAdmin.php`; para agregar otro
+basta con añadir su definición (tabla, clave, campos y tablas que lo usan).
+
 ### Chat
 
 El chat usa la tabla `TicketMessages`. Si no existe, créala con
@@ -92,8 +110,8 @@ El chat usa la tabla `TicketMessages`. Si no existe, créala con
 ### Archivos
 
 ```text
-app/Controllers/Panel/   Auth, Dashboard, Tickets, Reports, Catalog, Lookups
-app/Libraries/           TicketRepository (listado/detalle), TicketStats (indicadores)
+app/Controllers/Panel/   Auth, Dashboard, Tickets, Reports, Catalog, Admin, Lookups
+app/Libraries/           TicketRepository (listado/detalle), TicketStats (indicadores), CatalogAdmin (catálogos)
 app/Views/panel/         layout, vistas y parciales (gráficos SVG sin librerías)
 app/Helpers/panel_helper.php
 app/Filters/PanelAuthFilter.php

@@ -51,6 +51,16 @@ class Tickets extends BaseConfig
     public string $displayTimezone = 'America/Guayaquil';
 
     /**
+     * Roles (Roles.Descripcion) que pueden administrar compañías, sucursales,
+     * categorías y subcategorías. Vacío = cualquier usuario con sesión.
+     *
+     * Ejemplo: ['Administrador']
+     *
+     * @var list<string>
+     */
+    public array $adminRoles = [];
+
+    /**
      * Tickets por página en el listado.
      */
     public int $perPage = 20;

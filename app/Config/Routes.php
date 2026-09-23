@@ -27,6 +27,15 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');
 
+    // Administración de catálogos (ver App\Libraries\CatalogAdmin).
+    $routes->group('admin', ['filter' => 'paneladmin'], static function (RouteCollection $routes) {
+        $routes->get('/', 'Admin::index');
+        $routes->get('(:segment)', 'Admin::list/$1');
+        $routes->post('(:segment)', 'Admin::create/$1');
+        $routes->post('(:segment)/update/(:segment)', 'Admin::update/$1/$2');
+        $routes->post('(:segment)/delete/(:segment)', 'Admin::delete/$1/$2');
+    });
+
     $routes->get('lookups/branches', 'Lookups::branches');
     $routes->get('lookups/subcategories', 'Lookups::subcategories');
 });

@@ -37,6 +37,7 @@ class Filters extends BaseFilters
         'performance'   => PerformanceMetrics::class,
         'apiauth'       => ApiAuthFilter::class,
         'panelauth'     => \App\Filters\PanelAuthFilter::class,
+        'paneladmin'    => \App\Filters\PanelAdminFilter::class,
         'cors' => \App\Filters\Cors::class,
     ];
 

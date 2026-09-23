@@ -15,6 +15,10 @@ $navItems = [
     ['key' => 'reports',    'url' => 'panel/reportes',                  'icon' => 'chart',     'label' => 'Reportes'],
     ['key' => 'catalog',    'url' => 'panel/catalogo',                  'icon' => 'grid',      'label' => 'Catálogo'],
 ];
+
+if (panel_is_admin()) {
+    $navItems[] = ['key' => 'admin', 'url' => 'panel/admin', 'icon' => 'settings', 'label' => 'Administración'];
+}
 ?>
 <!doctype html>
 <html lang="es">

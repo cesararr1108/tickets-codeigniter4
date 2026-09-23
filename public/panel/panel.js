@@ -68,6 +68,17 @@
         });
     });
 
+    // Confirmación antes de enviar (ej. eliminar).
+    $$('form[data-confirm]').forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!confirm(form.dataset.confirm)) event.preventDefault();
+        });
+    });
+
+    // Al editar, lleva el formulario a la vista (útil en móvil).
+    const editForm = $('.admin-form.is-edit');
+    if (editForm && window.innerWidth < 1100) editForm.scrollIntoView({ block: 'start' });
+
     // Fila de tabla clicable.
     $$('tr[data-href]').forEach(row => {
         row.addEventListener('click', event => {

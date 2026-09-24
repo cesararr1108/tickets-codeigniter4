@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="TicketDesk">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Mesa de Ayuda TI">
   <rect width="128" height="128" rx="32" fill="#EEF2FA"/>
-  <path d="M34 40h60a8 8 0 0 1 8 8v8.5a7.5 7.5 0 0 0 0 15V80a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8v-8.5a7.5 7.5 0 0 0 0-15V48a8 8 0 0 1 8-8z" fill="none" stroke="#1E2A5A" stroke-width="5" stroke-linejoin="round"/>
-  <path d="M50 48v32" stroke="#9AA8C7" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="0.1 8"/>
-  <path d="M62 64.5l7.5 7.5L85 56.5" fill="none" stroke="#2F6FDB" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <g transform="translate(64 64) scale(1.22) translate(-64 -64)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M34 40h60a8 8 0 0 1 8 8v8.5a7.5 7.5 0 0 0 0 15V80a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8v-8.5a7.5 7.5 0 0 0 0-15V48a8 8 0 0 1 8-8z" stroke="#1E2A5A" stroke-width="7"/>
+    <path d="M62 64.5l7.5 7.5L85 56.5" stroke="#2F6FDB" stroke-width="8"/>
+  </g>
 </svg>

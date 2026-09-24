@@ -35,6 +35,8 @@ if (panel_is_admin()) {
             if (theme) document.documentElement.dataset.theme = theme;
         } catch (e) {}
     </script>
+    <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
+    <link rel="alternate icon" href="<?= base_url('favicon.ico') ?>">
     <link rel="stylesheet" href="<?= base_url('panel/panel.css') ?>">
 </head>
 <body>
@@ -44,7 +46,7 @@ if (panel_is_admin()) {
         <button type="button" class="icon-btn only-mobile" data-toggle-sidebar aria-label="Menú"><?= icon('menu') ?></button>
 
         <a href="<?= site_url('panel') ?>" class="brand">
-            <span class="brand-mark"><?= icon('chat') ?></span>
+            <span class="brand-mark"><?= brand_mark() ?></span>
             <span class="brand-name">Mesa de Ayuda <b>TI</b></span>
         </a>
 

@@ -221,6 +221,21 @@ if (! function_exists('icon')) {
     }
 }
 
+if (! function_exists('brand_mark')) {
+    /**
+     * Isotipo de la Mesa de Ayuda (ticket con check). Los colores salen de
+     * panel.css para que siga el tema claro/oscuro.
+     */
+    function brand_mark(): string
+    {
+        return '<svg class="brand-logo" viewBox="22 22 84 84" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+            . '<path class="brand-ticket" d="M34 40h60a8 8 0 0 1 8 8v8.5a7.5 7.5 0 0 0 0 15V80a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8v-8.5a7.5 7.5 0 0 0 0-15V48a8 8 0 0 1 8-8z" stroke-width="6"/>'
+            . '<path class="brand-perf" d="M50 49v30" stroke-width="4" stroke-dasharray="0.1 9"/>'
+            . '<path class="brand-check" d="M62 64.5l7.5 7.5L85 56.5" stroke-width="7"/>'
+            . '</svg>';
+    }
+}
+
 if (! function_exists('panel_is_admin')) {
     /**
      * ¿El usuario puede administrar catálogos? Si Config\Tickets::$adminRoles

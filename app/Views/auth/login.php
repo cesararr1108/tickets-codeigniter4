@@ -11,6 +11,8 @@
             if (theme) document.documentElement.dataset.theme = theme;
         } catch (e) {}
     </script>
+    <link rel="icon" type="image/svg+xml" href="<?= base_url('favicon.svg') ?>">
+    <link rel="alternate icon" href="<?= base_url('favicon.ico') ?>">
     <link rel="stylesheet" href="<?= base_url('panel/panel.css') ?>">
 </head>
 <body class="login-page">
@@ -18,7 +20,7 @@
         <?= csrf_field() ?>
 
         <div class="brand">
-            <span class="brand-mark"><?= icon('chat') ?></span>
+            <span class="brand-mark"><?= brand_mark() ?></span>
             <span class="brand-name">Mesa de Ayuda <b>TI</b></span>
         </div>
 

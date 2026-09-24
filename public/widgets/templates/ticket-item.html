@@ -1,0 +1,11 @@
+<!--
+  Ticket en la pestaña "Mis tickets".
+  Variables: id, title, meta, status, statusClass
+-->
+<article class="tw-ticket">
+    <div>
+        <div class="tw-ticket-title">{{title}}</div>
+        <div class="tw-ticket-meta">Ticket #{{id}} · {{meta}}</div>
+    </div>
+    <span class="tw-status tw-status-{{statusClass}}">{{status}}</span>
+</article>

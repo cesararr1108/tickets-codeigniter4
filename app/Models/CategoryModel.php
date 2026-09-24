@@ -15,11 +15,13 @@ class CategoryModel extends Model
 
     protected $allowedFields = [
         'Category',
+        'Description',
     ];
 
     protected $useTimestamps = false;
 
     protected $validationRules = [
-        'Category' => 'required|max_length[40]',
+        'Category'    => 'required|max_length[40]',
+        'Description' => 'permit_empty|max_length[155]',
     ];
 }

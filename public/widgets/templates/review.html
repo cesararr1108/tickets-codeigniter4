@@ -1,0 +1,44 @@
+<!--
+  Resumen del paso "Revisión y envío".
+  Variables: company, branch, category, subcategory, email, subject, priority, priorityClass, description, file
+-->
+<div class="tw-review">
+    <div class="tw-review-grid">
+        <div class="tw-review-item">
+            <span class="tw-review-label">Compañía</span>
+            <span class="tw-review-value">{{company}}</span>
+            <span class="tw-review-sub">{{branch}}</span>
+        </div>
+
+        <div class="tw-review-item">
+            <span class="tw-review-label">Categoría</span>
+            <span class="tw-review-value">{{category}}</span>
+            <span class="tw-review-sub">{{subcategory}}</span>
+        </div>
+
+        <div class="tw-review-item">
+            <span class="tw-review-label">Solicitante</span>
+            <span class="tw-review-value">{{email}}</span>
+        </div>
+
+        <div class="tw-review-item">
+            <span class="tw-review-label">Prioridad</span>
+            <span class="tw-badge tw-badge-{{priorityClass}}">{{priority}}</span>
+        </div>
+    </div>
+
+    <div class="tw-review-item tw-review-full">
+        <span class="tw-review-label">Asunto</span>
+        <span class="tw-review-value">{{subject}}</span>
+    </div>
+
+    <div class="tw-review-item tw-review-full">
+        <span class="tw-review-label">Descripción</span>
+        <p class="tw-review-text">{{description}}</p>
+    </div>
+
+    <div class="tw-review-item tw-review-full">
+        <span class="tw-review-label">Adjunto</span>
+        <span class="tw-review-value">{{file}}</span>
+    </div>
+</div>

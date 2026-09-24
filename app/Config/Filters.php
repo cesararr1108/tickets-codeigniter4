@@ -36,6 +36,8 @@ class Filters extends BaseFilters
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
         'apiauth'       => ApiAuthFilter::class,
+        'panelauth'     => \App\Filters\PanelAuthFilter::class,
+        'paneladmin'    => \App\Filters\PanelAdminFilter::class,
         'cors' => \App\Filters\Cors::class,
     ];
 

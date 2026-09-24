@@ -3,7 +3,42 @@
 use CodeIgniter\Router\RouteCollection;
 
 /** @var RouteCollection $routes */
-$routes->get('/', 'Home::index');
+$routes->get('/', static fn () => redirect()->to(site_url('panel')));
+
+/*
+ * Panel web (dashboard de tickets).
+ * Requiere sesión iniciada con un usuario de la tabla Users.
+ */
+$routes->get('login', 'Panel\\Auth::login');
+$routes->post('login', 'Panel\\Auth::attempt', ['filter' => 'csrf']);
+$routes->get('logout', 'Panel\\Auth::logout');
+
+$routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => ['panelauth', 'csrf']], static function (RouteCollection $routes) {
+    $routes->get('/', 'Dashboard::index');
+
+    $routes->get('tickets', 'Tickets::index');
+    $routes->get('tickets/nuevo', 'Tickets::create');
+    $routes->post('tickets', 'Tickets::store');
+    $routes->get('tickets/(:num)', 'Tickets::show/$1');
+    $routes->post('tickets/(:num)', 'Tickets::update/$1');
+    $routes->get('tickets/(:num)/messages', 'Tickets::messages/$1');
+    $routes->post('tickets/(:num)/messages', 'Tickets::addMessage/$1');
+
+    $routes->get('reportes', 'Reports::index');
+    $routes->get('catalogo', 'Catalog::index');
+
+    // Administración de catálogos (ver App\Libraries\CatalogAdmin).
+    $routes->group('admin', ['filter' => 'paneladmin'], static function (RouteCollection $routes) {
+        $routes->get('/', 'Admin::index');
+        $routes->get('(:segment)', 'Admin::list/$1');
+        $routes->post('(:segment)', 'Admin::create/$1');
+        $routes->post('(:segment)/update/(:segment)', 'Admin::update/$1/$2');
+        $routes->post('(:segment)/delete/(:segment)', 'Admin::delete/$1/$2');
+    });
+
+    $routes->get('lookups/branches', 'Lookups::branches');
+    $routes->get('lookups/subcategories', 'Lookups::subcategories');
+});
 
 /*
  * Rutas de la API.

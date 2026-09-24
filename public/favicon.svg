@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="TicketDesk">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1E2A5A"/>
+      <stop offset="1" stop-color="#2F6FDB"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity=".14"/>
+      <stop offset=".5" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="128" height="128" rx="32" fill="url(#bg)"/>
+  <rect width="128" height="128" rx="32" fill="url(#shine)"/>
+  <!-- ticket -->
+  <path d="M34 40h60a8 8 0 0 1 8 8v8.5a7.5 7.5 0 0 0 0 15V80a8 8 0 0 1-8 8H34a8 8 0 0 1-8-8v-8.5a7.5 7.5 0 0 0 0-15V48a8 8 0 0 1 8-8z" fill="none" stroke="#FFFFFF" stroke-width="5" stroke-linejoin="round"/>
+  <!-- perforation -->
+  <path d="M50 48v32" stroke="#FFFFFF" stroke-opacity=".55" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="0.1 8"/>
+  <!-- check -->
+  <path d="M62 64.5l7.5 7.5L85 56.5" fill="none" stroke="#5EEAD4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

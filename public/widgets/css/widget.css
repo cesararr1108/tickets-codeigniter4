@@ -354,10 +354,10 @@ svg {
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 6px;
     padding: 18px;
-    text-align: left;
+    text-align: center;
     border: 1px solid var(--tw-border);
     border-radius: var(--tw-radius);
     background: #fff;
@@ -402,6 +402,24 @@ svg {
 .tw-card-icon svg {
     width: 20px;
     height: 20px;
+}
+
+/* Logo de la compañía: <span class="tw-card-icon"><img src="..." alt=""></span> */
+.tw-card-icon:has(img) {
+    width: 128px;
+    height: 64px;
+    padding: 0;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid var(--tw-border);
+    overflow: hidden;
+}
+
+.tw-card-icon img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .tw-card-title {

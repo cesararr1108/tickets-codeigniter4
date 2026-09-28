@@ -1,14 +1,15 @@
 <!--
-  Formulario "Incidente - soporte" (paso Detalle). Lo controla
+  Formulario "Incidente - soporte" (paso Datos de la solicitud). Lo controla
   js/forms/incident-form.js.
 
   Variables (no escribir los marcadores con llaves en este comentario):
     requester, sede   -> datos automáticos del solicitante
     areaOptions       -> HTML: <option> de áreas (preseleccionada la del perfil)
-    servicioOptions   -> HTML: <option> de servicios afectados
 
   Título (Asunto), "¿Qué está sucediendo?" (Descripción) y urgencia
-  (Prioridad) ya se piden en el ticket.
+  (Prioridad) ya se piden en el ticket. Diagnóstico, solución y estado los
+  registra el área de TI en el panel.
+  Los opcionales van dentro del bloque plegable "Información adicional".
 -->
 <div class="tw-extra-form" data-form="incidente">
 
@@ -27,68 +28,59 @@
         </div>
     </div>
 
-    <!-- ============ INCIDENTE ============ -->
-    <div class="tw-subsection">
-        <p class="tw-section-label">Incidente</p>
-
-        <div class="tw-form-grid">
-            <div class="tw-field">
-                <label class="tw-label" for="inArea">Área</label>
-                <select id="inArea" class="tw-input" data-field="area" required>
-                    <option value="">Selecciona un área</option>
-                    {{{areaOptions}}}
-                </select>
-            </div>
-
-            <div class="tw-field">
-                <label class="tw-label" for="inServicio">Servicio afectado</label>
-                <select id="inServicio" class="tw-input" data-field="servicio_afectado" required>
-                    <option value="">Selecciona el servicio</option>
-                    {{{servicioOptions}}}
-                </select>
-            </div>
-        </div>
-
-        <div class="tw-field">
-            <label class="tw-label" for="inDesde">¿Desde cuándo ocurre?</label>
-            <input id="inDesde" class="tw-input" type="datetime-local" data-field="desde_cuando" required>
-        </div>
-
-        <div class="tw-field">
-            <span class="tw-label">¿A quién afecta?</span>
-            <div class="tw-chips" data-field="a_quien_afecta" data-required="true">
-                <button type="button" class="tw-chip" data-value="solo_yo" aria-pressed="false">
-                    <span class="tw-chip-dot" aria-hidden="true"></span>
-                    Solo a mí
-                </button>
-                <button type="button" class="tw-chip" data-value="varios" aria-pressed="false">
-                    <span class="tw-chip-dot" aria-hidden="true"></span>
-                    Varios usuarios
-                </button>
-                <button type="button" class="tw-chip" data-value="area" aria-pressed="false">
-                    <span class="tw-chip-dot" aria-hidden="true"></span>
-                    Toda mi área
-                </button>
-                <button type="button" class="tw-chip" data-value="sede" aria-pressed="false">
-                    <span class="tw-chip-dot" aria-hidden="true"></span>
-                    Toda la sede
-                </button>
-            </div>
-        </div>
+    <div class="tw-field">
+        <label class="tw-label" for="inArea">Área</label>
+        <select id="inArea" class="tw-input" data-field="area" required>
+            <option value="">Selecciona un área</option>
+            {{{areaOptions}}}
+        </select>
     </div>
 
-    <!-- ============ EVIDENCIA ============ -->
-    <div class="tw-subsection">
-        <p class="tw-section-label">Evidencia</p>
+    <!-- ============ OPCIONALES (plegado al inicio) ============ -->
+    <details class="tw-more">
+        <summary>
+            <span>Información adicional</span>
+            <span class="tw-optional">opcional · desde cuándo, a quién afecta, capturas</span>
+        </summary>
 
-        <div class="tw-field">
-            <span class="tw-label">Capturas o archivos <span class="tw-optional">(opcional)</span></span>
-            <label class="tw-dropzone" data-dropzone="evidencia">
-                <input type="file" multiple hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
-                <span data-file-names>Arrastra las capturas del error o haz clic para seleccionarlas</span>
-            </label>
+        <div class="tw-more-body">
+            <div class="tw-field">
+                <label class="tw-label" for="inDesde">¿Desde cuándo ocurre? <span class="tw-optional">(opcional)</span></label>
+                <input id="inDesde" class="tw-input" type="datetime-local" data-field="desde_cuando">
+            </div>
+
+            <div class="tw-field">
+                <span class="tw-label">¿A quién afecta? <span class="tw-optional">(opcional)</span></span>
+                <div class="tw-chips" data-field="a_quien_afecta">
+                    <button type="button" class="tw-chip" data-value="solo_yo" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Solo a mí
+                    </button>
+                    <button type="button" class="tw-chip" data-value="varios" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Varios usuarios
+                    </button>
+                    <button type="button" class="tw-chip" data-value="area" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Toda mi área
+                    </button>
+                    <button type="button" class="tw-chip" data-value="sede" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Toda la sede
+                    </button>
+                </div>
+            </div>
+
+            <div class="tw-field">
+                <span class="tw-label">Capturas o archivos <span class="tw-optional">(opcional)</span></span>
+                <label class="tw-dropzone" data-dropzone="evidencia" tabindex="0">
+                    <input type="file" multiple hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                    <span>Pega la captura con Ctrl+V, arrástrala o haz clic para seleccionarla</span>
+                </label>
+                <ul class="tw-file-list" data-file-list></ul>
+            </div>
         </div>
-    </div>
+    </details>
 
 </div>

@@ -6,6 +6,17 @@ $state     = target_state($ticket);
 $target    = $config->targetHours[$ticket['Priority']] ?? 72;
 $stateText = ['ok' => 'Dentro de la meta', 'warn' => 'Por vencer', 'late' => 'Fuera de meta', 'done' => 'Cerrado'][$state];
 $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
+
+// Formulario adicional: respuestas del solicitante y campos que llena el área.
+$formKey    = $formAnswers[0]['FormKey'] ?? null;
+$areaDefs   = $formKey !== null ? ($config->areaFields[$formKey] ?? []) : [];
+$areaValues = [];
+foreach ($formAnswers as $a) {
+    if (isset($areaDefs[$a['FieldKey']])) {
+        $areaValues[$a['FieldKey']] = (string) $a['Value'];
+    }
+}
+$formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset($areaDefs[$a['FieldKey']])));
 ?>
 <a class="back-link" href="<?= site_url('panel/tickets?status=pendientes') ?>"><?= icon('arrow-left') ?> Tickets</a>
 
@@ -30,7 +41,6 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
             'requerimiento' => 'Requerimiento',
             'incidente'     => 'Incidente / soporte',
         ];
-        $formKey = $formAnswers[0]['FormKey'];
         ?>
         <section class="card form-answers">
             <details open>
@@ -121,6 +131,34 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
 
             <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>
         </form>
+
+        <?php if ($areaDefs !== []): ?>
+            <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/seguimiento') ?>">
+                <?= csrf_field() ?>
+                <input type="hidden" name="FormKey" value="<?= esc($formKey, 'attr') ?>">
+                <h2>Seguimiento del área</h2>
+                <p class="muted small">Solo lo ve TI; el solicitante no llena estos campos.</p>
+
+                <?php foreach ($areaDefs as $key => $def): $value = $areaValues[$key] ?? ''; ?>
+                    <label class="field">
+                        <span class="field-label"><?= esc($def['label']) ?></span>
+                        <?php if (($def['type'] ?? 'text') === 'select'): ?>
+                            <select name="Area[<?= esc($key, 'attr') ?>]" class="select">
+                                <?php foreach ($def['options'] as $option): ?>
+                                    <option value="<?= esc($option, 'attr') ?>" <?= $value === $option ? 'selected' : '' ?>><?= esc($option) ?></option>
+                                <?php endforeach ?>
+                            </select>
+                        <?php elseif ($def['type'] === 'textarea'): ?>
+                            <textarea name="Area[<?= esc($key, 'attr') ?>]" class="input" rows="3"><?= esc($value) ?></textarea>
+                        <?php else: ?>
+                            <input type="text" name="Area[<?= esc($key, 'attr') ?>]" class="input" value="<?= esc($value, 'attr') ?>">
+                        <?php endif ?>
+                    </label>
+                <?php endforeach ?>
+
+                <button type="submit" class="btn btn-primary btn-block">Guardar seguimiento</button>
+            </form>
+        <?php endif ?>
 
         <div class="card">
             <h2>Detalle</h2>

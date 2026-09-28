@@ -9,6 +9,7 @@
     impactoOptions          -> HTML: <option> de impacto
     userOptions             -> HTML: <option> de usuarios (aprobador)
 
+  Responsable TI y estado los registra el área en el panel.
   Título (Asunto), "¿Qué necesita?" (Descripción), categoría y subcategoría
   ya se piden en el ticket. Los bloques data-variant dependen de la
   subcategoría; los ocultos no se validan ni se guardan.
@@ -206,18 +207,24 @@
         </div>
     </div>
 
-    <!-- ============ EVIDENCIA ============ -->
-    <div class="tw-subsection">
-        <p class="tw-section-label">Evidencia / documentos</p>
+    <!-- ============ OPCIONALES (plegado al inicio) ============ -->
+    <details class="tw-more">
+        <summary>
+            <span>Información adicional</span>
+            <span class="tw-optional">opcional · evidencia y documentos</span>
+        </summary>
 
-        <div class="tw-field">
-            <span class="tw-label">Documentos <span class="tw-optional">(formato de autorización, etc.)</span></span>
-            <label class="tw-dropzone" data-dropzone="documentos">
-                <input type="file" multiple hidden>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
-                <span data-file-names>Arrastra los archivos o haz clic para seleccionarlos</span>
-            </label>
+        <div class="tw-more-body">
+            <div class="tw-field">
+                <span class="tw-label">Evidencia / documentos <span class="tw-optional">(opcional · formato de autorización, etc.)</span></span>
+                <label class="tw-dropzone" data-dropzone="documentos" tabindex="0">
+                    <input type="file" multiple hidden>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                    <span>Arrastra archivos, haz clic para seleccionarlos o pega con Ctrl+V</span>
+                </label>
+                <ul class="tw-file-list" data-file-list></ul>
+            </div>
         </div>
-    </div>
+    </details>
 
 </div>

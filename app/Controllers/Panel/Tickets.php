@@ -253,6 +253,31 @@ class Tickets extends BasePanelController
     }
 
     /**
+     * POST /panel/tickets/{id}/seguimiento
+     * Guarda los campos que llena el área (estado del proyecto, diagnóstico,
+     * solución...). Ver Config\Tickets::$areaFields.
+     */
+    public function followUp(int $id)
+    {
+        $formKey = (string) $this->request->getPost('FormKey');
+        $fields  = $this->config->areaFields[$formKey] ?? null;
+
+        if ($fields === null || model(TicketModel::class)->find($id) === null) {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'No hay campos de seguimiento para este ticket.');
+        }
+
+        try {
+            model(TicketFormAnswerModel::class)->saveAreaFields($id, $formKey, $fields, (array) $this->request->getPost('Area'));
+        } catch (\Throwable $e) {
+            log_message('error', '[Panel] Seguimiento: ' . $e->getMessage());
+
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'No se pudo guardar el seguimiento.');
+        }
+
+        return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Seguimiento actualizado.');
+    }
+
+    /**
      * GET /panel/tickets/{id}/adjuntos/{attachmentId}
      * Descarga un adjunto guardado en writable/uploads.
      */

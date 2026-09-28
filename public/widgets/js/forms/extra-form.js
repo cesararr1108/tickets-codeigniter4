@@ -11,6 +11,7 @@
  *                       activan este formulario
  *   templateData()   -> variables para la plantilla
  *   variantFor(sub)  -> (opcional) bloque [data-variant] según subcategoría
+ *                       (y this.category)
  *
  * Convenciones del HTML:
  *   data-field="clave"        campo que se guarda
@@ -113,7 +114,10 @@ export class ExtraForm {
         this.apiUrl = apiUrl;
         this.root = null;
         this.files = [];
+        this.fileList = null;
+        this.onPaste = null;
         this.subcategory = null;
+        this.category = null;
         this.destroyed = false;
 
         this.onClick = this.onClick.bind(this);
@@ -126,6 +130,10 @@ export class ExtraForm {
         return context;
     }
 
+    /*
+     * Bloque [data-variant] a mostrar según subcategoría/categoría
+     * (this.category). null = "default".
+     */
     variantFor(subcategory) {
         return null;
     }
@@ -150,6 +158,9 @@ export class ExtraForm {
 
     unmount() {
         this.destroyed = true;
+        if (this.onPaste) {
+            document.removeEventListener("paste", this.onPaste);
+        }
         this.root?.removeEventListener("click", this.onClick);
         this.container.replaceChildren();
         this.container.hidden = true;
@@ -216,30 +227,24 @@ export class ExtraForm {
     }
 
     // ------------------------------------------
-    // Archivos
+    // Archivos (clic, arrastrar o pegar con Ctrl+V)
     // ------------------------------------------
 
     bindDropzone() {
 
         const zone = this.root.querySelector("[data-dropzone]");
         const input = zone?.querySelector('input[type="file"]');
-        const label = zone?.querySelector("[data-file-names]");
 
-        if (!zone || !input || !label) {
+        if (!zone || !input) {
             return;
         }
 
-        const defaultLabel = label.textContent;
+        this.fileList = this.root.querySelector("[data-file-list]");
 
-        const setFiles = files => {
-            this.files = Array.from(files ?? []);
-            label.textContent = this.files.length
-                ? this.files.map(file => file.name).join(", ")
-                : defaultLabel;
-            zone.classList.toggle("tw-has-file", this.files.length > 0);
-        };
-
-        input.addEventListener("change", () => setFiles(input.files));
+        input.addEventListener("change", () => {
+            this.addFiles(input.files);
+            input.value = "";
+        });
 
         ["dragenter", "dragover"].forEach(type =>
             zone.addEventListener(type, event => {
@@ -255,7 +260,99 @@ export class ExtraForm {
             })
         );
 
-        zone.addEventListener("drop", event => setFiles(event.dataTransfer?.files));
+        zone.addEventListener("drop", event => this.addFiles(event.dataTransfer?.files));
+
+        this.fileList?.addEventListener("click", event => {
+            const button = event.target.closest("[data-remove]");
+
+            if (button) {
+                this.files.splice(Number(button.dataset.remove), 1);
+                this.renderFiles();
+            }
+        });
+
+        // Ctrl+V con una captura de pantalla (el evento llega al documento
+        // aunque el widget esté dentro de un Shadow DOM).
+        this.onPaste = event => this.handlePaste(event, zone);
+        document.addEventListener("paste", this.onPaste);
+    }
+
+    handlePaste(event, zone) {
+
+        // Solo si este formulario está a la vista.
+        if (!this.root?.isConnected || this.root.offsetParent === null) {
+            return;
+        }
+
+        const files = Array.from(event.clipboardData?.items ?? [])
+            .filter(item => item.kind === "file")
+            .map(item => item.getAsFile())
+            .filter(Boolean);
+
+        if (!files.length) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const stamp = new Date().toTimeString().slice(0, 8).replaceAll(":", "");
+
+        this.addFiles(files.map((file, i) => {
+            const extension = (file.type.split("/")[1] || "png").replace("jpeg", "jpg");
+            const name = `captura-${stamp}${files.length > 1 ? "-" + (i + 1) : ""}.${extension}`;
+
+            return new File([file], name, { type: file.type });
+        }));
+
+        // Abre el bloque plegable para que se vea lo que se pegó.
+        const details = zone.closest("details");
+        if (details) {
+            details.open = true;
+        }
+    }
+
+    addFiles(list) {
+
+        Array.from(list ?? []).forEach(file => {
+            const exists = this.files.some(f => f.name === file.name && f.size === file.size);
+
+            if (!exists) {
+                this.files.push(file);
+            }
+        });
+
+        this.renderFiles();
+    }
+
+    renderFiles() {
+
+        const zone = this.root?.querySelector("[data-dropzone]");
+        zone?.classList.toggle("tw-has-file", this.files.length > 0);
+
+        if (!this.fileList) {
+            return;
+        }
+
+        this.fileList.replaceChildren(...this.files.map((file, index) => {
+            const item = document.createElement("li");
+
+            const name = document.createElement("span");
+            name.textContent = file.name;
+
+            const size = document.createElement("small");
+            size.textContent = file.size < 1024 * 1024
+                ? Math.max(1, Math.round(file.size / 1024)) + " KB"
+                : (file.size / 1024 / 1024).toFixed(1) + " MB";
+
+            const remove = document.createElement("button");
+            remove.type = "button";
+            remove.dataset.remove = index;
+            remove.setAttribute("aria-label", "Quitar " + file.name);
+            remove.textContent = "×";
+
+            item.append(name, size, remove);
+            return item;
+        }));
     }
 
     // ------------------------------------------
@@ -327,11 +424,14 @@ export class ExtraForm {
      */
     answers() {
 
-        const list = this.fields().map(field => ({
-            key: field.dataset.field,
-            label: this.labelOf(field),
-            value: this.valueOf(field)
-        }));
+        // Los opcionales que se dejan vacíos no se guardan.
+        const list = this.fields()
+            .map(field => ({
+                key: field.dataset.field,
+                label: this.labelOf(field),
+                value: this.valueOf(field)
+            }))
+            .filter(answer => answer.value !== "");
 
         if (this.files.length) {
             list.push({

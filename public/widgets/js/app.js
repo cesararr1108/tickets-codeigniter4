@@ -488,6 +488,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         // Misma clase de formulario: se conservan las respuestas.
         if (FormClass && state.extraForm instanceof FormClass) {
+            state.extraForm.category = category;
             state.extraForm.setSubcategory(subcategory);
             return;
         }
@@ -503,6 +504,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         const form = new FormClass(el.extraForm, { apiUrl });
 
         state.extraForm = form;
+        form.category = category;
         form.subcategory = subcategory;
 
         el.extraFormTitle.textContent = FormClass.title;

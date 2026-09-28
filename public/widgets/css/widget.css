@@ -868,6 +868,124 @@ svg {
 .tw-status-en_progreso { background: #fff7e6; color: #b45309; }
 .tw-status-cerrado { background: #f0fdf4; color: #15803d; }
 
+/* ================= FORMULARIOS ADICIONALES ================= */
+
+/* Bloque plegable con los campos opcionales (cerrado al inicio). */
+.tw-more {
+    margin-top: 22px;
+    border: 1px solid var(--tw-border);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.tw-more > summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 13px 16px;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 600;
+    color: var(--tw-text);
+    border-radius: 12px;
+}
+
+.tw-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.tw-more > summary::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-right: 2px solid var(--tw-muted);
+    border-bottom: 2px solid var(--tw-muted);
+    transform: rotate(-45deg);
+    transition: transform .15s ease;
+    flex-shrink: 0;
+}
+
+.tw-more[open] > summary::before {
+    transform: rotate(45deg);
+}
+
+.tw-more > summary:hover {
+    background: var(--tw-bg);
+}
+
+.tw-more > summary .tw-optional {
+    font-size: 12px;
+}
+
+.tw-more[open] > summary {
+    border-bottom: 1px solid var(--tw-border);
+    border-radius: 12px 12px 0 0;
+}
+
+.tw-more-body {
+    padding: 16px 16px 2px;
+}
+
+.tw-dropzone:focus-visible {
+    outline: 3px solid var(--tw-primary-soft);
+    outline-offset: 1px;
+}
+
+/* Archivos agregados (clic, arrastrar o Ctrl+V). */
+.tw-file-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.tw-file-list:empty {
+    display: none;
+}
+
+.tw-file-list li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px 7px 12px;
+    border: 1px solid var(--tw-border);
+    border-radius: 9px;
+    background: var(--tw-bg);
+    font-size: 13px;
+}
+
+.tw-file-list span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tw-file-list small {
+    color: var(--tw-muted);
+}
+
+.tw-file-list button {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: var(--tw-muted);
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.tw-file-list button:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 720px) {

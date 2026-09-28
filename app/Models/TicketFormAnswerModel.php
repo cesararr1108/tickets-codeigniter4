@@ -83,4 +83,47 @@ class TicketFormAnswerModel extends Model
 
         return count($rows);
     }
+
+    /**
+     * Guarda (inserta o actualiza) los campos que llena el área desde el
+     * panel. Van al final del formulario (SortOrder 1000+).
+     *
+     * @param array<string, array<string, mixed>> $definitions Config\Tickets::$areaFields[$formKey]
+     * @param array<string, mixed>                 $values      valores enviados (clave => valor)
+     */
+    public function saveAreaFields(int $idTicket, string $formKey, array $definitions, array $values): void
+    {
+        $order = 1000;
+
+        foreach ($definitions as $key => $definition) {
+            $order++;
+
+            if (! array_key_exists($key, $values)) {
+                continue;
+            }
+
+            $value = trim((string) $values[$key]);
+
+            if (($definition['type'] ?? '') === 'select' && $value !== '' && ! in_array($value, $definition['options'] ?? [], true)) {
+                continue;
+            }
+
+            $existing = $this->where('IdTicket', $idTicket)->where('FieldKey', $key)->first();
+
+            if ($existing !== null) {
+                $this->update($existing['IdAnswer'], ['Value' => $value]);
+
+                continue;
+            }
+
+            $this->insert([
+                'IdTicket'  => $idTicket,
+                'FormKey'   => $formKey,
+                'FieldKey'  => $key,
+                'Label'     => (string) $definition['label'],
+                'Value'     => $value,
+                'SortOrder' => $order,
+            ]);
+        }
+    }
 }

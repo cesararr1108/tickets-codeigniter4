@@ -3,23 +3,11 @@
  * HTML: templates/incident-form.html
  *
  * Título, descripción ("¿Qué está sucediendo?") y urgencia (prioridad) ya
- * los pide el paso Detalle; Diagnóstico y Solución los registra TI en el
- * panel.
+ * los pide el paso Detalle; diagnóstico, solución y estado los registra TI
+ * en el panel.
  */
 
 import { AREAS, ExtraForm, options } from "./extra-form.js";
-
-const SERVICIOS = [
-    "Correo electrónico",
-    "SAP",
-    "Internet / red",
-    "Equipo de cómputo",
-    "Impresora",
-    "Teléfono",
-    "Portal / página web",
-    "Carpetas compartidas",
-    "Otro"
-];
 
 export class IncidentForm extends ExtraForm {
 
@@ -32,8 +20,7 @@ export class IncidentForm extends ExtraForm {
         return {
             requester: context.requester,
             sede: context.sede,
-            areaOptions: options(AREAS, context.area),
-            servicioOptions: options(SERVICIOS)
+            areaOptions: options(AREAS, context.area)
         };
     }
 }

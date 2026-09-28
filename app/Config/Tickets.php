@@ -61,6 +61,49 @@ class Tickets extends BaseConfig
     public array $adminRoles = [];
 
     /**
+     * Campos que llena el área de TI desde el panel (el solicitante no los
+     * ve en el widget), por formulario (TicketFormAnswers.FormKey).
+     * Se guardan en TicketFormAnswers junto a las respuestas del formulario.
+     * Estados tomados del Excel de requerimientos (hoja "Estados").
+     *
+     * type: select | text | textarea
+     *
+     * @var array<string, array<string, array<string, mixed>>>
+     */
+    public array $areaFields = [
+        'proyecto' => [
+            'estado_proyecto' => [
+                'label'   => 'Estado del proyecto',
+                'type'    => 'select',
+                'options' => [
+                    'Propuesto', 'En evaluación', 'Pendiente de aprobación', 'Aprobado',
+                    'Planificación', 'En ejecución', 'En espera', 'En pruebas',
+                    'Pendiente de aceptación', 'Implementado', 'Cerrado', 'Cancelado', 'Rechazado',
+                ],
+            ],
+        ],
+        'requerimiento' => [
+            'estado_requerimiento' => [
+                'label'   => 'Estado del requerimiento',
+                'type'    => 'select',
+                'options' => [
+                    'Nuevo', 'En validación', 'Pendiente de aprobación', 'Aprobado', 'Asignado',
+                    'En ejecución', 'En espera', 'Atendido', 'Cerrado', 'Rechazado', 'Cancelado',
+                ],
+            ],
+        ],
+        'incidente' => [
+            'estado_incidente' => [
+                'label'   => 'Estado del incidente',
+                'type'    => 'select',
+                'options' => ['Nuevo', 'Asignado', 'En atención', 'En espera', 'Resuelto', 'Cerrado', 'Cancelado'],
+            ],
+            'diagnostico' => ['label' => 'Diagnóstico', 'type' => 'textarea'],
+            'solucion'    => ['label' => 'Solución', 'type' => 'textarea'],
+        ],
+    ];
+
+    /**
      * Tickets por página en el listado.
      */
     public int $perPage = 20;

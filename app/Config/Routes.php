@@ -24,6 +24,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('tickets/(:num)/messages', 'Tickets::messages/$1');
     $routes->post('tickets/(:num)/messages', 'Tickets::addMessage/$1');
     $routes->get('tickets/(:num)/adjuntos/(:num)', 'Tickets::attachment/$1/$2');
+    $routes->post('tickets/(:num)/seguimiento', 'Tickets::followUp/$1');
 
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');

@@ -1229,16 +1229,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     // MODAL Y PESTAÑAS
     // ==========================================
 
-    function onKeydown(event) {
-        if (event.key === "Escape") {
-            closeModal();
-        }
-    }
-
     function openModal() {
         el.overlay.classList.add("tw-open");
         el.overlay.setAttribute("aria-hidden", "false");
-        document.addEventListener("keydown", onKeydown);
 
         loadCompanies();
         loadMineCounts();
@@ -1248,7 +1241,6 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     function closeModal() {
         el.overlay.classList.remove("tw-open");
         el.overlay.setAttribute("aria-hidden", "true");
-        document.removeEventListener("keydown", onKeydown);
     }
 
     function switchTab(tab) {
@@ -1378,11 +1370,8 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     makeFabDraggable();
     el.close.addEventListener("click", closeModal);
 
-    el.overlay.addEventListener("click", event => {
-        if (event.target === el.overlay) {
-            closeModal();
-        }
-    });
+    // El modal solo se cierra con la X o con "Cancelar" (no con clic afuera
+    // ni con Escape), para no perder lo que se está escribiendo.
 
     el.tabs.forEach(tab =>
         tab.addEventListener("click", () => switchTab(tab))

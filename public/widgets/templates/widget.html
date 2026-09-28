@@ -45,12 +45,16 @@
                         <span class="tw-stepper-num">2</span>
                         <span class="tw-stepper-label">Categoría</span>
                     </li>
-                    <li class="tw-stepper-item" data-step="3">
+                    <li class="tw-stepper-item" data-step="3" id="extraFormStep" hidden>
                         <span class="tw-stepper-num">3</span>
-                        <span class="tw-stepper-label">Detalle</span>
+                        <span class="tw-stepper-label">Datos de la solicitud</span>
                     </li>
                     <li class="tw-stepper-item" data-step="4">
                         <span class="tw-stepper-num">4</span>
+                        <span class="tw-stepper-label">Detalle</span>
+                    </li>
+                    <li class="tw-stepper-item" data-step="5">
+                        <span class="tw-stepper-num">5</span>
                         <span class="tw-stepper-label">Revisión y envío</span>
                     </li>
                 </ol>
@@ -96,14 +100,24 @@
                             <h4 class="tw-section-label">Subcategoría <span class="tw-optional">(opcional)</span></h4>
                             <div id="subcategoryList" class="tw-chips"></div>
                         </div>
-
-                        <!-- Campos del tipo de solicitud (Proyecto, Requerimiento, Incidente):
-                             se despliegan al elegir la categoría o subcategoría. -->
-                        <div id="extraForm" class="tw-subsection" hidden></div>
                     </section>
 
-                    <!-- PASO 3: DETALLE -->
+                    <!-- PASO 3: DATOS DE LA SOLICITUD
+                         Solo aparece si la categoría/subcategoría tiene formulario
+                         (Proyecto, Requerimiento, Incidente). -->
                     <section class="tw-step" data-step="3" hidden>
+                        <div class="tw-section-head">
+                            <div>
+                                <h3 class="tw-section-title" id="extraFormTitle">Datos de la solicitud</h3>
+                                <p class="tw-section-hint">Completa la información de este tipo de solicitud.</p>
+                            </div>
+                        </div>
+
+                        <div id="extraForm" hidden></div>
+                    </section>
+
+                    <!-- PASO 4: DETALLE -->
+                    <section class="tw-step" data-step="4" hidden>
                         <div class="tw-form-grid">
                             <div class="tw-field">
                                 <label class="tw-label" for="ticketEmail">Correo del solicitante</label>
@@ -150,8 +164,8 @@
                         </div>
                     </section>
 
-                    <!-- PASO 4: REVISIÓN -->
-                    <section class="tw-step" data-step="4" hidden>
+                    <!-- PASO 5: REVISIÓN -->
+                    <section class="tw-step" data-step="5" hidden>
                         <div class="tw-section-head">
                             <div>
                                 <h3 class="tw-section-title">Revisa tu solicitud</h3>

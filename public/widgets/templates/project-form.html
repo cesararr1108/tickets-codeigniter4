@@ -1,16 +1,19 @@
 <!--
   Formulario "Solicitud de proyecto" (se muestra en el paso Detalle cuando la
-  subcategoría lo tiene asociado).
+  categoría elegida es "Proyecto").
 
-  Variables:
-    requester        -> nombre del solicitante (automático, solo lectura)
-    {{{areaOptions}}}      -> <option> de áreas solicitantes
-    {{{userOptions}}}      -> <option> de usuarios (responsable y líder)
-    {{{areaChips}}}        -> chips (chip.html) de áreas involucradas
-    {{{systemChips}}}      -> chips (chip.html) de sistemas involucrados
+  Variables (no escribir los marcadores con llaves en este comentario: se
+  reemplazarían aquí también y romperían el HTML):
+    requester    -> nombre del solicitante (automático, solo lectura)
+    areaOptions  -> HTML: <option> de áreas solicitantes
+    userOptions  -> HTML: <option> de usuarios (responsable y líder)
+    areaChips    -> HTML: chips (chip.html) de áreas involucradas
+    systemChips  -> HTML: chips (chip.html) de sistemas involucrados
 
   Cada campo lleva data-field="clave" para recoger las respuestas.
-  Los grupos de chips con data-multiple="true" permiten varias selecciones.
+  Los grupos de chips con data-multiple="true" permiten varias selecciones y
+  los que tienen data-required="true" son obligatorios.
+  Lo controla js/forms/project-form.js.
 -->
 <div class="tw-project-form" data-form="proyecto">
 
@@ -98,3 +101,146 @@
 
         <div class="tw-field">
             <label class="tw-label" for="pfDeliverables">Entregables</label>
+            <textarea id="pfDeliverables" class="tw-textarea" data-field="entregables" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfAcceptance">Criterios de aceptación</label>
+            <input id="pfAcceptance" class="tw-input" type="text" data-field="criterios_aceptacion" maxlength="500" required>
+        </div>
+    </div>
+
+    <!-- ============ INVOLUCRADOS ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Involucrados</p>
+
+        <div class="tw-field">
+            <span class="tw-label">Áreas involucradas</span>
+            <div class="tw-chips" data-field="areas_involucradas" data-multiple="true" data-required="true">
+                {{{areaChips}}}
+            </div>
+        </div>
+
+        <div class="tw-field">
+            <span class="tw-label">Sistemas involucrados</span>
+            <div class="tw-chips" data-field="sistemas_involucrados" data-multiple="true">
+                {{{systemChips}}}
+            </div>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfIntegrations">Integraciones requeridas <span class="tw-optional">(opcional)</span></label>
+            <input id="pfIntegrations" class="tw-input" type="text" data-field="integraciones" maxlength="300">
+        </div>
+    </div>
+
+    <!-- ============ REQUERIMIENTOS ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Requerimientos</p>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <label class="tw-label" for="pfFunctional">Requerimientos funcionales</label>
+                <textarea id="pfFunctional" class="tw-textarea" data-field="req_funcionales" maxlength="4000" required></textarea>
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="pfTechnical">Requerimientos técnicos <span class="tw-optional">(opcional)</span></label>
+                <textarea id="pfTechnical" class="tw-textarea" data-field="req_tecnicos" maxlength="4000"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ PLANEACIÓN ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Planeación</p>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <label class="tw-label" for="pfDate">Fecha objetivo</label>
+                <input id="pfDate" class="tw-input" type="date" data-field="fecha_objetivo" required>
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="pfBudget">Presupuesto estimado <span class="tw-optional">(opcional)</span></label>
+                <input id="pfBudget" class="tw-input" type="text" inputmode="numeric" data-field="presupuesto" placeholder="$ 0" maxlength="20">
+            </div>
+        </div>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <span class="tw-label">¿Requiere proveedor?</span>
+                <div class="tw-chips" data-field="requiere_proveedor" data-required="true">
+                    <button type="button" class="tw-chip" data-value="si" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Sí
+                    </button>
+                    <button type="button" class="tw-chip" data-value="no" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        No
+                    </button>
+                </div>
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="pfStatus">Estado del proyecto</label>
+                <select id="pfStatus" class="tw-input" data-field="estado_proyecto" required>
+                    <option value="propuesto" selected>Propuesto</option>
+                    <option value="aprobado">Aprobado</option>
+                    <option value="en_ejecucion">En ejecución</option>
+                    <option value="cerrado">Cerrado</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="tw-field">
+            <span class="tw-label">Prioridad estratégica</span>
+            <div class="tw-priority" data-field="prioridad_estrategica" data-required="true">
+                <button type="button" class="tw-priority-card" data-value="alta" aria-pressed="false" style="--accent:#d64545">
+                    <span class="tw-priority-title">Alta</span>
+                    <span class="tw-priority-desc">Alineado con objetivos críticos del negocio.</span>
+                </button>
+                <button type="button" class="tw-priority-card" data-value="media" aria-pressed="false" style="--accent:#e8a200">
+                    <span class="tw-priority-title">Media</span>
+                    <span class="tw-priority-desc">Aporta valor, puede planearse a mediano plazo.</span>
+                </button>
+                <button type="button" class="tw-priority-card" data-value="baja" aria-pressed="false" style="--accent:#1a9e55">
+                    <span class="tw-priority-title">Baja</span>
+                    <span class="tw-priority-desc">Mejora deseable sin urgencia.</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ RIESGOS ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Riesgos</p>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <label class="tw-label" for="pfRisks">Riesgos identificados <span class="tw-optional">(opcional)</span></label>
+                <input id="pfRisks" class="tw-input" type="text" data-field="riesgos" maxlength="500">
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="pfDependencies">Dependencias <span class="tw-optional">(opcional)</span></label>
+                <input id="pfDependencies" class="tw-input" type="text" data-field="dependencias" maxlength="500">
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ ANEXOS ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Anexos</p>
+
+        <div class="tw-field">
+            <span class="tw-label">Documentos anexos <span class="tw-optional">(cotización, requisitos, etc.)</span></span>
+            <label class="tw-dropzone" data-dropzone="documentos">
+                <input type="file" data-field="documentos" multiple hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                <span data-file-names>Arrastra los archivos o haz clic para seleccionarlos</span>
+            </label>
+        </div>
+    </div>
+
+</div>

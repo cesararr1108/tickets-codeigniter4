@@ -42,6 +42,15 @@ export class ProjectForm extends ExtraForm {
     static template = "project-form";
     static keywords = ["proyecto", "desarrollo"];
 
+    // La prioridad del ticket es la "Prioridad estratégica" del formulario.
+    static ownsPriority = true;
+
+    priority() {
+        return this.root
+            ?.querySelector('[data-field="prioridad_estrategica"] [aria-pressed="true"]')
+            ?.dataset.value ?? null;
+    }
+
     async templateData(context) {
         return {
             requester: context.requester,

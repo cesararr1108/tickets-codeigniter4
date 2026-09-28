@@ -12,7 +12,7 @@
 error_reporting(E_ALL & ~E_DEPRECATED);
 // If you want to suppress more types of errors.
 // error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT & ~E_USER_NOTICE & ~E_USER_DEPRECATED);
-ini_set('display_errors', '1');
+ini_set('display_errors', '0');
 
 /*
  |--------------------------------------------------------------------------
@@ -22,4 +22,6 @@ ini_set('display_errors', '1');
  | the system. It's not widely used currently, and may not survive
  | release of the framework.
  */
-defined('CI_DEBUG') || define('CI_DEBUG', true);
+// En producción debe ser false: con true se muestra la barra de depuración
+// (ícono de CodeIgniter abajo a la derecha) y el detalle de los errores.
+defined('CI_DEBUG') || define('CI_DEBUG', false);

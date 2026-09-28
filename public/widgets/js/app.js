@@ -36,11 +36,10 @@ import { IncidentForm } from "./forms/incident-form.js";
  *   2. el nombre de la categoría.
  */
 const EXTRA_FORMS = [ProjectForm, RequirementForm, IncidentForm];
-const TOTAL_STEPS = 5;
+const TOTAL_STEPS = 4;
 
-// Paso "Datos de la solicitud": solo se muestra si la categoría o
-// subcategoría tiene formulario adicional (Proyecto, Requerimiento...).
-const FORM_STEP = 3;
+// Paso "Detalle": datos generales + formulario del tipo de solicitud.
+const DETAIL_STEP = 3;
 const SEARCH_THRESHOLD = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -105,8 +104,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         file: $("ticketFile"),
         fileName: $("ticketFileName"),
         extraForm: $("extraForm"),
-        extraFormStep: $("extraFormStep"),
-        extraFormTitle: $("extraFormTitle"),
+        detailTitle: $("detailTitle"),
+        priorityField: $("priorityField"),
+        fileField: $("fileField"),
         review: $("reviewBox"),
 
         back: $("stepBack"),
@@ -531,7 +531,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         state.extraForm = null;
 
         if (!FormClass) {
-            renderStepper();
+            applyFormLayout();
             return;
         }
 
@@ -541,8 +541,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         form.category = category;
         form.subcategory = subcategory;
 
-        el.extraFormTitle.textContent = FormClass.title;
-        renderStepper();
+        applyFormLayout();
 
         form.mount(formContext()).catch(error => {
             console.error("[Tickets Widget] Error cargando el formulario adicional:", error);
@@ -550,9 +549,38 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             if (state.extraForm === form) {
                 state.extraForm = null;
                 form.unmount();
-                renderStepper();
+                applyFormLayout();
             }
         });
+    }
+
+    /*
+     * Ajusta el paso Detalle al formulario activo:
+     *  - título con el tipo de solicitud;
+     *  - sin "Prioridad" si el formulario la trae (Proyecto: prioridad estratégica);
+     *  - sin "Archivo adjunto" general si el formulario tiene su zona de archivos.
+     */
+    function applyFormLayout() {
+
+        const FormClass = state.extraForm?.constructor ?? null;
+
+        el.detailTitle.textContent = FormClass?.title ?? "Detalle de la solicitud";
+        el.priorityField.hidden = Boolean(FormClass?.ownsPriority);
+        el.fileField.hidden = Boolean(FormClass);
+
+        if (FormClass) {
+            el.file.value = "";
+            setFile(null);
+        }
+    }
+
+    /*
+     * Prioridad del ticket: la del formulario si la define, o la elegida.
+     */
+    function ticketPriority() {
+        return state.extraForm?.constructor.ownsPriority
+            ? state.extraForm.priority()
+            : state.priority;
     }
 
     async function loadSubcategories() {
@@ -663,8 +691,8 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 subcategory: state.subcategory?.name ?? "Sin subcategoría",
                 email: el.email.value.trim(),
                 subject: el.subject.value.trim(),
-                priority: PRIORITY_LABELS[state.priority],
-                priorityClass: state.priority,
+                priority: PRIORITY_LABELS[ticketPriority()],
+                priorityClass: ticketPriority(),
                 description: el.description.value.trim(),
                 file: state.file?.name ?? "Sin archivo adjunto"
             })
@@ -690,59 +718,32 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             if (!state.category) return "Selecciona una categoría.";
         }
 
-        if (step === FORM_STEP && state.extraForm) {
-            const extraError = state.extraForm.validate();
-            if (extraError) return extraError;
-        }
-
-        if (step === 4) {
+        if (step === DETAIL_STEP) {
             if (!EMAIL_RE.test(el.email.value.trim())) return "Ingresa un correo válido.";
             if (!el.subject.value.trim()) return "Ingresa el asunto.";
-            if (!state.priority) return "Selecciona la prioridad.";
+            if (!state.extraForm?.constructor.ownsPriority && !state.priority) return "Selecciona la prioridad.";
             if (!el.description.value.trim()) return "Ingresa una descripción.";
+
+            const extraError = state.extraForm?.validate();
+            if (extraError) return extraError;
         }
 
         return null;
     }
 
     /*
-     * Paso siguiente/anterior, saltando "Datos de la solicitud" si la
-     * categoría no tiene formulario.
-     */
-    function stepAfter(step) {
-        return step + 1 === FORM_STEP && !state.extraForm ? step + 2 : step + 1;
-    }
-
-    function stepBefore(step) {
-        return step - 1 === FORM_STEP && !state.extraForm ? step - 2 : step - 1;
-    }
-
-    /*
-     * Marca el paso actual/completados y numera solo los pasos visibles.
+     * Marca el paso actual y los completados.
      */
     function renderStepper() {
-
-        el.extraFormStep.hidden = !state.extraForm;
-
-        let number = 0;
-
         el.stepper.querySelectorAll(".tw-stepper-item").forEach(item => {
             const itemStep = Number(item.dataset.step);
 
             item.classList.toggle("tw-current", itemStep === state.step);
             item.classList.toggle("tw-done", itemStep < state.step);
-
-            if (!item.hidden) {
-                item.querySelector(".tw-stepper-num").textContent = ++number;
-            }
         });
     }
 
     function goTo(step) {
-
-        if (step === FORM_STEP && !state.extraForm) {
-            step = step > state.step ? stepAfter(FORM_STEP - 1) : stepBefore(FORM_STEP + 1);
-        }
 
         state.step = step;
 
@@ -764,7 +765,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         // Si se volvió a cambiar la sucursal o el correo, se actualizan
         // los campos automáticos del formulario adicional.
-        if (step === FORM_STEP && state.extraForm) {
+        if (step === DETAIL_STEP && state.extraForm) {
             const context = formContext();
             state.extraForm.setField("sede", context.sede);
             state.extraForm.setField("solicitante", context.requester);
@@ -789,7 +790,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             return;
         }
 
-        goTo(stepAfter(state.step));
+        goTo(state.step + 1);
     }
 
     function resetForm() {
@@ -810,6 +811,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         // Quita el formulario adicional (ej. Proyecto).
         state.extraForm?.unmount();
         state.extraForm = null;
+        applyFormLayout();
 
         markSelected(el.companyGrid, null);
         markSelected(el.categoryGrid, null);
@@ -875,7 +877,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             IdCategory: state.category.id,
             RequesterEmail: email,
             Subject: el.subject.value.trim(),
-            Priority: state.priority,
+            Priority: ticketPriority(),
             Status: "abierto",
             Description: el.description.value.trim(),
             SenderName: perfil.name || email
@@ -1333,7 +1335,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         }
     });
 
-    el.back.addEventListener("click", () => goTo(Math.max(1, stepBefore(state.step))));
+    el.back.addEventListener("click", () => goTo(Math.max(1, state.step - 1)));
     el.next.addEventListener("click", next);
 
     el.cancel.addEventListener("click", () => {

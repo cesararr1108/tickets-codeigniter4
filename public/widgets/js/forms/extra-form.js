@@ -100,6 +100,14 @@ export class ExtraForm {
     static template = "";
     static keywords = [];
 
+    // true si el formulario define la prioridad del ticket (y se oculta
+    // la de "Detalle"); en ese caso priority() la devuelve.
+    static ownsPriority = false;
+
+    priority() {
+        return null;
+    }
+
     /*
      * ¿Este formulario corresponde al texto (nombre de categoría o de
      * formulario)?

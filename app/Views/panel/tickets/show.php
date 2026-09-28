@@ -17,6 +17,12 @@ foreach ($formAnswers as $a) {
     }
 }
 $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset($areaDefs[$a['FieldKey']])));
+
+// Adjuntos por nombre, para enlazar "Documentos anexos" del formulario.
+$attachmentsByName = [];
+foreach ($attachments as $f) {
+    $attachmentsByName[$f['FileName']] ??= $f;
+}
 ?>
 <a class="back-link" href="<?= site_url('panel/tickets?status=pendientes') ?>"><?= icon('arrow-left') ?> Tickets</a>
 
@@ -91,7 +97,19 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
                     <?php foreach ($formAnswers as $a): $value = trim((string) $a['Value']); $long = mb_strlen($value) > 70 || str_contains($value, "\n"); ?>
                         <div class="<?= $long ? 'answer-wide' : '' ?>">
                             <dt><?= esc($a['Label']) ?></dt>
-                            <dd class="<?= $value === '' ? 'muted' : '' ?>"><?= $value === '' ? '—' : nl2br(esc($value)) ?></dd>
+                            <?php if ($a['FieldKey'] === 'documentos' && $value !== ''): ?>
+                                <dd class="answer-files">
+                                    <?php foreach (array_map('trim', explode(',', $value)) as $name): $file = $attachmentsByName[$name] ?? null; ?>
+                                        <?php if ($file !== null): ?>
+                                            <a href="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/adjuntos/' . $file['AttachmentId']) ?>" target="_blank" rel="noopener"><?= icon('paperclip') ?> <?= esc($name) ?></a>
+                                        <?php else: ?>
+                                            <span><?= esc($name) ?></span>
+                                        <?php endif ?>
+                                    <?php endforeach ?>
+                                </dd>
+                            <?php else: ?>
+                                <dd class="<?= $value === '' ? 'muted' : '' ?>"><?= $value === '' ? '—' : nl2br(esc($value)) ?></dd>
+                            <?php endif ?>
                         </div>
                     <?php endforeach ?>
                 </dl>
@@ -276,6 +294,11 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
             </form>
         <?php endif ?>
 
+    </aside>
+</div>
+
+<!-- Información del ticket a todo el ancho (debajo, para no alargar la columna derecha) -->
+<div class="ticket-bottom">
         <div class="card">
             <h2>Detalle</h2>
             <dl class="details">
@@ -316,6 +339,5 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
                 </ul>
             </div>
         <?php endif ?>
-    </aside>
 </div>
 <?= $this->endSection() ?>

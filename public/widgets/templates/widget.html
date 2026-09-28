@@ -64,16 +64,12 @@
                         <span class="tw-stepper-num">2</span>
                         <span class="tw-stepper-label">Categoría</span>
                     </li>
-                    <li class="tw-stepper-item" data-step="3" id="extraFormStep" hidden>
+                    <li class="tw-stepper-item" data-step="3">
                         <span class="tw-stepper-num">3</span>
-                        <span class="tw-stepper-label">Datos de la solicitud</span>
+                        <span class="tw-stepper-label">Detalle</span>
                     </li>
                     <li class="tw-stepper-item" data-step="4">
                         <span class="tw-stepper-num">4</span>
-                        <span class="tw-stepper-label">Detalle</span>
-                    </li>
-                    <li class="tw-stepper-item" data-step="5">
-                        <span class="tw-stepper-num">5</span>
                         <span class="tw-stepper-label">Revisión y envío</span>
                     </li>
                 </ol>
@@ -121,22 +117,18 @@
                         </div>
                     </section>
 
-                    <!-- PASO 3: DATOS DE LA SOLICITUD
-                         Solo aparece si la categoría/subcategoría tiene formulario
-                         (Proyecto, Requerimiento, Incidente). -->
+                    <!-- PASO 3: DETALLE
+                         Datos generales del ticket + (si la categoría lo tiene) el
+                         formulario del tipo de solicitud: Proyecto, Requerimiento,
+                         Incidente... todo en una sola pantalla. -->
                     <section class="tw-step" data-step="3" hidden>
                         <div class="tw-section-head">
                             <div>
-                                <h3 class="tw-section-title" id="extraFormTitle">Datos de la solicitud</h3>
-                                <p class="tw-section-hint">Completa la información de este tipo de solicitud.</p>
+                                <h3 class="tw-section-title" id="detailTitle">Detalle de la solicitud</h3>
+                                <p class="tw-section-hint">Cuéntanos qué necesitas.</p>
                             </div>
                         </div>
 
-                        <div id="extraForm" hidden></div>
-                    </section>
-
-                    <!-- PASO 4: DETALLE -->
-                    <section class="tw-step" data-step="4" hidden>
                         <div class="tw-form-grid">
                             <div class="tw-field">
                                 <label class="tw-label" for="ticketEmail">Correo del solicitante</label>
@@ -149,7 +141,7 @@
                             </div>
                         </div>
 
-                        <div class="tw-field">
+                        <div class="tw-field" id="priorityField">
                             <span class="tw-label">Prioridad</span>
                             <div id="priorityList" class="tw-priority">
                                 <button type="button" class="tw-priority-card" data-value="alta" aria-pressed="false" style="--accent:#d64545">
@@ -173,7 +165,11 @@
                             <span class="tw-counter" id="descriptionCounter">0 / 4000</span>
                         </div>
 
-                        <div class="tw-field">
+                        <!-- Campos del tipo de solicitud (se ocultan si la categoría no tiene formulario) -->
+                        <div id="extraForm" class="tw-subsection" hidden></div>
+
+                        <!-- Adjunto general: se oculta cuando el formulario trae su propia zona de archivos -->
+                        <div class="tw-field" id="fileField">
                             <span class="tw-label">Archivo adjunto <span class="tw-optional">(opcional)</span></span>
                             <label class="tw-dropzone" id="ticketDropzone">
                                 <input id="ticketFile" type="file" hidden>
@@ -183,8 +179,8 @@
                         </div>
                     </section>
 
-                    <!-- PASO 5: REVISIÓN -->
-                    <section class="tw-step" data-step="5" hidden>
+                    <!-- PASO 4: REVISIÓN -->
+                    <section class="tw-step" data-step="4" hidden>
                         <div class="tw-section-head">
                             <div>
                                 <h3 class="tw-section-title">Revisa tu solicitud</h3>

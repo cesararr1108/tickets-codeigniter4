@@ -27,10 +27,16 @@ class Auth extends BasePanelController
         $password = (string) $this->request->getPost('password');
 
         $user = model(UserModel::class)
-            ->select('Users.IdUser, Users.FullName, Users.Email, Users.PasswordHash, Users.IsActive, Users.RoleId, Users.CodCompanies')
+            ->select('
+             Users.IdUser,
+             Users.FullName, 
+             Users.Email, 
+             Users.PasswordHash, 
+             Users.IsActive,
+             Users.RoleId, Users.CodCompanies')
             ->where('Email', $email)
             ->first();
-
+            
         if ($user === null || ! password_verify($password, (string) $user['PasswordHash'])) {
             return redirect()->back()->withInput()->with('error', 'Correo o contraseña incorrectos.');
         }

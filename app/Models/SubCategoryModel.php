@@ -16,6 +16,7 @@ class SubCategoryModel extends Model
     protected $allowedFields = [
         'SubCategory',
         'IdCategory',
+        'IdForm'
     ];
 
     protected $useTimestamps = false;

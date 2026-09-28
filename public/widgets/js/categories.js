@@ -10,7 +10,8 @@ export async function obtenerCategorias(apiUrl) {
 
     return toList(result).map(category => ({
         id: category.IdCategory,
-        name: category.Category ?? "Categoría"
+        name: category.Category ?? "Sin nombre",
+        description :  category.Description 
     }));
 }
 

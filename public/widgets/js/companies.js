@@ -10,6 +10,7 @@ export async function obtenerCompanias(apiUrl) {
 
     return toList(result).map(company => ({
         id: company.CodCompanies,
-        name: company.Companies ?? "Compañía"
+        name: company.Companies ?? "Compañía",
+        icon : company.Icon
     }));
 }

@@ -1,0 +1,100 @@
+<!--
+  Formulario "Solicitud de proyecto" (se muestra en el paso Detalle cuando la
+  subcategoría lo tiene asociado).
+
+  Variables:
+    requester        -> nombre del solicitante (automático, solo lectura)
+    {{{areaOptions}}}      -> <option> de áreas solicitantes
+    {{{userOptions}}}      -> <option> de usuarios (responsable y líder)
+    {{{areaChips}}}        -> chips (chip.html) de áreas involucradas
+    {{{systemChips}}}      -> chips (chip.html) de sistemas involucrados
+
+  Cada campo lleva data-field="clave" para recoger las respuestas.
+  Los grupos de chips con data-multiple="true" permiten varias selecciones.
+-->
+<div class="tw-project-form" data-form="proyecto">
+
+    <!-- ============ INFORMACIÓN GENERAL ============ -->
+    <p class="tw-section-label">Información general</p>
+
+    <div class="tw-form-grid">
+        <div class="tw-field">
+            <label class="tw-label" for="pfRequester">Solicitante</label>
+            <input id="pfRequester" class="tw-input" type="text" data-field="solicitante" value="{{requester}}" readonly>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfArea">Área solicitante</label>
+            <select id="pfArea" class="tw-input" data-field="area_solicitante" required>
+                <option value="">Selecciona un área</option>
+                {{{areaOptions}}}
+            </select>
+        </div>
+    </div>
+
+    <div class="tw-field">
+        <label class="tw-label" for="pfName">Nombre del proyecto</label>
+        <input id="pfName" class="tw-input" type="text" data-field="nombre_proyecto" maxlength="150" required>
+    </div>
+
+    <div class="tw-form-grid">
+        <div class="tw-field">
+            <label class="tw-label" for="pfOwner">Responsable solicitante</label>
+            <select id="pfOwner" class="tw-input" data-field="responsable_solicitante" required>
+                <option value="">Selecciona un usuario</option>
+                {{{userOptions}}}
+            </select>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfLeader">Líder del proyecto</label>
+            <select id="pfLeader" class="tw-input" data-field="lider_proyecto" required>
+                <option value="">Selecciona un usuario</option>
+                {{{userOptions}}}
+            </select>
+        </div>
+    </div>
+
+    <!-- ============ DEFINICIÓN ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Definición</p>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfNeed">Necesidad / problema</label>
+            <textarea id="pfNeed" class="tw-textarea" data-field="necesidad" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfGoal">Objetivo</label>
+            <textarea id="pfGoal" class="tw-textarea" data-field="objetivo" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfReason">Justificación</label>
+            <textarea id="pfReason" class="tw-textarea" data-field="justificacion" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfBenefits">Beneficios esperados</label>
+            <textarea id="pfBenefits" class="tw-textarea" data-field="beneficios" maxlength="2000" required></textarea>
+        </div>
+    </div>
+
+    <!-- ============ ALCANCE ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Alcance</p>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <label class="tw-label" for="pfScope">Alcance</label>
+                <textarea id="pfScope" class="tw-textarea" data-field="alcance" maxlength="2000" required></textarea>
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="pfOutOfScope">Fuera de alcance <span class="tw-optional">(opcional)</span></label>
+                <textarea id="pfOutOfScope" class="tw-textarea" data-field="fuera_alcance" maxlength="2000"></textarea>
+            </div>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="pfDeliverables">Entregables</label>

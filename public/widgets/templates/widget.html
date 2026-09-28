@@ -22,8 +22,12 @@
                 </div>
 
                 <button type="button" id="ticketClose" class="tw-close" aria-label="Cerrar">×</button>
-            </header>
 
+                
+            </header>
+            <div class="tw-row">
+                 <div id="ticketAlert" class="tw-alert" role="alert"></div>
+            </div>
             <nav class="tw-tabs">
                 <button type="button" class="tw-tab tw-active" data-tab="new">Nuevo ticket</button>
                 <button type="button" class="tw-tab" data-tab="mine">Mis tickets</button>
@@ -53,7 +57,7 @@
 
                 <div class="tw-content">
 
-                    <div id="ticketAlert" class="tw-alert" role="alert"></div>
+                   
 
                     <!-- PASO 1: COMPAÑÍA Y SUCURSAL -->
                     <section class="tw-step" data-step="1">
@@ -141,6 +145,8 @@
                             </label>
                         </div>
                     </section>
+                    <!-- Formulario adicional según la categoría (ej. Proyecto) -->
+                    <div id="extraForm" class="tw-subsection" hidden></div>
 
                     <!-- PASO 4: REVISIÓN -->
                     <section class="tw-step" data-step="4" hidden>

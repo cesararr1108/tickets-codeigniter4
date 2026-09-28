@@ -88,6 +88,30 @@ class CatalogAdmin
                     ['table' => 'Tickets', 'column' => 'IdCategory', 'label' => 'tickets', 'one' => 'ticket', 'link' => 'panel/tickets?category='],
                 ],
             ],
+            'form'=>
+            [
+                'title'=>'Formularios',
+                'singular' => 'formularios',
+                'icon'     => 'tag',
+                'table'=>'TicketForms',
+                'pk'=>'IdForm',
+                'autoPk'   => true,
+                'name'=>'NameForm',
+                'order'    => 'NameForm',
+                'model'=>TicketFormModel::class,
+                'fields'   => [
+                         'NameForm'    => ['label' => 'Nombre', 'type' => 'text', 'max' => 100, 'required' => true],
+                 ],
+                 'usage'=>[
+                    [
+                     'table'  => 'TicketForms', 
+                     'column' => 'IdForm',
+                     'label'  => 'formularios', 
+                     'one'    => 'formularios', 
+                     'link'   => 'panel/admin/formularios?form='],
+                   
+                 ]
+            ],
 
             'subcategories' => [
                 'title'    => 'Subcategorías',
@@ -100,10 +124,15 @@ class CatalogAdmin
                 'name'     => 'SubCategory',
                 'order'    => 'SubCategory',
                 'search'   => ['SubCategory'],
-                'parent'   => ['field' => 'IdCategory', 'param' => 'category', 'catalog' => 'categories', 'label' => 'Categoría'],
+                'parent'   => [
+                'field' => 'IdCategory', 
+                'param' => 'category', 
+                'catalog' => 'categories',
+                'label' => 'Categoría'],
                 'fields'   => [
                     'SubCategory' => ['label' => 'Nombre', 'type' => 'text', 'max' => 100, 'required' => true],
                     'IdCategory'  => ['label' => 'Categoría', 'type' => 'select', 'options' => 'categories', 'required' => true],
+                    'IdForm'=>['label'=>'Formulario','type'=>'select','options'=>'form','required'=>false]
                 ],
                 'usage' => [
                     ['table' => 'Tickets', 'column' => 'IdSubCategory', 'label' => 'tickets', 'one' => 'ticket'],

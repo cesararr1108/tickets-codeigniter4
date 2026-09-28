@@ -16,6 +16,7 @@ export const PALETTE = [
 
 export function colorFor(index) {
     return PALETTE[index % PALETTE.length];
+  // return 'transparent'
 }
 
 export function initials(name) {
@@ -52,12 +53,12 @@ const ICONS = {
 const KEYWORDS = [
     [/hardware|equipo|computador|pc|laptop|monitor/, "hardware"],
     [/software|aplicaci|programa|sistema/, "software"],
-    [/red|internet|wifi|conexi|vpn/, "network"],
-    [/correo|mail|outlook/, "mail"],
-    [/impres|escan/, "printer"],
-    [/acceso|usuario|contrase|clave|permiso/, "access"],
+    [/red|internet|wifi|conexi|vpn/, "internet"],
+    [/correo|mail|outlook/, "correo"],
+    [/impres|escan/, "impresora"],
+    [/acceso|usuario|contrase|clave|permiso/, "acceso"],
     [/sap|erp|base de datos|reporte/, "database"],
-    [/telefon|celular|movil/, "phone"],
+    [/telefon|celular|movil/, "telefono"],
     [/incidente|falla|error|soporte/, "alert"],
     [/mantenimiento|ajuste|instalaci|configur/, "tools"]
 ];

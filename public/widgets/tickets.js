@@ -14,8 +14,9 @@
  */
 
 (() => {
+  
     const currentScript = document.currentScript;
-
+  
     const containerId =
         currentScript?.dataset.container || "tickets-widget";
 
@@ -28,6 +29,18 @@
 
     // Carpeta donde vive tickets.js (ej: https://host/widgets/).
     const baseUrl = new URL("./", currentScript?.src || location.href);
+
+  
+
+    const perfil = {
+        company: currentScript?.dataset.company || "",
+        branch:  currentScript?.dataset.branch  || "",
+        email:   currentScript?.dataset.email   || "",
+        name:    currentScript?.dataset.name    || "",
+        phone:   currentScript?.dataset.phone   || "",
+        //lock:    currentScript?.dataset.lock === "true"
+    };
+
 
     const container = document.getElementById(containerId);
 
@@ -52,9 +65,10 @@
         baseUrl
     );
 
+
     import(appUrl.href)
-        .then(module => module.mountWidget(container, { apiUrl, version }))
-        .then(widget => {
+        .then(module => module.mountWidget(container, { apiUrl, version ,perfil}))
+        .then(widget => { 
             // API pública opcional.
             window.TicketsWidget = { ...widget, api: apiUrl };
         })

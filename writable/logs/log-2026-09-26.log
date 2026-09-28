@@ -1,0 +1,330 @@
+CRITICAL - 2026-09-26 15:37:34 --> ErrorException: Undefined array key "icon"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Views/panel/admin/catalog.php on line 31.
+ 1 APPPATH/Views/panel/admin/catalog.php(31): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/View/View.php(240): include('/var/www/tickets-codeigniter4/app/Views/panel/admin/catalog.php')
+ 3 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 4 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 5 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 6 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 7 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 8 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 9 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+10 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:03:12 --> ErrorException: Undefined array key "icon"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Views/panel/admin/catalog.php on line 31.
+ 1 APPPATH/Views/panel/admin/catalog.php(31): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/View/View.php(240): include('/var/www/tickets-codeigniter4/app/Views/panel/admin/catalog.php')
+ 3 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 4 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 5 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 6 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 7 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 8 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 9 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+10 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:08:24 --> ErrorException: Undefined array key "table"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 142.
+ 1 APPPATH/Libraries/CatalogAdmin.php(142): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:10:14 --> ErrorException: Undefined array key "pk"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 145.
+ 1 APPPATH/Libraries/CatalogAdmin.php(145): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:10:32 --> ErrorException: Undefined array key "name"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 146.
+ 1 APPPATH/Libraries/CatalogAdmin.php(146): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:10:34 --> ErrorException: Undefined array key "name"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 146.
+ 1 APPPATH/Libraries/CatalogAdmin.php(146): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:10:35 --> ErrorException: Undefined array key "name"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 146.
+ 1 APPPATH/Libraries/CatalogAdmin.php(146): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:11:07 --> ErrorException: Undefined array key "order"
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 148.
+ 1 APPPATH/Libraries/CatalogAdmin.php(148): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ERROR - 2026-09-26 16:11:27 --> [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.Formularios' no es válido. SQLSTATE: 42S02, code: 208
+in SYSTEMPATH/Database/BaseConnection.php on line 908.
+ 1 SYSTEMPATH/Database/BaseConnection.php(825): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT "IdForm", "NameForm"
+FROM "TicketsDB"."dbo"."Formularios"
+ORDER BY "NameForm"')
+ 2 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query('SELECT "IdForm", "NameForm"
+FROM "TicketsDB"."dbo"."Formularios"
+ORDER BY "NameForm"', [], false)
+ 3 APPPATH/Libraries/CatalogAdmin.php(150): CodeIgniter\Database\SQLSRV\Builder->get()
+ 4 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options('form')
+ 5 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list('subcategories')
+ 6 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Panel\Admin))
+ 7 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 8 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 9 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+10 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-09-26 16:11:27 --> CodeIgniter\Database\Exceptions\DatabaseException: [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.Formularios' no es válido. SQLSTATE: 42S02, code: 208
+[Method: GET, Route: panel/admin/subcategories]
+in SYSTEMPATH/Database/BaseConnection.php on line 863.
+ 1 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query()
+ 2 APPPATH/Libraries/CatalogAdmin.php(150): CodeIgniter\Database\SQLSRV\Builder->get()
+ 3 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 4 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 5 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 6 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 7 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 9 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:11:27 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.Formularios' no es válido. SQLSTATE: 42S02, code: 208
+in SYSTEMPATH/Database/SQLSRV/Connection.php on line 533.
+ 1 SYSTEMPATH/Database/BaseConnection.php(908): CodeIgniter\Database\SQLSRV\Connection->execute()
+ 2 SYSTEMPATH/Database/BaseConnection.php(825): CodeIgniter\Database\BaseConnection->simpleQuery()
+ 3 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query()
+ 4 APPPATH/Libraries/CatalogAdmin.php(150): CodeIgniter\Database\SQLSRV\Builder->get()
+ 5 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 6 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 7 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 8 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 9 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:14:20 --> ErrorException: Undefined array key "fields"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Controllers/Panel/Admin.php on line 75.
+ 1 APPPATH/Controllers/Panel/Admin.php(75): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:14:40 --> ErrorException: Undefined array key "fields"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Controllers/Panel/Admin.php on line 75.
+ 1 APPPATH/Controllers/Panel/Admin.php(75): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:15:17 --> ErrorException: Undefined array key "usage"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Libraries/CatalogAdmin.php on line 182.
+ 1 APPPATH/Libraries/CatalogAdmin.php(182): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 APPPATH/Controllers/Panel/Admin.php(92): App\Libraries\CatalogAdmin::usageCounts()
+ 3 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 4 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 5 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 6 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 7 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 8 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:16:06 --> TypeError: Cannot access offset of type string on string
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Libraries/CatalogAdmin.php on line 186.
+ 1 APPPATH/Controllers/Panel/Admin.php(92): App\Libraries\CatalogAdmin::usageCounts()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:16:44 --> ErrorException: Undefined array key "autoPk"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Views/panel/admin/catalog.php on line 66.
+ 1 APPPATH/Views/panel/admin/catalog.php(66): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/View/View.php(240): include('/var/www/tickets-codeigniter4/app/Views/panel/admin/catalog.php')
+ 3 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 4 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 5 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 6 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 7 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 8 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 9 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+10 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:16:44 --> ErrorException: Undefined array key "autoPk"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Views/panel/admin/catalog.php on line 66.
+ 1 APPPATH/Views/panel/admin/catalog.php(66): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/View/View.php(240): include('/var/www/tickets-codeigniter4/app/Views/panel/admin/catalog.php')
+ 3 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 4 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 5 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 6 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 7 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 8 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 9 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+10 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+ERROR - 2026-09-26 16:18:11 --> [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.NameForm' no es válido. SQLSTATE: 42S02, code: 208
+in SYSTEMPATH/Database/BaseConnection.php on line 908.
+ 1 SYSTEMPATH/Database/BaseConnection.php(825): CodeIgniter\Database\BaseConnection->simpleQuery('SELECT "IdForm", COUNT("IdForm") AS "total"
+FROM "TicketsDB"."dbo"."NameForm"
+WHERE "IdForm" IN (3,1,2)
+GROUP BY "IdForm"')
+ 2 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query('SELECT "IdForm", COUNT("IdForm") AS "total"
+FROM "TicketsDB"."dbo"."NameForm"
+WHERE "IdForm" IN :IdForm:
+GROUP BY "IdForm"', [...], false)
+ 3 APPPATH/Libraries/CatalogAdmin.php(192): CodeIgniter\Database\SQLSRV\Builder->get()
+ 4 APPPATH/Controllers/Panel/Admin.php(92): App\Libraries\CatalogAdmin::usageCounts([...], [...])
+ 5 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list('form')
+ 6 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController(Object(App\Controllers\Panel\Admin))
+ 7 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest(null, Object(Config\Cache), false)
+ 8 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 9 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter(Object(CodeIgniter\CodeIgniter))
+10 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb(Object(Config\Paths))
+CRITICAL - 2026-09-26 16:18:11 --> CodeIgniter\Database\Exceptions\DatabaseException: [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.NameForm' no es válido. SQLSTATE: 42S02, code: 208
+[Method: GET, Route: panel/admin/form]
+in SYSTEMPATH/Database/BaseConnection.php on line 863.
+ 1 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query()
+ 2 APPPATH/Libraries/CatalogAdmin.php(192): CodeIgniter\Database\SQLSRV\Builder->get()
+ 3 APPPATH/Controllers/Panel/Admin.php(92): App\Libraries\CatalogAdmin::usageCounts()
+ 4 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 5 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 6 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 7 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 8 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 9 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:18:11 --> [Caused by] CodeIgniter\Database\Exceptions\DatabaseException: [Microsoft][ODBC Driver 18 for SQL Server][SQL Server]El nombre de objeto 'TicketsDB.dbo.NameForm' no es válido. SQLSTATE: 42S02, code: 208
+in SYSTEMPATH/Database/SQLSRV/Connection.php on line 533.
+ 1 SYSTEMPATH/Database/BaseConnection.php(908): CodeIgniter\Database\SQLSRV\Connection->execute()
+ 2 SYSTEMPATH/Database/BaseConnection.php(825): CodeIgniter\Database\BaseConnection->simpleQuery()
+ 3 SYSTEMPATH/Database/SQLSRV/Builder.php(658): CodeIgniter\Database\BaseConnection->query()
+ 4 APPPATH/Libraries/CatalogAdmin.php(192): CodeIgniter\Database\SQLSRV\Builder->get()
+ 5 APPPATH/Controllers/Panel/Admin.php(92): App\Libraries\CatalogAdmin::usageCounts()
+ 6 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 7 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 8 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 9 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:19:33 --> ErrorException: Undefined array key "autoPk"
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Views/panel/admin/catalog.php on line 66.
+ 1 APPPATH/Views/panel/admin/catalog.php(66): CodeIgniter\Debug\Exceptions->errorHandler()
+ 2 SYSTEMPATH/View/View.php(240): include('/var/www/tickets-codeigniter4/app/Views/panel/admin/catalog.php')
+ 3 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 4 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 5 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 6 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 7 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 8 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 9 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+10 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+11 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+12 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:19:57 --> TypeError: Cannot access offset of type string on string
+[Method: GET, Route: panel/admin/form]
+in APPPATH/Views/panel/admin/catalog.php on line 148.
+ 1 SYSTEMPATH/View/View.php(240): include()
+ 2 SYSTEMPATH/View/View.php(243): CodeIgniter\View\View->CodeIgniter\View\{closure}()
+ 3 SYSTEMPATH/Common.php(1268): CodeIgniter\View\View->render()
+ 4 APPPATH/Controllers/Panel/BasePanelController.php(60): view()
+ 5 APPPATH/Controllers/Panel/Admin.php(81): App\Controllers\Panel\BasePanelController->render()
+ 6 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 7 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 8 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 9 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+10 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+11 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:51:43 --> TypeError: App\Libraries\CatalogAdmin::options(): Argument #1 ($key) must be of type string, array given, called in /var/www/tickets-codeigniter4/app/Controllers/Panel/Admin.php on line 77
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 156.
+ 1 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:54:50 --> TypeError: App\Libraries\CatalogAdmin::options(): Argument #1 ($key) must be of type string, array given, called in /var/www/tickets-codeigniter4/app/Controllers/Panel/Admin.php on line 77
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 156.
+ 1 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:54:53 --> TypeError: App\Libraries\CatalogAdmin::options(): Argument #1 ($key) must be of type string, array given, called in /var/www/tickets-codeigniter4/app/Controllers/Panel/Admin.php on line 77
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 156.
+ 1 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:56:24 --> TypeError: App\Libraries\CatalogAdmin::options(): Argument #1 ($key) must be of type string, array given, called in /var/www/tickets-codeigniter4/app/Controllers/Panel/Admin.php on line 77
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 156.
+ 1 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()
+CRITICAL - 2026-09-26 16:56:27 --> TypeError: App\Libraries\CatalogAdmin::options(): Argument #1 ($key) must be of type string, array given, called in /var/www/tickets-codeigniter4/app/Controllers/Panel/Admin.php on line 77
+[Method: GET, Route: panel/admin/subcategories]
+in APPPATH/Libraries/CatalogAdmin.php on line 156.
+ 1 APPPATH/Controllers/Panel/Admin.php(77): App\Libraries\CatalogAdmin::options()
+ 2 SYSTEMPATH/CodeIgniter.php(974): App\Controllers\Panel\Admin->list()
+ 3 SYSTEMPATH/CodeIgniter.php(520): CodeIgniter\CodeIgniter->runController()
+ 4 SYSTEMPATH/CodeIgniter.php(363): CodeIgniter\CodeIgniter->handleRequest()
+ 5 SYSTEMPATH/Boot.php(417): CodeIgniter\CodeIgniter->run()
+ 6 SYSTEMPATH/Boot.php(68): CodeIgniter\Boot::runCodeIgniter()
+ 7 FCPATH/index.php(59): CodeIgniter\Boot::bootWeb()

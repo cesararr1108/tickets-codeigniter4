@@ -23,7 +23,11 @@ import {
     obtenerTodasSubcategorias
 } from "./categories.js";
 import { agregarMensaje, crearTicket, obtenerTickets } from "./tickets.js";
-
+import { ProjectForm } from "./forms/project-form.js";
+const EXTRA_FORMS = [ProjectForm];
+console.log({
+    EXTRA_FORMS
+})
 const TOTAL_STEPS = 4;
 const SEARCH_THRESHOLD = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,14 +38,15 @@ const PRIORITY_LABELS = {
     baja: "Baja"
 };
 
-export async function mountWidget(container, { apiUrl, version = "" }) {
-
+export async function mountWidget(container, { apiUrl, version = "",perfil }) {
+  //  console.log( { apiUrl, version = "",CompanieUrl,BarancheUrl })
     setAssetVersion(version);
 
     const [css, html] = await Promise.all([
         loadText("css/widget.css"),
         loadTemplate("widget")
     ]);
+
 
     const shadow = container.attachShadow({ mode: "open" });
 
@@ -78,7 +83,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         dropzone: $("ticketDropzone"),
         file: $("ticketFile"),
         fileName: $("ticketFileName"),
-
+        extraForm: $("extraForm"),
         review: $("reviewBox"),
 
         back: $("stepBack"),
@@ -107,7 +112,8 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         category: null,
         subcategory: null,
         priority: null,
-        file: null
+        file: null,
+         extraForm: null
     };
 
     // Evita pintar respuestas viejas si el usuario cambia rápido de opción.
@@ -161,7 +167,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
     // PASO 1: COMPAÑÍAS
     // ==========================================
 
-    async function loadCompanies() {
+    async function loadCompanies( ) {
 
         if (state.companies) {
             return;
@@ -173,6 +179,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
         try {
             companies = await obtenerCompanias(apiUrl);
+
         } catch (error) {
             console.error("[Tickets Widget] Error cargando compañías:", error);
             await showState(el.companyGrid, "error", "No fue posible cargar las compañías.");
@@ -193,7 +200,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
                 description: "",
                 meta: "Código " + company.id,
                 color: colorFor(index),
-                icon: escapeHtml(initials(company.name)),
+                icon: `<img src="https://200.122.206.204:8081/widgets/img/companies/${company.icon}" alt="">` /*escapeHtml(initials(company.name))*/,
                 search: `${company.name} ${company.id}`.toLowerCase()
             }))
         );
@@ -202,6 +209,9 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
         if (companies.length === 1) {
             selectCompany(companies[0].id);
+        }else{
+             selectCompany(perfil.company,perfil.branch);//
+             //precargo las ofcicinas branch
         }
     }
 
@@ -214,7 +224,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         });
     }
 
-    async function selectCompany(value) {
+    async function selectCompany(value,branche ='') {
 
         const company = findById(state.companies ?? [], value);
 
@@ -231,6 +241,10 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         markSelected(el.companyGrid, company.id);
 
         await loadBranches();
+
+        if(branche!=''){
+            selectBranch(branche)
+        }
     }
 
     async function loadBranches() {
@@ -344,13 +358,15 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
         el.categoryGrid.replaceChildren(
             await renderList("option-card", categories, (category, index) => {
-
+                    console.log({
+                        categories
+                    })
                 const subs = state.subcategoriesByCategory?.get(String(category.id));
 
                 return {
                     value: category.id,
                     title: category.name,
-                    description: subs ? summarize(subs) : "",
+                    description: subs ? summarize(subs) : category.description,
                     meta: subs ? countLabel(subs.length) : "",
                     color: colorFor(index),
                     icon: iconFor(category.name),
@@ -396,7 +412,48 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
         markSelected(el.categoryGrid, category.id);
 
+        setExtraForm(category);
+
         await loadSubcategories();
+    }
+
+    /*
+     * Monta (o quita) el formulario adicional de la categoría en el paso 3.
+     */
+    function setExtraForm(category) {
+        console.log({
+            category
+        })
+        const FormClass = EXTRA_FORMS.find(form => form.matches(category)) ?? null;
+        console.log({
+            FormClass
+        })
+        // Misma clase de formulario: se conservan las respuestas.
+        if (FormClass && state.extraForm instanceof FormClass) {
+            return;
+        }
+
+        state.extraForm?.unmount();
+        state.extraForm = null;
+
+        if (!FormClass) {
+            return;
+        }
+
+        const form = new FormClass(el.extraForm, { apiUrl });
+        console.log({
+            form  , apiUrl
+        })
+        state.extraForm = form;
+
+        form.mount({ requester: el.email.value.trim() }).catch(error => {
+            console.error("[Tickets Widget] Error cargando el formulario adicional:", error);
+
+            if (state.extraForm === form) {
+                state.extraForm = null;
+                form.unmount();
+            }
+        });
     }
 
     async function loadSubcategories() {
@@ -510,12 +567,16 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
                 file: state.file?.name ?? "Sin archivo adjunto"
             })
         );
+
+        // Respuestas del formulario adicional (ej. Proyecto).
+        if (state.extraForm) {
+            el.review.firstElementChild?.append(state.extraForm.reviewNode());
+        }
     }
 
     // ==========================================
     // NAVEGACIÓN ENTRE PASOS
     // ==========================================
-
     function validateStep(step) {
 
         if (step === 1) {
@@ -532,6 +593,9 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
             if (!el.subject.value.trim()) return "Ingresa el asunto.";
             if (!state.priority) return "Selecciona la prioridad.";
             if (!el.description.value.trim()) return "Ingresa una descripción.";
+
+            const extraError = state.extraForm?.validate();
+            if (extraError) return extraError;
         }
 
         return null;
@@ -599,6 +663,10 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
             priority: null
         });
 
+        // Quita el formulario adicional (ej. Proyecto).
+        state.extraForm?.unmount();
+        state.extraForm = null;
+
         markSelected(el.companyGrid, null);
         markSelected(el.categoryGrid, null);
         markSelected(el.priorityList, null);
@@ -642,7 +710,15 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         }
 
         const email = el.email.value.trim();
-        const description = el.description.value.trim();
+
+        // Las respuestas del formulario adicional se guardan junto a la descripción.
+        const description = [el.description.value.trim(), state.extraForm?.toText()]
+            .filter(Boolean)
+            .join("\n\n");
+
+        // La API recibe un archivo por ticket: si no hay adjunto principal,
+        // se envía el primer documento del formulario adicional.
+        const file = state.file ?? state.extraForm?.files[0] ?? null;
 
         const data = {
             CodCompanies: state.company.id,
@@ -663,7 +739,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         el.nextLabel.textContent = "Creando...";
 
         try {
-            const result = await crearTicket(apiUrl, data, state.file);
+            const result = await crearTicket(apiUrl, data, file);
 
             const ticketId =
                 result?.IdTicket ?? result?.data?.IdTicket ?? result?.id;
@@ -751,6 +827,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         document.addEventListener("keydown", onKeydown);
 
         loadCompanies();
+
     }
 
     function closeModal() {
@@ -798,6 +875,11 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
     el.companySearch.addEventListener("input", filterCompanies);
     el.description.addEventListener("input", updateCounter);
+
+    // El campo "Solicitante" del formulario adicional sigue al correo.
+    el.email.addEventListener("input", () =>
+        state.extraForm?.setRequester(el.email.value.trim())
+    );
 
     el.file.addEventListener("change", () => setFile(el.file.files[0]));
 

@@ -1,0 +1,12 @@
+# Archivos del widget (js, css, plantillas html).
+#
+# app.js se carga con ?v=..., pero los módulos que importa (./tickets.js,
+# ./forms/*.js...) y las plantillas se piden sin versión. Con "no-cache" el
+# navegador los puede guardar, pero siempre pregunta al servidor si cambiaron
+# (responde 304 si no), así después de un "git pull" no quedan versiones viejas
+# mezcladas con nuevas.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(js|css|html)$">
+        Header set Cache-Control "no-cache"
+    </FilesMatch>
+</IfModule>

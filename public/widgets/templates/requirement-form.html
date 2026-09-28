@@ -4,6 +4,7 @@
 
   Variables (no escribir los marcadores con llaves en este comentario):
     requester, sede         -> datos automáticos del solicitante
+    today                   -> fecha de hoy (AAAA-MM-DD), valor inicial de "Fecha requerida"
     areaOptions             -> HTML: <option> de áreas (preseleccionada la del perfil)
     tipoOptions             -> HTML: <option> de tipos de requerimiento
     impactoOptions          -> HTML: <option> de impacto
@@ -54,31 +55,8 @@
         <p class="tw-section-label">Detalle del requerimiento</p>
 
         <div class="tw-field">
-            <label class="tw-label" for="rqJustificacion">Justificación</label>
-            <textarea id="rqJustificacion" class="tw-textarea" data-field="justificacion" maxlength="2000" required></textarea>
-        </div>
-
-        <div class="tw-form-grid">
-            <div class="tw-field">
-                <label class="tw-label" for="rqFecha">Fecha requerida</label>
-                <input id="rqFecha" class="tw-input" type="date" data-field="fecha_requerida" required>
-            </div>
-
-            <div class="tw-field">
-                <label class="tw-label" for="rqImpacto">Impacto</label>
-                <select id="rqImpacto" class="tw-input" data-field="impacto" required>
-                    <option value="">Selecciona el impacto</option>
-                    {{{impactoOptions}}}
-                </select>
-            </div>
-        </div>
-
-        <div class="tw-field">
-            <label class="tw-label" for="rqAprobador">Aprobador</label>
-            <select id="rqAprobador" class="tw-input" data-field="aprobador" required>
-                <option value="">Selecciona el jefe o responsable que aprueba</option>
-                {{{userOptions}}}
-            </select>
+            <label class="tw-label" for="rqFecha">Fecha requerida</label>
+            <input id="rqFecha" class="tw-input" type="date" data-field="fecha_requerida" value="{{today}}" min="{{today}}" required>
         </div>
     </div>
 
@@ -143,20 +121,6 @@
                     <input id="rqAdgCelular" class="tw-input" type="tel" data-field="beneficiario_celular" maxlength="20" required>
                 </div>
             </div>
-
-            <div class="tw-field">
-                <span class="tw-label">¿El usuario ya está creado en SAP?</span>
-                <div class="tw-chips" data-field="beneficiario_creado_sap" data-required="true">
-                    <button type="button" class="tw-chip" data-value="si" aria-pressed="false">
-                        <span class="tw-chip-dot" aria-hidden="true"></span>
-                        Sí
-                    </button>
-                    <button type="button" class="tw-chip" data-value="no" aria-pressed="false">
-                        <span class="tw-chip-dot" aria-hidden="true"></span>
-                        No
-                    </button>
-                </div>
-            </div>
         </div>
 
         <!-- Creación de usuario SAP -->
@@ -211,10 +175,48 @@
     <details class="tw-more">
         <summary>
             <span>Información adicional</span>
-            <span class="tw-optional">opcional · evidencia y documentos</span>
+            <span class="tw-optional">opcional · justificación, impacto, aprobador, documentos</span>
         </summary>
 
         <div class="tw-more-body">
+            <div class="tw-field">
+                <label class="tw-label" for="rqJustificacion">Justificación <span class="tw-optional">(opcional)</span></label>
+                <textarea id="rqJustificacion" class="tw-textarea" data-field="justificacion" maxlength="2000"></textarea>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqImpacto">Impacto <span class="tw-optional">(opcional)</span></label>
+                    <select id="rqImpacto" class="tw-input" data-field="impacto">
+                        <option value="">Selecciona el impacto</option>
+                        {{{impactoOptions}}}
+                    </select>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAprobador">Aprobador <span class="tw-optional">(opcional)</span></label>
+                    <select id="rqAprobador" class="tw-input" data-field="aprobador">
+                        <option value="">Jefe o responsable que aprueba</option>
+                        {{{userOptions}}}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Solo para "Creación de usuario ADG" -->
+            <div class="tw-field" data-variant="usuario-adg" hidden>
+                <span class="tw-label">¿El usuario ya está creado en SAP? <span class="tw-optional">(opcional)</span></span>
+                <div class="tw-chips" data-field="beneficiario_creado_sap">
+                    <button type="button" class="tw-chip" data-value="si" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Sí
+                    </button>
+                    <button type="button" class="tw-chip" data-value="no" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        No
+                    </button>
+                </div>
+            </div>
+
             <div class="tw-field">
                 <span class="tw-label">Evidencia / documentos <span class="tw-optional">(opcional · formato de autorización, etc.)</span></span>
                 <label class="tw-dropzone" data-dropzone="documentos" tabindex="0">

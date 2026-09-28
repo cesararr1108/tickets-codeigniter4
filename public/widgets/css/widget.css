@@ -70,6 +70,20 @@ svg {
     height: 25px;
 }
 
+/* Arrastrable: sin selección ni scroll táctil mientras se mueve. */
+.tw-fab {
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.tw-fab.tw-fab-dragging {
+    cursor: grabbing;
+    transition: none;
+    transform: scale(1.08);
+    box-shadow: 0 16px 34px rgba(44, 58, 140, .38), 0 6px 12px rgba(0, 0, 0, .15);
+}
+
 /* ================= MODAL ================= */
 
 .tw-overlay {

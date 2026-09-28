@@ -1273,10 +1273,109 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     }
 
     // ==========================================
+    // BOTÓN FLOTANTE MOVIBLE
+    // ==========================================
+
+    /*
+     * El botón se puede arrastrar (mouse o dedo) a cualquier parte de la
+     * pantalla; la posición se recuerda en el navegador. Un clic sin
+     * arrastrar abre el modal.
+     */
+    function makeFabDraggable() {
+
+        const KEY = "tw-fab-position";
+        const MARGIN = 8;
+        const fab = el.fab;
+
+        let start = null;
+        let moved = false;
+
+        const clamp = (x, y) => ({
+            x: Math.min(Math.max(MARGIN, x), window.innerWidth - fab.offsetWidth - MARGIN),
+            y: Math.min(Math.max(MARGIN, y), window.innerHeight - fab.offsetHeight - MARGIN)
+        });
+
+        const place = (x, y) => {
+            const pos = clamp(x, y);
+            fab.style.left = pos.x + "px";
+            fab.style.top = pos.y + "px";
+            fab.style.right = "auto";
+            fab.style.bottom = "auto";
+            return pos;
+        };
+
+        // Posición guardada (si el navegador permite localStorage).
+        try {
+            const saved = JSON.parse(localStorage.getItem(KEY) || "null");
+            if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+                requestAnimationFrame(() => place(saved.x, saved.y));
+            }
+        } catch (e) {}
+
+        fab.addEventListener("pointerdown", event => {
+            if (event.button !== 0) return;
+
+            const rect = fab.getBoundingClientRect();
+            start = { px: event.clientX, py: event.clientY, x: rect.left, y: rect.top };
+            moved = false;
+            fab.setPointerCapture(event.pointerId);
+        });
+
+        fab.addEventListener("pointermove", event => {
+            if (!start) return;
+
+            const dx = event.clientX - start.px;
+            const dy = event.clientY - start.py;
+
+            // Umbral para no confundir un clic con un arrastre.
+            if (!moved && Math.hypot(dx, dy) < 6) return;
+
+            moved = true;
+            fab.classList.add("tw-fab-dragging");
+            place(start.x + dx, start.y + dy);
+        });
+
+        const end = () => {
+            if (!start) return;
+
+            start = null;
+            fab.classList.remove("tw-fab-dragging");
+
+            if (moved) {
+                const rect = fab.getBoundingClientRect();
+                try {
+                    localStorage.setItem(KEY, JSON.stringify({ x: rect.left, y: rect.top }));
+                } catch (e) {}
+            }
+        };
+
+        fab.addEventListener("pointerup", end);
+        fab.addEventListener("pointercancel", end);
+
+        fab.addEventListener("click", event => {
+            // Si se arrastró, no se abre el modal.
+            if (moved) {
+                event.preventDefault();
+                moved = false;
+                return;
+            }
+            openModal();
+        });
+
+        // Si cambia el tamaño de la ventana, que no quede fuera de la pantalla.
+        window.addEventListener("resize", () => {
+            if (fab.style.left) {
+                const rect = fab.getBoundingClientRect();
+                place(rect.left, rect.top);
+            }
+        });
+    }
+
+    // ==========================================
     // EVENTOS
     // ==========================================
 
-    el.fab.addEventListener("click", openModal);
+    makeFabDraggable();
     el.close.addEventListener("click", closeModal);
 
     el.overlay.addEventListener("click", event => {

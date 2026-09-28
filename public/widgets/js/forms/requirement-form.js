@@ -5,7 +5,7 @@
  * El bloque "Usuario beneficiario" cambia según la subcategoría:
  *   Biométrico               -> nombre, cédula, cargo
  *   Creación de usuario ADG  -> identificación, nombres, apellidos, correo,
- *                               celular, rol y si ya está creado en SAP
+ *                               celular, rol y (opcional) si ya está en SAP
  *   Creación de usuario SAP  -> identificación, nombres, apellidos, correo,
  *                               celular, rol
  *   Otras                    -> usuario beneficiario (texto)
@@ -42,9 +42,18 @@ export class RequirementForm extends ExtraForm {
 
         const users = await loadUsers(this.apiUrl);
 
+        // Fecha local de hoy (no UTC) para "Fecha requerida".
+        const now = new Date();
+        const today = [
+            now.getFullYear(),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getDate()).padStart(2, "0")
+        ].join("-");
+
         return {
             requester: context.requester,
             sede: context.sede,
+            today,
             areaOptions: options(AREAS, context.area),
             tipoOptions: options(TIPOS),
             impactoOptions: options(IMPACTOS),

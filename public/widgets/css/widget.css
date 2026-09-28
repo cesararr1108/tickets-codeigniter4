@@ -1011,6 +1011,19 @@ svg {
 
 .tw-status-en_progreso { background: #fff7e6; color: #b45309; }
 .tw-status-cerrado { background: #f0fdf4; color: #15803d; }
+.tw-status-escalado { background: #fff4d6; color: #8a5a00; }
+
+.tw-escalated-note {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border-left: 4px solid #e8a200;
+    background: #fff8e6;
+    color: #6b4a00;
+    font-size: 13px;
+}
 
 /* Paginación */
 .tw-pager {

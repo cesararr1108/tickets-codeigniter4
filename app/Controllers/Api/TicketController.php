@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Models\TicketAttachmentModel;
+use App\Models\TicketEscalationModel;
 use App\Models\TicketFormAnswerModel;
 use App\Models\TicketMessageModel;
 use App\Models\TicketModel;
@@ -164,9 +165,14 @@ class TicketController extends BaseApiController
         $page  = min($page, $pages);
 
         $builder = $db->table('Tickets t')
-            ->select('t.IdTicket, t.Subject, t.Status, t.Priority, t.CreatedAt, cat.Category, sc.SubCategory')
+            ->select('t.IdTicket, t.Subject, t.Status, t.Priority, t.CreatedAt, cat.Category, sc.SubCategory, u.FullName AS AssignedName')
             ->join('Category cat', 'cat.IdCategory = t.IdCategory', 'left')
-            ->join('SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', 'left');
+            ->join('SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', 'left')
+            ->join('Users u', 'u.IdUser = t.AssignedUserId', 'left');
+
+        if (TicketEscalationModel::available()) {
+            $builder->select('(SELECT COUNT(*) FROM TicketEscalations e WHERE e.IdTicket = t.IdTicket AND e.ResolvedAt IS NULL) AS Escalated', false);
+        }
 
         $rows = $inRange($builder, 't.CreatedAt')
             ->where('t.RequesterEmail', $email)
@@ -318,6 +324,11 @@ class TicketController extends BaseApiController
             ->findAll());
 
         unset($ticket['RequesterEmail']);
+
+        // Estado de escalamiento visible para el solicitante (sin el motivo interno).
+        $escalation = model(TicketEscalationModel::class)->activeFor((int) $id);
+        $ticket['Escalated']   = $escalation !== null;
+        $ticket['EscalatedAt'] = $escalation['CreatedAt'] ?? null;
 
         return $this->respond([
             'ticket'      => $ticket,

@@ -223,8 +223,10 @@ if (! function_exists('icon')) {
 
 if (! function_exists('panel_is_admin')) {
     /**
-     * ¿El usuario puede administrar catálogos? Si Config\Tickets::$adminRoles
-     * está vacío, cualquier usuario con sesión puede hacerlo.
+     * ¿El usuario es administrador? (Config\Tickets::$adminRoles)
+     *
+     * Mientras ningún usuario activo tenga un rol de administrador, todos
+     * se consideran administradores (así no se pierde el acceso al instalar).
      */
     function panel_is_admin(): bool
     {
@@ -236,6 +238,41 @@ if (! function_exists('panel_is_admin')) {
 
         $roles = array_map('mb_strtolower', tickets_config()->adminRoles);
 
-        return $roles === [] || in_array(mb_strtolower((string) ($user['role'] ?? '')), $roles, true);
+        if ($roles === [] || in_array(mb_strtolower((string) ($user['role'] ?? '')), $roles, true)) {
+            return true;
+        }
+
+        return ! panel_admins_exist();
+    }
+}
+
+if (! function_exists('panel_admins_exist')) {
+    /**
+     * ¿Hay al menos un usuario activo con rol de administrador?
+     */
+    function panel_admins_exist(): bool
+    {
+        static $exists = null;
+
+        if ($exists === null) {
+            $roles = tickets_config()->adminRoles;
+
+            $exists = $roles !== [] && db_connect()->table('Users u')
+                ->join('Roles r', 'r.Id = u.RoleId')
+                ->whereIn('r.Descripcion', $roles)
+                ->where('u.IsActive', 1)
+                ->countAllResults() > 0;
+        }
+
+        return $exists;
+    }
+}
+
+if (! function_exists('panel_user_id')) {
+    function panel_user_id(): ?string
+    {
+        $id = panel_user()['id'] ?? null;
+
+        return $id === null ? null : (string) $id;
     }
 }

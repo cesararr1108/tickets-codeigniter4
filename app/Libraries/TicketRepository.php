@@ -2,6 +2,7 @@
 
 namespace App\Libraries;
 
+use App\Models\TicketEscalationModel;
 use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 
@@ -25,7 +26,14 @@ class TicketRepository
      */
     public function builder(): BaseBuilder
     {
-        return $this->db->table('Tickets t')
+        $builder = $this->db->table('Tickets t');
+
+        // Marca de escalamiento activo (si la tabla existe).
+        if (TicketEscalationModel::available()) {
+            $builder->select('(SELECT COUNT(*) FROM TicketEscalations e WHERE e.IdTicket = t.IdTicket AND e.ResolvedAt IS NULL) AS Escalated', false);
+        }
+
+        return $builder
             ->select('t.IdTicket, t.CodCompanies, t.CodBranches, t.AssignedUserId, t.RequesterEmail,
                 t.Subject, t.IdCategory, t.IdSubCategory, t.Priority, t.Status, t.CreatedAt,
                 c.Companies, b.Branches, cat.Category, sc.SubCategory, u.FullName AS AssignedName')
@@ -55,6 +63,13 @@ class TicketRepository
             if (($filters[$key] ?? '') !== '') {
                 $builder->where($column, $filters[$key]);
             }
+        }
+
+        if (($filters['escalated'] ?? '') === '1' && TicketEscalationModel::available()) {
+            $builder->whereIn('t.IdTicket', static fn (BaseBuilder $sub) => $sub
+                ->select('IdTicket')
+                ->from('TicketEscalations')
+                ->where('ResolvedAt', null));
         }
 
         $assigned = $filters['assigned'] ?? '';

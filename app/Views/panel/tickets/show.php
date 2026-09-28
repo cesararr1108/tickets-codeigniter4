@@ -27,10 +27,46 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
         <div class="head-badges">
             <?= status_badge($ticket['Status']) ?>
             <?= priority_badge($ticket['Priority']) ?>
+            <?php if (! empty($escalation)): ?><span class="badge badge-escalated"><?= icon('flag') ?> Escalado</span><?php endif ?>
             <span class="age age-<?= $state ?>"><?= icon('clock') ?> <?= format_age($ticket['CreatedAt']) ?> · <?= $stateText ?> (<?= $target ?> h)</span>
         </div>
     </div>
 </div>
+
+<?php if (! empty($escalation)): ?>
+    <section class="card escalation-card">
+        <div class="escalation-head">
+            <?= icon('flag') ?>
+            <div>
+                <strong>Escalado por <?= esc($escalation['EscalatedByName']) ?></strong>
+                <span class="muted small"><?= format_date($escalation['CreatedAt']) ?> · <?= time_ago($escalation['CreatedAt']) ?></span>
+            </div>
+        </div>
+        <p class="escalation-reason"><?= nl2br(esc($escalation['Reason'])) ?></p>
+
+        <?php if ($perm['isAdmin']): ?>
+            <form class="escalation-form" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/escalamiento') ?>">
+                <?= csrf_field() ?>
+                <label class="field">
+                    <span class="field-label">Nota para el técnico <span class="muted">(opcional)</span></span>
+                    <textarea name="ResolutionNote" class="input" rows="2" maxlength="2000" placeholder="Indicaciones, decisión tomada…"></textarea>
+                </label>
+                <label class="field">
+                    <span class="field-label">Reasignar a</span>
+                    <select name="AssignedUserId" class="select">
+                        <option value="">Mantener responsable actual</option>
+                        <?php foreach ($lookups['agents'] as $a): ?>
+                            <option value="<?= esc($a['IdUser'], 'attr') ?>"><?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?></option>
+                        <?php endforeach ?>
+                    </select>
+                </label>
+                <button type="submit" class="btn btn-primary"><?= icon('check') ?> Atender escalamiento</button>
+            </form>
+        <?php else: ?>
+            <p class="muted small">Esperando respuesta del administrador.</p>
+        <?php endif ?>
+    </section>
+<?php endif ?>
 
 <div class="ticket-layout">
     <div class="ticket-main">
@@ -83,56 +119,127 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
             <?php endforeach ?>
         </div>
 
-        <form class="chat-composer" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/messages') ?>" data-chat-form>
-            <?= csrf_field() ?>
-            <textarea name="Message" rows="2" placeholder="Escribe una respuesta… (Enter para enviar, Shift+Enter para salto de línea)" required></textarea>
-            <button type="submit" class="btn btn-primary" aria-label="Enviar"><?= icon('send') ?> <span class="hide-mobile">Enviar</span></button>
-        </form>
+        <?php if ($perm['canChat']): ?>
+            <form class="chat-composer" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/messages') ?>" data-chat-form>
+                <?= csrf_field() ?>
+                <textarea name="Message" rows="2" placeholder="Escribe una respuesta… (Enter para enviar, Shift+Enter para salto de línea)" required></textarea>
+                <button type="submit" class="btn btn-primary" aria-label="Enviar"><?= icon('send') ?> <span class="hide-mobile">Enviar</span></button>
+            </form>
+        <?php else: ?>
+            <div class="chat-locked">
+                <?= icon('user') ?>
+                <span>
+                    <?php if ($ticket['AssignedUserId'] === null): ?>
+                        Solo el responsable conversa con el solicitante. <strong>Toma el ticket</strong> para responder.
+                    <?php else: ?>
+                        Solo <strong><?= esc($ticket['AssignedName'] ?? $ticket['AssignedUserId']) ?></strong>, responsable del ticket, conversa con el solicitante.
+                    <?php endif ?>
+                </span>
+            </div>
+        <?php endif ?>
     </section>
     </div>
 
     <aside class="ticket-side">
-        <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
-            <?= csrf_field() ?>
-            <h2>Gestión</h2>
+        <div class="card">
+            <h2>Responsable</h2>
+            <div class="assignee">
+                <?php if ($ticket['AssignedUserId'] === null): ?>
+                    <span class="avatar avatar-empty"><?= icon('user') ?></span>
+                    <div><strong>Sin responsable</strong><span class="muted small">Nadie ha tomado el ticket.</span></div>
+                <?php else: ?>
+                    <span class="avatar"><?= esc(initials($ticket['AssignedName'] ?? $ticket['AssignedUserId'])) ?></span>
+                    <div>
+                        <strong><?= esc($ticket['AssignedName'] ?? $ticket['AssignedUserId']) ?><?= $perm['isAssignee'] ? ' (yo)' : '' ?></strong>
+                        <span class="muted small">Lo ve el solicitante como quien atiende su caso.</span>
+                    </div>
+                <?php endif ?>
+            </div>
 
-            <label class="field">
-                <span class="field-label">Estado</span>
-                <div class="segmented">
-                    <?php foreach ($config->statuses as $value => $label): ?>
-                        <label>
-                            <input type="radio" name="Status" value="<?= $value ?>" <?= $ticket['Status'] === $value ? 'checked' : '' ?>>
-                            <span><?= esc($label) ?></span>
+            <?php if ($perm['canTake']): ?>
+                <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/tomar') ?>">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn btn-accent btn-block"><?= icon('user') ?> Tomar ticket</button>
+                </form>
+            <?php endif ?>
+
+            <?php if ($perm['canEscalate'] && empty($escalation)): ?>
+                <details class="escalate-box">
+                    <summary class="btn btn-block btn-warning-soft"><?= icon('flag') ?> Escalar al administrador</summary>
+                    <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/escalar') ?>">
+                        <?= csrf_field() ?>
+                        <label class="field">
+                            <span class="field-label">¿Por qué no lo puedes resolver?</span>
+                            <textarea name="Reason" class="input" rows="3" maxlength="2000" required placeholder="Ej.: requiere permisos de SAP que no tengo, necesita compra de repuesto…"></textarea>
                         </label>
+                        <button type="submit" class="btn btn-primary btn-block">Escalar</button>
+                    </form>
+                </details>
+            <?php endif ?>
+        </div>
+
+        <?php if ($perm['canManage']): ?>
+            <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
+                <?= csrf_field() ?>
+                <h2>Gestión</h2>
+
+                <label class="field">
+                    <span class="field-label">Estado</span>
+                    <div class="segmented">
+                        <?php foreach ($config->statuses as $value => $label): ?>
+                            <label>
+                                <input type="radio" name="Status" value="<?= $value ?>" <?= $ticket['Status'] === $value ? 'checked' : '' ?>>
+                                <span><?= esc($label) ?></span>
+                            </label>
+                        <?php endforeach ?>
+                    </div>
+                </label>
+
+                <label class="field">
+                    <span class="field-label">Prioridad</span>
+                    <select name="Priority" class="select">
+                        <?php foreach ($config->priorities as $value => $label): ?>
+                            <option value="<?= $value ?>" <?= $ticket['Priority'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
+                        <?php endforeach ?>
+                    </select>
+                </label>
+
+                <label class="field">
+                    <span class="field-label">Responsable</span>
+                    <select name="AssignedUserId" class="select">
+                        <option value="">Sin asignar</option>
+                        <?php foreach ($lookups['agents'] as $a): ?>
+                            <?php if (! $perm['isAdmin'] && $a['IdUser'] !== ($user['id'] ?? null)) continue; // el técnico solo puede elegirse a sí mismo ?>
+                            <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $ticket['AssignedUserId'] === $a['IdUser'] ? 'selected' : '' ?>>
+                                <?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?>
+                            </option>
+                        <?php endforeach ?>
+                    </select>
+                    <?php if (! $perm['isAdmin']): ?><span class="muted small">Solo el administrador puede asignar a otras personas.</span><?php endif ?>
+                </label>
+
+                <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>
+            </form>
+        <?php endif ?>
+
+        <?php if (! empty($escalations) && (count($escalations) > 1 || empty($escalation))): ?>
+            <div class="card">
+                <h2>Escalamientos</h2>
+                <ul class="mini-list escalation-history">
+                    <?php foreach ($escalations as $e): if ($e['ResolvedAt'] === null) continue; ?>
+                        <li>
+                            <div>
+                                <strong><?= esc($e['EscalatedByName']) ?></strong> <span class="muted small"><?= format_date($e['CreatedAt']) ?></span>
+                                <p class="small"><?= esc($e['Reason']) ?></p>
+                                <p class="small muted">Atendido por <?= esc($e['ResolvedByName']) ?><?= $e['ResolutionNote'] ? ': ' . esc($e['ResolutionNote']) : '' ?></p>
+                            </div>
+                        </li>
                     <?php endforeach ?>
-                </div>
-            </label>
+                </ul>
+            </div>
+        <?php endif ?>
 
-            <label class="field">
-                <span class="field-label">Prioridad</span>
-                <select name="Priority" class="select">
-                    <?php foreach ($config->priorities as $value => $label): ?>
-                        <option value="<?= $value ?>" <?= $ticket['Priority'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
-                    <?php endforeach ?>
-                </select>
-            </label>
-
-            <label class="field">
-                <span class="field-label">Agente asignado</span>
-                <select name="AssignedUserId" class="select">
-                    <option value="">Sin asignar</option>
-                    <?php foreach ($lookups['agents'] as $a): ?>
-                        <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $ticket['AssignedUserId'] === $a['IdUser'] ? 'selected' : '' ?>>
-                            <?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?>
-                        </option>
-                    <?php endforeach ?>
-                </select>
-            </label>
-
-            <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>
-        </form>
-
-        <?php if ($areaDefs !== []): ?>
+        <?php if ($areaDefs !== [] && $perm['canManage']): ?>
             <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/seguimiento') ?>">
                 <?= csrf_field() ?>
                 <input type="hidden" name="FormKey" value="<?= esc($formKey, 'attr') ?>">

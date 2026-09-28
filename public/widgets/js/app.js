@@ -1054,6 +1054,10 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 title: ticket.Subject,
                 category: [ticket.Category, ticket.SubCategory].filter(Boolean).join(" / ") || "Sin categoría",
                 date: formatDate(ticket.CreatedAt),
+                assigned: ticket.AssignedName || "Por asignar",
+                escalatedHtml: Number(ticket.Escalated) > 0
+                    ? '<span class="tw-status tw-status-escalado" title="Escalado al administrador">Escalado</span>'
+                    : "",
                 priority: PRIORITY_LABELS[ticket.Priority] ?? ticket.Priority ?? "",
                 priorityClass: statusClass(ticket.Priority),
                 status: STATUS_LABELS[ticket.Status] ?? ticket.Status,
@@ -1145,6 +1149,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 subcategory: t.SubCategory ?? "",
                 date: formatDate(t.CreatedAt),
                 assigned: t.AssignedName || "Por asignar",
+                escalationHtml: t.Escalated
+                    ? `<div class="tw-escalated-note"><strong>Tu solicitud fue escalada al administrador</strong><span>Desde ${escapeHtml(formatDate(t.EscalatedAt))}. El equipo de TI la está revisando con un nivel superior.</span></div>`
+                    : "",
                 followUpHtml: pairs("Seguimiento de TI", detail.followUp),
                 answersHtml: pairs("Información de la solicitud", detail.answers),
                 messagesHtml: messages,

@@ -109,7 +109,7 @@ $statusOptions = ['' => 'Todos los estados', 'pendientes' => 'Pendientes'] + $co
                                 <?php if (! empty($t['SubCategory'])): ?><span class="muted small"><?= esc($t['SubCategory']) ?></span><?php endif ?>
                             </td>
                             <td><?= priority_badge($t['Priority']) ?></td>
-                            <td><?= status_badge($t['Status']) ?></td>
+                            <td><?= status_badge($t['Status']) ?><?php if (! empty($t['Escalated'])): ?> <span class="badge badge-escalated" title="Escalado al administrador"><?= icon('flag') ?></span><?php endif ?></td>
                             <td>
                                 <?php if ($t['AssignedName']): ?>
                                     <span class="agent"><span class="avatar avatar-sm"><?= esc(initials($t['AssignedName'])) ?></span><?= esc($t['AssignedName']) ?></span>

@@ -52,6 +52,7 @@ abstract class BasePanelController extends BaseController
                 ->whereIn('Status', ['abierto', 'en_progreso'])
                 ->where('AssignedUserId', null)
                 ->countAllResults(),
+            'escalated'  => model(\App\Models\TicketEscalationModel::class)->countActive(),
         ];
 
         $data['user']   = $this->user;

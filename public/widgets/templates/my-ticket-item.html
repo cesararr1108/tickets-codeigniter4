@@ -1,13 +1,16 @@
 <!--
   Ticket en la pestaña "Mis tickets".
-  Variables: id, title, category, date, priority, priorityClass, status, statusClass
+  Variables: id, title, category, date, assigned, priority, priorityClass, status, statusClass
+  HTML: escalatedHtml (etiqueta "Escalado" o vacío)
 -->
 <article class="tw-ticket">
     <div class="tw-ticket-main">
         <div class="tw-ticket-title">{{title}}</div>
         <div class="tw-ticket-meta">#{{id}} · {{category}} · {{date}}</div>
+        <div class="tw-ticket-meta">Atiende: <strong>{{assigned}}</strong></div>
     </div>
     <span class="tw-ticket-prio tw-prio-{{priorityClass}}">{{priority}}</span>
+    {{{escalatedHtml}}}
     <span class="tw-status tw-status-{{statusClass}}">{{status}}</span>
     <button type="button" class="tw-btn tw-btn-outline tw-ticket-btn" data-ticket="{{id}}">
         Ver detalle

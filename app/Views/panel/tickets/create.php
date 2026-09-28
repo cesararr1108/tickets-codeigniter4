@@ -87,7 +87,8 @@ $oldPriority = old('Priority');
                 <select name="AssignedUserId" class="select">
                     <option value="">Sin asignar</option>
                     <?php foreach ($lookups['agents'] as $a): ?>
-                        <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= old('AssignedUserId') === $a['IdUser'] ? 'selected' : '' ?>><?= esc($a['FullName']) ?></option>
+                        <?php if (! panel_is_admin() && $a['IdUser'] !== ($user['id'] ?? null)) continue; // el técnico solo se asigna a sí mismo ?>
+                        <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= old('AssignedUserId') === $a['IdUser'] ? 'selected' : '' ?>><?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?></option>
                     <?php endforeach ?>
                 </select>
             </label>

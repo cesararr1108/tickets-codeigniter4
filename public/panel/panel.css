@@ -614,6 +614,43 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .ticket-side { display: flex; flex-direction: column; gap: 16px; }
 .ticket-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 
+/* Roles: responsable, escalamiento y chat restringido */
+.badge-escalated { background: var(--warning-soft); color: var(--warning-text); display: inline-flex; align-items: center; gap: 4px; }
+.badge-escalated .icon { width: 12px; height: 12px; }
+
+.escalation-card { margin-bottom: 16px; border-color: #f3c66b; background: linear-gradient(0deg, var(--surface), var(--surface)), var(--warning-soft); border-left: 4px solid var(--warning); }
+.escalation-head { display: flex; align-items: center; gap: 10px; }
+.escalation-head > .icon { width: 20px; height: 20px; color: var(--warning); }
+.escalation-head div { display: flex; flex-direction: column; }
+.escalation-reason { margin: 10px 0 0; line-height: 1.5; }
+.escalation-form { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; }
+.escalation-form .field { margin: 0; }
+.escalation-history p { margin: 4px 0 0; }
+
+.assignee { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.assignee div { display: flex; flex-direction: column; min-width: 0; }
+.avatar-empty { background: var(--surface-2); color: var(--muted); }
+.avatar-empty .icon { width: 16px; height: 16px; }
+
+.btn-warning-soft { background: var(--warning-soft); color: var(--warning-text); border: 1px solid transparent; }
+.btn-warning-soft:hover { filter: brightness(.97); }
+.escalate-box { margin-top: 10px; }
+.escalate-box > summary { list-style: none; cursor: pointer; }
+.escalate-box > summary::-webkit-details-marker { display: none; }
+.escalate-box form { margin-top: 12px; }
+.ticket-side form + details, .ticket-side .card form + form { margin-top: 10px; }
+
+.chat-locked { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface-2); color: var(--text-2); font-size: 13px; }
+.chat-locked .icon { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* Usuarios */
+.field-check { display: flex; flex-direction: row; align-items: center; gap: 8px; flex-wrap: wrap; }
+.field-check input { width: 16px; height: 16px; }
+.users-table td .chip { white-space: nowrap; }
+.role-admin { background: var(--primary-soft); color: var(--primary); }
+.role-tech { background: var(--good-soft); color: var(--good-text); }
+.user-off { opacity: .55; }
+
 /* Respuestas del formulario adicional (Proyecto, Requerimiento, Incidente) */
 .form-answers { padding: 0; }
 .form-answers summary { list-style: none; cursor: pointer; padding: 18px 20px 14px; margin: 0; }
@@ -777,6 +814,7 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
     .brand { width: auto; }
     .brand-name { display: none; }
     .answers { grid-template-columns: minmax(0, 1fr); }
+    .escalation-form { grid-template-columns: minmax(0, 1fr); }
 
     .sidebar {
         position: fixed;

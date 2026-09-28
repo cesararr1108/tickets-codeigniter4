@@ -25,6 +25,9 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('tickets/(:num)/messages', 'Tickets::addMessage/$1');
     $routes->get('tickets/(:num)/adjuntos/(:num)', 'Tickets::attachment/$1/$2');
     $routes->post('tickets/(:num)/seguimiento', 'Tickets::followUp/$1');
+    $routes->post('tickets/(:num)/tomar', 'Tickets::take/$1');
+    $routes->post('tickets/(:num)/escalar', 'Tickets::escalate/$1');
+    $routes->post('tickets/(:num)/escalamiento', 'Tickets::resolveEscalation/$1');
 
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');
@@ -32,6 +35,11 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     // Administración de catálogos (ver App\Libraries\CatalogAdmin).
     $routes->group('admin', ['filter' => 'paneladmin'], static function (RouteCollection $routes) {
         $routes->get('/', 'Admin::index');
+
+        // Usuarios del panel (antes de las rutas genéricas de catálogos).
+        $routes->get('usuarios', 'Users::index');
+        $routes->post('usuarios', 'Users::create');
+        $routes->post('usuarios/update/(:segment)', 'Users::update/$1');
         $routes->get('(:segment)', 'Admin::list/$1');
         $routes->post('(:segment)', 'Admin::create/$1');
         $routes->post('(:segment)/update/(:segment)', 'Admin::update/$1/$2');

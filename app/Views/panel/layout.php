@@ -17,6 +17,10 @@ $navItems = [
 ];
 
 if (panel_is_admin()) {
+    array_splice($navItems, 5, 0, [
+        ['key' => 'escalated', 'url' => 'panel/tickets?escalated=1', 'icon' => 'flag', 'label' => 'Escalados', 'count' => $nav['escalated'] ?? 0, 'alert' => true],
+    ]);
+    $navItems[] = ['key' => 'users', 'url' => 'panel/admin/usuarios', 'icon' => 'users', 'label' => 'Usuarios'];
     $navItems[] = ['key' => 'admin', 'url' => 'panel/admin', 'icon' => 'settings', 'label' => 'Administración'];
 }
 ?>

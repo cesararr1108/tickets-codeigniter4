@@ -3,6 +3,7 @@
   Variables: id, title, status, statusClass, priority, priorityClass,
              company, branch, category, subcategory, date, assigned
   HTML (ya escapado en app.js): answersHtml, followUpHtml, messagesHtml, filesHtml
+  escalationHtml: aviso si el ticket fue escalado al administrador
   replyHidden / closedHidden: "hidden" o "" (según si el ticket está resuelto)
 -->
 <article class="tw-detail">
@@ -16,6 +17,8 @@
             <span class="tw-status tw-status-{{statusClass}}">{{status}}</span>
         </div>
     </header>
+
+    {{{escalationHtml}}}
 
     <div class="tw-review-grid">
         <div class="tw-review-item">
@@ -31,7 +34,7 @@
         <div class="tw-review-item">
             <span class="tw-review-label">Creado</span>
             <span class="tw-review-value">{{date}}</span>
-            <span class="tw-review-sub">Atiende: {{assigned}}</span>
+            <span class="tw-review-sub">Responsable: <strong>{{assigned}}</strong></span>
         </div>
     </div>
 

@@ -51,14 +51,22 @@ class Tickets extends BaseConfig
     public string $displayTimezone = 'America/Guayaquil';
 
     /**
-     * Roles (Roles.Descripcion) que pueden administrar compañías, sucursales,
-     * categorías y subcategorías. Vacío = cualquier usuario con sesión.
+     * Roles (Roles.Descripcion) de ADMINISTRADOR: administran catálogos y
+     * usuarios, asignan tickets a cualquiera y atienden los escalamientos.
+     * Los demás usuarios del panel son TÉCNICOS: solo pueden tomar tickets
+     * para sí mismos, gestionar los suyos y escalarlos.
      *
-     * Ejemplo: ['Administrador']
+     * Mientras ningún usuario activo tenga uno de estos roles, todos se
+     * tratan como administradores (para no quedar sin acceso al instalar).
      *
      * @var list<string>
      */
-    public array $adminRoles = [];
+    public array $adminRoles = ['Administrador'];
+
+    /**
+     * Rol que se sugiere al crear usuarios técnicos.
+     */
+    public string $technicianRole = 'Técnico';
 
     /**
      * Campos que llena el área de TI desde el panel (el solicitante no los

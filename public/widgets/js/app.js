@@ -23,7 +23,8 @@ import {
     obtenerSubcategorias,
     obtenerTodasSubcategorias
 } from "./categories.js";
-import { crearTicket, obtenerTickets } from "./tickets.js";
+import { crearTicket } from "./tickets.js";
+import { obtenerDetalleTicket, obtenerMisTickets } from "./my-tickets.js";
 import { ProjectForm } from "./forms/project-form.js";
 import { RequirementForm } from "./forms/requirement-form.js";
 import { IncidentForm } from "./forms/incident-form.js";
@@ -42,6 +43,15 @@ const TOTAL_STEPS = 5;
 const FORM_STEP = 3;
 const SEARCH_THRESHOLD = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// "Mis tickets": tickets por página y nombres de los estados.
+const MINE_PER_PAGE = 5;
+
+const STATUS_LABELS = {
+    abierto: "Abierto",
+    en_progreso: "En progreso",
+    cerrado: "Resuelto"
+};
 
 const PRIORITY_LABELS = {
     alta: "Alta",
@@ -105,7 +115,28 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         nextLabel: $("stepNextLabel"),
 
         ticketsList: $("ticketsList"),
-        refreshTickets: $("refreshTickets")
+        refreshTickets: $("refreshTickets"),
+
+        mineBadge: $("mineBadge"),
+        mineFilter: $("mineFilter"),
+        mineFrom: $("mineFrom"),
+        mineTo: $("mineTo"),
+        mineClear: $("mineClear"),
+        mineTabs: $("mineTabs"),
+        mineListView: $("mineListView"),
+        mineDetailView: $("mineDetailView"),
+        minePager: $("minePager"),
+        minePrev: $("minePrev"),
+        mineNext: $("mineNext"),
+        minePageInfo: $("minePageInfo"),
+        mineBack: $("mineBack"),
+        countPendientes: $("countPendientes"),
+        countResueltos: $("countResueltos"),
+
+        success: $("ticketSuccess"),
+        successId: $("ticketSuccessId"),
+        successMine: $("successMine"),
+        successNew: $("successNew")
     };
 
     const defaultFileLabel = el.fileName.textContent;
@@ -127,7 +158,10 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         priority: null,
         file: null,
         extraForm: null,
-        formNames: new Map()
+        formNames: new Map(),
+
+        // Pestaña "Mis tickets"
+        mine: { status: "pendientes", page: 1, pages: 1, from: "", to: "" }
     };
 
     // Datos del usuario que envía el script del anfitrión (data-*).
@@ -868,12 +902,8 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
             await resetForm();
 
-            showAlert(
-                ticketId
-                    ? `El ticket #${ticketId} fue creado correctamente.`
-                    : "El ticket fue creado correctamente.",
-                "success"
-            );
+            showSuccess(ticketId);
+            loadMineCounts();
 
         } catch (error) {
             console.error("[Tickets Widget] Error creando ticket:", error);
@@ -893,36 +923,250 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     // MIS TICKETS
     // ==========================================
 
+    /*
+     * Correo con el que se buscan "Mis tickets": el del anfitrión o el
+     * escrito en el formulario.
+     */
+    function mineEmail() {
+        return (perfil.email || el.email.value || "").trim();
+    }
+
+    function formatDate(value) {
+
+        if (!value) {
+            return "";
+        }
+
+        // La BD guarda en UTC ("2026-09-28 15:57:44").
+        const date = new Date(String(value).replace(" ", "T").replace(/(\.\d+)?$/, "") + "Z");
+
+        return Number.isNaN(date.getTime())
+            ? String(value)
+            : date.toLocaleString("es-CO", { dateStyle: "medium", timeStyle: "short" });
+    }
+
+    function statusClass(status) {
+        return String(status ?? "").toLowerCase().replace(/[^a-z_]/g, "");
+    }
+
+    /*
+     * Contadores de las pestañas Pendientes / Resueltos (según las fechas).
+     */
+    function updateCounts(counts) {
+        el.countPendientes.textContent = Number(counts?.pendientes ?? 0);
+        el.countResueltos.textContent = Number(counts?.resueltos ?? 0);
+    }
+
+    /*
+     * Badge de la pestaña "Mis tickets": todos los pendientes (sin fechas).
+     */
+    function updateBadge(counts) {
+
+        const pending = Number(counts?.pendientes ?? 0);
+
+        el.mineBadge.textContent = pending > 99 ? "99+" : pending;
+        el.mineBadge.hidden = pending === 0;
+    }
+
+    /*
+     * Solo el conteo (para el badge de la pestaña).
+     */
+    async function loadMineCounts() {
+
+        const email = mineEmail();
+
+        if (!EMAIL_RE.test(email)) {
+            return;
+        }
+
+        try {
+            const result = await obtenerMisTickets(apiUrl, { email, perPage: 1 });
+            updateBadge(result?.counts);
+        } catch (error) {
+            console.error("[Tickets Widget] Error contando tickets:", error);
+        }
+    }
+
     async function loadTickets() {
+
+        showMineList();
+
+        const email = mineEmail();
+
+        el.minePager.hidden = true;
+
+        if (!EMAIL_RE.test(email)) {
+            await showState(el.ticketsList, "empty", "Escribe tu correo en \"Nuevo ticket\" para ver tus solicitudes.");
+            return;
+        }
+
+        if (state.mine.from && state.mine.to && state.mine.from > state.mine.to) {
+            await showState(el.ticketsList, "error", "La fecha inicial no puede ser mayor que la final.");
+            return;
+        }
 
         await showState(el.ticketsList, "loading", "Cargando tickets...");
 
-        let tickets;
+        let result;
 
         try {
-            tickets = await obtenerTickets(apiUrl);
+            result = await obtenerMisTickets(apiUrl, {
+                email,
+                status: state.mine.status,
+                from: state.mine.from,
+                to: state.mine.to,
+                page: state.mine.page,
+                perPage: MINE_PER_PAGE
+            });
         } catch (error) {
             console.error("[Tickets Widget] Error cargando tickets:", error);
             await showState(el.ticketsList, "error", "No fue posible cargar tus tickets.");
             return;
         }
 
+        updateCounts(result?.counts);
+
+        if (!state.mine.from && !state.mine.to) {
+            updateBadge(result?.counts);
+        }
+
+        state.mine.page = Number(result?.page ?? 1);
+        state.mine.pages = Number(result?.pages ?? 1);
+
+        const tickets = result?.data ?? [];
+
         if (!tickets.length) {
-            await showState(el.ticketsList, "empty", "No tienes tickets registrados.");
+            const range = state.mine.from || state.mine.to ? " en ese rango de fechas" : "";
+
+            await showState(
+                el.ticketsList,
+                "empty",
+                state.mine.status === "resueltos"
+                    ? `No tienes tickets resueltos${range}.`
+                    : `No tienes tickets pendientes${range}.`
+            );
             return;
         }
 
         el.ticketsList.replaceChildren(
-            await renderList("ticket-item", tickets, ticket => ({
-                id: ticket.id,
-                title: ticket.title,
-                meta: ticket.priority
-                    ? "Prioridad " + String(ticket.priority).toLowerCase()
-                    : "Sin prioridad",
-                status: String(ticket.status).replaceAll("_", " "),
-                statusClass: String(ticket.status).toLowerCase().replace(/[^a-z_]/g, "")
+            await renderList("my-ticket-item", tickets, ticket => ({
+                id: ticket.IdTicket,
+                title: ticket.Subject,
+                category: [ticket.Category, ticket.SubCategory].filter(Boolean).join(" / ") || "Sin categoría",
+                date: formatDate(ticket.CreatedAt),
+                priority: PRIORITY_LABELS[ticket.Priority] ?? ticket.Priority ?? "",
+                priorityClass: statusClass(ticket.Priority),
+                status: STATUS_LABELS[ticket.Status] ?? ticket.Status,
+                statusClass: statusClass(ticket.Status)
             }))
         );
+
+        el.minePager.hidden = state.mine.pages <= 1;
+        el.minePageInfo.textContent = `Página ${state.mine.page} de ${state.mine.pages}`;
+        el.minePrev.disabled = state.mine.page <= 1;
+        el.mineNext.disabled = state.mine.page >= state.mine.pages;
+    }
+
+    function selectMineTab(status, load = true) {
+
+        state.mine.status = status === "resueltos" ? "resueltos" : "pendientes";
+        state.mine.page = 1;
+
+        el.mineTabs.querySelectorAll("[data-status]").forEach(tab => {
+            tab.classList.toggle("tw-active", tab.dataset.status === state.mine.status);
+        });
+
+        if (load) {
+            loadTickets();
+        }
+    }
+
+    function showMineList() {
+        el.mineDetailView.hidden = true;
+        el.mineDetailView.replaceChildren();
+        el.mineListView.hidden = false;
+        el.mineBack.hidden = true;
+    }
+
+    /*
+     * Detalle de un ticket propio: datos, respuestas, seguimiento de TI,
+     * conversación y adjuntos.
+     */
+    async function openTicketDetail(id) {
+
+        el.mineListView.hidden = true;
+        el.mineDetailView.hidden = false;
+        el.mineBack.hidden = false;
+        el.panelMine.querySelector(".tw-content").scrollTop = 0;
+
+        await showState(el.mineDetailView, "loading", "Cargando ticket...");
+
+        let detail;
+
+        try {
+            detail = await obtenerDetalleTicket(apiUrl, id, mineEmail());
+        } catch (error) {
+            console.error("[Tickets Widget] Error cargando el ticket:", error);
+            await showState(el.mineDetailView, "error", "No fue posible cargar el ticket.");
+            return;
+        }
+
+        const t = detail.ticket ?? {};
+
+        const pairs = (title, items) => items?.length
+            ? `<section class="tw-detail-block"><p class="tw-section-label">${escapeHtml(title)}</p><dl class="tw-answers">`
+                + items.map(item => `<div><dt>${escapeHtml(item.label)}</dt><dd>${escapeHtml(item.value || "—")}</dd></div>`).join("")
+                + "</dl></section>"
+            : "";
+
+        const messages = detail.messages?.length
+            ? detail.messages.map(m => `
+                <div class="tw-msg tw-msg-${m.type === "agente" ? "agent" : "client"}">
+                    <div class="tw-msg-head"><strong>${escapeHtml(m.sender)}</strong><span>${escapeHtml(formatDate(m.createdAt))}</span></div>
+                    <p>${escapeHtml(m.message)}</p>
+                </div>`).join("")
+            : '<p class="tw-muted">Sin mensajes.</p>';
+
+        const files = detail.attachments?.length
+            ? `<section class="tw-detail-block"><p class="tw-section-label">Adjuntos</p><ul class="tw-file-list">`
+                + detail.attachments.map(name => `<li><span>${escapeHtml(name)}</span></li>`).join("")
+                + "</ul></section>"
+            : "";
+
+        el.mineDetailView.replaceChildren(
+            await render("my-ticket-detail", {
+                id: t.IdTicket,
+                title: t.Subject,
+                status: STATUS_LABELS[t.Status] ?? t.Status,
+                statusClass: statusClass(t.Status),
+                priority: PRIORITY_LABELS[t.Priority] ?? t.Priority ?? "",
+                priorityClass: statusClass(t.Priority),
+                company: t.Companies ?? "",
+                branch: t.Branches ?? "",
+                category: t.Category ?? "Sin categoría",
+                subcategory: t.SubCategory ?? "",
+                date: formatDate(t.CreatedAt),
+                assigned: t.AssignedName || "Por asignar",
+                followUpHtml: pairs("Seguimiento de TI", detail.followUp),
+                answersHtml: pairs("Información de la solicitud", detail.answers),
+                messagesHtml: messages,
+                filesHtml: files
+            })
+        );
+    }
+
+    // ==========================================
+    // CONFIRMACIÓN
+    // ==========================================
+
+    function showSuccess(ticketId) {
+        el.successId.textContent = ticketId ? "#" + ticketId : "";
+        el.success.hidden = false;
+        el.successMine.focus();
+    }
+
+    function hideSuccess() {
+        el.success.hidden = true;
     }
 
     // ==========================================
@@ -941,6 +1185,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         document.addEventListener("keydown", onKeydown);
 
         loadCompanies();
+        loadMineCounts();
 
     }
 
@@ -959,9 +1204,16 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         el.panelNew.classList.toggle("tw-active", isNew);
         el.panelMine.classList.toggle("tw-active", !isNew);
 
+        hideAlert();
+
         if (!isNew) {
+            hideSuccess();
             loadTickets();
         }
+    }
+
+    function tabByName(name) {
+        return Array.from(el.tabs).find(tab => tab.dataset.tab === name);
     }
 
     // ==========================================
@@ -1035,7 +1287,64 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         closeModal();
     });
 
-    el.refreshTickets.addEventListener("click", loadTickets);
+    el.refreshTickets.addEventListener("click", () => {
+        if (el.mineDetailView.hidden) {
+            loadTickets();
+        } else {
+            openTicketDetail(state.mine.openId);
+        }
+    });
+
+    el.mineFilter.addEventListener("submit", event => {
+        event.preventDefault();
+        state.mine.from = el.mineFrom.value;
+        state.mine.to = el.mineTo.value;
+        state.mine.page = 1;
+        loadTickets();
+    });
+
+    el.mineClear.addEventListener("click", () => {
+        el.mineFrom.value = "";
+        el.mineTo.value = "";
+        state.mine.from = "";
+        state.mine.to = "";
+        state.mine.page = 1;
+        loadTickets();
+    });
+
+    el.mineTabs.addEventListener("click", event => {
+        const tab = event.target.closest("[data-status]");
+        if (tab) {
+            selectMineTab(tab.dataset.status);
+        }
+    });
+
+    el.ticketsList.addEventListener("click", event => {
+        const item = event.target.closest("[data-ticket]");
+        if (item) {
+            state.mine.openId = item.dataset.ticket;
+            openTicketDetail(item.dataset.ticket);
+        }
+    });
+
+    el.minePrev.addEventListener("click", () => {
+        state.mine.page = Math.max(1, state.mine.page - 1);
+        loadTickets();
+    });
+
+    el.mineNext.addEventListener("click", () => {
+        state.mine.page = Math.min(state.mine.pages, state.mine.page + 1);
+        loadTickets();
+    });
+
+    el.mineBack.addEventListener("click", loadTickets);
+
+    el.successMine.addEventListener("click", () => {
+        selectMineTab("pendientes", false);
+        switchTab(tabByName("mine"));
+    });
+
+    el.successNew.addEventListener("click", hideSuccess);
 
     updateCounter();
     prefillEmail();

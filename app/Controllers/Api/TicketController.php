@@ -105,6 +105,174 @@ class TicketController extends BaseApiController
         return $this->respondCreated($model->find($id));
     }
 
+    /** Estados que cuentan como pendientes / resueltos en "Mis tickets". */
+    private const PENDING_STATUSES  = ['abierto', 'en_progreso'];
+    private const RESOLVED_STATUSES = ['cerrado'];
+
+    /**
+     * GET /tickets/mine?email=...&status=pendientes|resueltos&from=AAAA-MM-DD&to=AAAA-MM-DD&page=1&perPage=5
+     *
+     * Tickets del solicitante (por correo), paginados, más el conteo de
+     * pendientes y resueltos para las pestañas y el badge del widget.
+     * from / to (opcionales) filtran por fecha de creación, ambas incluidas.
+     */
+    public function mine()
+    {
+        $email = trim((string) $this->request->getGet('email'));
+
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $this->failValidationErrors(['email' => 'Indica el correo del solicitante.']);
+        }
+
+        $status  = $this->request->getGet('status') === 'resueltos' ? 'resueltos' : 'pendientes';
+        $perPage = max(1, min(50, (int) ($this->request->getGet('perPage') ?: 5)));
+        $page    = max(1, (int) ($this->request->getGet('page') ?: 1));
+
+        $from = $this->dateParam('from');
+        $to   = $this->dateParam('to');
+
+        if ($from !== null && $to !== null && $from > $to) {
+            return $this->failValidationErrors(['from' => 'La fecha inicial no puede ser mayor que la final.']);
+        }
+
+        $db = db_connect();
+
+        // Rango de fechas: [from 00:00, to + 1 día 00:00)
+        $inRange = static function ($builder, string $column) use ($from, $to) {
+            if ($from !== null) {
+                $builder->where($column . ' >=', $from . ' 00:00:00');
+            }
+            if ($to !== null) {
+                $builder->where($column . ' <', date('Y-m-d', strtotime($to . ' +1 day')) . ' 00:00:00');
+            }
+
+            return $builder;
+        };
+
+        $count = static fn (array $statuses) => $inRange($db->table('Tickets')
+            ->where('RequesterEmail', $email)
+            ->whereIn('Status', $statuses), 'CreatedAt')
+            ->countAllResults();
+
+        $counts = [
+            'pendientes' => $count(self::PENDING_STATUSES),
+            'resueltos'  => $count(self::RESOLVED_STATUSES),
+        ];
+
+        $total = $counts[$status];
+        $pages = max(1, (int) ceil($total / $perPage));
+        $page  = min($page, $pages);
+
+        $builder = $db->table('Tickets t')
+            ->select('t.IdTicket, t.Subject, t.Status, t.Priority, t.CreatedAt, cat.Category, sc.SubCategory')
+            ->join('Category cat', 'cat.IdCategory = t.IdCategory', 'left')
+            ->join('SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', 'left');
+
+        $rows = $inRange($builder, 't.CreatedAt')
+            ->where('t.RequesterEmail', $email)
+            ->whereIn('t.Status', $status === 'resueltos' ? self::RESOLVED_STATUSES : self::PENDING_STATUSES)
+            ->orderBy('t.CreatedAt', 'DESC')
+            ->orderBy('t.IdTicket', 'DESC')
+            ->limit($perPage, ($page - 1) * $perPage)
+            ->get()
+            ->getResultArray();
+
+        return $this->respond([
+            'data'    => $rows,
+            'status'  => $status,
+            'page'    => $page,
+            'perPage' => $perPage,
+            'pages'   => $pages,
+            'total'   => $total,
+            'counts'  => $counts,
+            'from'    => $from,
+            'to'      => $to,
+        ]);
+    }
+
+    /**
+     * Fecha AAAA-MM-DD del query string, o null si no viene o no es válida.
+     */
+    private function dateParam(string $name): ?string
+    {
+        $value = trim((string) $this->request->getGet($name));
+        $date  = \DateTime::createFromFormat('!Y-m-d', $value);
+
+        return $date !== false && $date->format('Y-m-d') === $value ? $value : null;
+    }
+
+    /**
+     * GET /tickets/{id}/detalle?email=...
+     *
+     * Detalle de un ticket para su solicitante: datos, respuestas del
+     * formulario, seguimiento de TI, conversación y adjuntos. Solo responde
+     * si el correo coincide con el del ticket.
+     */
+    public function requesterDetail($id = null)
+    {
+        $email = trim((string) $this->request->getGet('email'));
+
+        $ticket = db_connect()->table('Tickets t')
+            ->select('t.IdTicket, t.Subject, t.Status, t.Priority, t.CreatedAt, t.RequesterEmail,
+                c.Companies, b.Branches, cat.Category, sc.SubCategory, u.FullName AS AssignedName')
+            ->join('Companies c', 'c.CodCompanies = t.CodCompanies', 'left')
+            ->join('Branches b', 'b.CodBranches = t.CodBranches', 'left')
+            ->join('Category cat', 'cat.IdCategory = t.IdCategory', 'left')
+            ->join('SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', 'left')
+            ->join('Users u', 'u.IdUser = t.AssignedUserId', 'left')
+            ->where('t.IdTicket', (int) $id)
+            ->get()
+            ->getRowArray();
+
+        if ($ticket === null || $email === '' || strcasecmp((string) $ticket['RequesterEmail'], $email) !== 0) {
+            return $this->failNotFound('Ticket no encontrado.');
+        }
+
+        $answers = [];
+        $followUp = [];
+
+        try {
+            $rows       = model(TicketFormAnswerModel::class)->forTicket((int) $id);
+            $formKey    = $rows[0]['FormKey'] ?? null;
+            $areaFields = $formKey !== null ? (config('Tickets')->areaFields[$formKey] ?? []) : [];
+
+            foreach ($rows as $row) {
+                $item = ['label' => $row['Label'], 'value' => (string) $row['Value']];
+
+                if (isset($areaFields[$row['FieldKey']])) {
+                    if ($item['value'] !== '') {
+                        $followUp[] = $item;
+                    }
+                } else {
+                    $answers[] = $item;
+                }
+            }
+        } catch (\Throwable $e) {
+            log_message('warning', '[API tickets] Respuestas del formulario: ' . $e->getMessage());
+        }
+
+        $messages = array_map(static fn ($m) => [
+            'sender'    => $m['SenderName'],
+            'type'      => $m['SenderType'],
+            'message'   => $m['Message'],
+            'createdAt' => $m['CreatedAt'],
+        ], model(TicketMessageModel::class)->forTicket((int) $id));
+
+        $attachments = array_map(static fn ($a) => $a['FileName'], model(TicketAttachmentModel::class)
+            ->where('TicketId', (int) $id)
+            ->findAll());
+
+        unset($ticket['RequesterEmail']);
+
+        return $this->respond([
+            'ticket'      => $ticket,
+            'answers'     => $answers,
+            'followUp'    => $followUp,
+            'messages'    => $messages,
+            'attachments' => $attachments,
+        ]);
+    }
+
     /**
      * Archivos enviados como "file" o "files[]".
      *

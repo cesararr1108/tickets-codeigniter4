@@ -10,8 +10,11 @@
     areaChips    -> HTML: chips (chip.html) de áreas involucradas
     systemChips  -> HTML: chips (chip.html) de sistemas involucrados
 
-  data-variant="proyecto": solo se muestra cuando es un proyecto (en un
-  desarrollo se oculta y no se guarda).
+  data-variant="proyecto" / "desarrollo": solo se muestra el bloque del
+  tipo elegido (el otro se oculta y no se valida ni se guarda). En un
+  desarrollo, Objetivo, Justificación, Alcance, Áreas involucradas y
+  Requerimientos funcionales son opcionales (van en el plegable); en un
+  proyecto son obligatorios.
   Los opcionales van dentro del bloque plegable "Información adicional".
   El estado del proyecto NO va aquí: lo actualiza el área desde el panel.
 -->
@@ -61,14 +64,16 @@
             <textarea id="pfNeed" class="tw-textarea" data-field="necesidad" maxlength="2000" required></textarea>
         </div>
 
-        <div class="tw-field">
-            <label class="tw-label" for="pfGoal">Objetivo</label>
-            <textarea id="pfGoal" class="tw-textarea" data-field="objetivo" maxlength="2000" required></textarea>
-        </div>
+        <div data-variant="proyecto" hidden>
+            <div class="tw-field">
+                <label class="tw-label" for="pfGoal">Objetivo</label>
+                <textarea id="pfGoal" class="tw-textarea" data-field="objetivo" maxlength="2000" required></textarea>
+            </div>
 
-        <div class="tw-field">
-            <label class="tw-label" for="pfReason">Justificación</label>
-            <textarea id="pfReason" class="tw-textarea" data-field="justificacion" maxlength="2000" required></textarea>
+            <div class="tw-field">
+                <label class="tw-label" for="pfReason">Justificación</label>
+                <textarea id="pfReason" class="tw-textarea" data-field="justificacion" maxlength="2000" required></textarea>
+            </div>
         </div>
 
         <div class="tw-field">
@@ -81,7 +86,7 @@
     <div class="tw-subsection">
         <p class="tw-section-label">Alcance</p>
 
-        <div class="tw-field">
+        <div class="tw-field" data-variant="proyecto" hidden>
             <label class="tw-label" for="pfScope">Alcance</label>
             <textarea id="pfScope" class="tw-textarea" data-field="alcance" maxlength="2000" required></textarea>
         </div>
@@ -91,16 +96,18 @@
             <input id="pfAcceptance" class="tw-input" type="text" data-field="criterios_aceptacion" maxlength="500" required>
         </div>
 
-        <div class="tw-field">
-            <span class="tw-label">Áreas involucradas</span>
-            <div class="tw-chips" data-field="areas_involucradas" data-multiple="true" data-required="true">
-                {{{areaChips}}}
+        <div data-variant="proyecto" hidden>
+            <div class="tw-field">
+                <span class="tw-label">Áreas involucradas</span>
+                <div class="tw-chips" data-field="areas_involucradas" data-multiple="true" data-required="true">
+                    {{{areaChips}}}
+                </div>
             </div>
-        </div>
 
-        <div class="tw-field">
-            <label class="tw-label" for="pfFunctional">Requerimientos funcionales</label>
-            <textarea id="pfFunctional" class="tw-textarea" data-field="req_funcionales" maxlength="4000" required></textarea>
+            <div class="tw-field">
+                <label class="tw-label" for="pfFunctional">Requerimientos funcionales</label>
+                <textarea id="pfFunctional" class="tw-textarea" data-field="req_funcionales" maxlength="4000" required></textarea>
+            </div>
         </div>
     </div>
 
@@ -140,6 +147,36 @@
         </summary>
 
         <div class="tw-more-body">
+            <!-- En un desarrollo estos campos son opcionales -->
+            <div data-variant="desarrollo" hidden>
+                <div class="tw-field">
+                    <label class="tw-label" for="pfGoalDev">Objetivo <span class="tw-optional">(opcional)</span></label>
+                    <textarea id="pfGoalDev" class="tw-textarea" data-field="objetivo" maxlength="2000"></textarea>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="pfReasonDev">Justificación <span class="tw-optional">(opcional)</span></label>
+                    <textarea id="pfReasonDev" class="tw-textarea" data-field="justificacion" maxlength="2000"></textarea>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="pfScopeDev">Alcance <span class="tw-optional">(opcional)</span></label>
+                    <textarea id="pfScopeDev" class="tw-textarea" data-field="alcance" maxlength="2000"></textarea>
+                </div>
+
+                <div class="tw-field">
+                    <span class="tw-label">Áreas involucradas <span class="tw-optional">(opcional)</span></span>
+                    <div class="tw-chips" data-field="areas_involucradas" data-multiple="true">
+                        {{{areaChips}}}
+                    </div>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="pfFunctionalDev">Requerimientos funcionales <span class="tw-optional">(opcional)</span></label>
+                    <textarea id="pfFunctionalDev" class="tw-textarea" data-field="req_funcionales" maxlength="4000"></textarea>
+                </div>
+            </div>
+
             <div class="tw-field">
                 <label class="tw-label" for="pfOutOfScope">Fuera de alcance <span class="tw-optional">(opcional)</span></label>
                 <textarea id="pfOutOfScope" class="tw-textarea" data-field="fuera_alcance" maxlength="2000"></textarea>

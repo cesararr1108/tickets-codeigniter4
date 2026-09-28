@@ -2,8 +2,12 @@
  * Formulario "Proyectos - Desarrollos" (hoja del Excel de requerimientos).
  * HTML: templates/project-form.html
  *
- * Si es un DESARROLLO (subcategoría o categoría con "desarrollo") se ocultan
- * "Líder del proyecto" y "Presupuesto estimado" (bloques data-variant="proyecto").
+ * Si es un DESARROLLO (subcategoría o categoría con "desarrollo"):
+ *   - se ocultan "Líder del proyecto" y "Presupuesto estimado";
+ *   - Objetivo, Justificación, Alcance, Áreas involucradas y Requerimientos
+ *     funcionales pasan a opcionales (bloque plegable).
+ * En un PROYECTO todos esos campos son obligatorios.
+ * (bloques data-variant="proyecto" / "desarrollo" del HTML)
  * El estado del proyecto lo actualiza el área desde el panel.
  */
 

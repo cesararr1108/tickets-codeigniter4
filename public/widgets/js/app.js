@@ -24,7 +24,7 @@ import {
     obtenerTodasSubcategorias
 } from "./categories.js";
 import { crearTicket } from "./tickets.js";
-import { obtenerDetalleTicket, obtenerMisTickets } from "./my-tickets.js";
+import { obtenerDetalleTicket, obtenerMisTickets, responderTicket } from "./my-tickets.js";
 import { ProjectForm } from "./forms/project-form.js";
 import { RequirementForm } from "./forms/requirement-form.js";
 import { IncidentForm } from "./forms/incident-form.js";
@@ -1120,12 +1120,10 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             : "";
 
         const messages = detail.messages?.length
-            ? detail.messages.map(m => `
-                <div class="tw-msg tw-msg-${m.type === "agente" ? "agent" : "client"}">
-                    <div class="tw-msg-head"><strong>${escapeHtml(m.sender)}</strong><span>${escapeHtml(formatDate(m.createdAt))}</span></div>
-                    <p>${escapeHtml(m.message)}</p>
-                </div>`).join("")
-            : '<p class="tw-muted">Sin mensajes.</p>';
+            ? detail.messages.map(messageHtml).join("")
+            : '<p class="tw-muted" data-empty>Sin mensajes.</p>';
+
+        const closed = t.Status === "cerrado";
 
         const files = detail.attachments?.length
             ? `<section class="tw-detail-block"><p class="tw-section-label">Adjuntos</p><ul class="tw-file-list">`
@@ -1150,9 +1148,58 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 followUpHtml: pairs("Seguimiento de TI", detail.followUp),
                 answersHtml: pairs("Información de la solicitud", detail.answers),
                 messagesHtml: messages,
-                filesHtml: files
+                filesHtml: files,
+                replyHidden: closed ? "hidden" : "",
+                closedHidden: closed ? "" : "hidden"
             })
         );
+    }
+
+    function messageHtml(m) {
+        return `
+            <div class="tw-msg tw-msg-${m.type === "agente" ? "agent" : "client"}">
+                <div class="tw-msg-head"><strong>${escapeHtml(m.sender)}</strong><span>${escapeHtml(formatDate(m.createdAt))}</span></div>
+                <p>${escapeHtml(m.message)}</p>
+            </div>`;
+    }
+
+    /*
+     * El solicitante responde en la conversación de su ticket.
+     */
+    async function sendReply(form) {
+
+        const textarea = form.querySelector("textarea");
+        const button = form.querySelector("button[type=submit]");
+        const error = form.querySelector("[data-reply-error]");
+        const message = textarea.value.trim();
+
+        if (!message || button.disabled) {
+            return;
+        }
+
+        button.disabled = true;
+        error.textContent = "";
+
+        try {
+            const saved = await responderTicket(apiUrl, form.dataset.reply, {
+                email: mineEmail(),
+                name: perfil.name || mineEmail(),
+                message
+            });
+
+            const thread = el.mineDetailView.querySelector("[data-messages]");
+            thread.querySelector("[data-empty]")?.remove();
+            thread.insertAdjacentHTML("beforeend", messageHtml(saved));
+
+            textarea.value = "";
+            thread.lastElementChild?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        } catch (err) {
+            console.error("[Tickets Widget] Error enviando el mensaje:", err);
+            error.textContent = err.message || "No fue posible enviar el mensaje.";
+        } finally {
+            button.disabled = false;
+            textarea.focus();
+        }
     }
 
     // ==========================================
@@ -1338,6 +1385,26 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     });
 
     el.mineBack.addEventListener("click", loadTickets);
+
+    // Respuesta del solicitante en el detalle del ticket.
+    el.mineDetailView.addEventListener("submit", event => {
+        const form = event.target.closest("form[data-reply]");
+
+        if (form) {
+            event.preventDefault();
+            sendReply(form);
+        }
+    });
+
+    // Enter envía; Shift+Enter hace salto de línea.
+    el.mineDetailView.addEventListener("keydown", event => {
+        const form = event.target.closest("form[data-reply]");
+
+        if (form && event.key === "Enter" && !event.shiftKey && event.target.tagName === "TEXTAREA") {
+            event.preventDefault();
+            sendReply(form);
+        }
+    });
 
     el.successMine.addEventListener("click", () => {
         selectMineTab("pendientes", false);

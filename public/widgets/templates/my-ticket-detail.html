@@ -3,6 +3,7 @@
   Variables: id, title, status, statusClass, priority, priorityClass,
              company, branch, category, subcategory, date, assigned
   HTML (ya escapado en app.js): answersHtml, followUpHtml, messagesHtml, filesHtml
+  replyHidden / closedHidden: "hidden" o "" (según si el ticket está resuelto)
 -->
 <article class="tw-detail">
     <header class="tw-detail-head">
@@ -40,7 +41,23 @@
 
     <section class="tw-detail-block">
         <p class="tw-section-label">Conversación</p>
-        {{{messagesHtml}}}
+        <div class="tw-thread" data-messages>
+            {{{messagesHtml}}}
+        </div>
+
+        <!-- Respuesta del solicitante (oculta si el ticket está resuelto) -->
+        <form class="tw-reply" data-reply="{{id}}" {{replyHidden}}>
+            <textarea class="tw-textarea" name="message" maxlength="4000" rows="3"
+                      placeholder="Escribe un mensaje para el equipo de TI… (Enter para enviar, Shift+Enter para nueva línea)" required></textarea>
+            <div class="tw-reply-actions">
+                <span class="tw-reply-error" data-reply-error></span>
+                <button type="submit" class="tw-btn tw-btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
+                    Enviar
+                </button>
+            </div>
+        </form>
+        <p class="tw-reply-closed" {{closedHidden}}>Este ticket está resuelto. Si necesitas más ayuda, crea una nueva solicitud.</p>
     </section>
 
     {{{filesHtml}}}

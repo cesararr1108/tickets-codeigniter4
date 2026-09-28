@@ -191,6 +191,61 @@ class TicketController extends BaseApiController
     }
 
     /**
+     * POST /tickets/{id}/responder
+     * Body: { email, name, message }
+     *
+     * El solicitante escribe en la conversación de su ticket. Solo si el
+     * correo coincide con el del ticket y el ticket no está cerrado.
+     */
+    public function requesterReply($id = null)
+    {
+        $payload = $this->getPayload();
+        $email   = trim((string) ($payload['email'] ?? ''));
+        $name    = trim((string) ($payload['name'] ?? ''));
+        $message = trim((string) ($payload['message'] ?? ''));
+
+        $ticket = $this->model()->find((int) $id);
+
+        if ($ticket === null || $email === '' || strcasecmp((string) $ticket['RequesterEmail'], $email) !== 0) {
+            return $this->failNotFound('Ticket no encontrado.');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return $this->failValidationErrors(['message' => 'El ticket está resuelto; crea uno nuevo si necesitas más ayuda.']);
+        }
+
+        if ($message === '') {
+            return $this->failValidationErrors(['message' => 'Escribe un mensaje.']);
+        }
+
+        if (mb_strlen($message) > 4000) {
+            return $this->failValidationErrors(['message' => 'El mensaje supera los 4000 caracteres.']);
+        }
+
+        $model = model(TicketMessageModel::class);
+
+        $saved = $model->insert([
+            'IdTicket'   => (int) $id,
+            'SenderType' => 'cliente',
+            'SenderName' => mb_substr($name !== '' ? $name : $email, 0, 150),
+            'Message'    => $message,
+        ]);
+
+        if ($saved === false) {
+            return $this->failValidationErrors($model->errors());
+        }
+
+        $row = $model->find($model->getInsertID());
+
+        return $this->respondCreated([
+            'sender'    => $row['SenderName'],
+            'type'      => $row['SenderType'],
+            'message'   => $row['Message'],
+            'createdAt' => $row['CreatedAt'],
+        ]);
+    }
+
+    /**
      * Fecha AAAA-MM-DD del query string, o null si no viene o no es válida.
      */
     private function dateParam(string $name): ?string

@@ -6,7 +6,7 @@
  * el widget.
  */
 
-import { apiGet } from "./api.js";
+import { apiGet, apiPost } from "./api.js";
 
 /*
  * GET /tickets/mine?email=&status=pendientes|resueltos&from=&to=&page=&perPage=
@@ -32,5 +32,19 @@ export async function obtenerDetalleTicket(apiUrl, id, email) {
     return await apiGet(
         apiUrl,
         "/tickets/" + encodeURIComponent(id) + "/detalle?email=" + encodeURIComponent(email)
+    );
+}
+
+/*
+ * POST /tickets/{id}/responder
+ * El solicitante escribe en la conversación de su ticket.
+ * Devuelve el mensaje guardado: { sender, type, message, createdAt }
+ */
+export async function responderTicket(apiUrl, id, { email, name, message }) {
+
+    return await apiPost(
+        apiUrl,
+        "/tickets/" + encodeURIComponent(id) + "/responder",
+        { email, name, message }
     );
 }

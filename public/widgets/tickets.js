@@ -6,7 +6,12 @@
  *   src="https://200.122.206.204:8081/widgets/tickets.js"
  *   data-container="tickets-widget"
  *   data-api="https://200.122.206.204:8081/api"
- *   data-version="1">
+ *   data-version="1"
+ *   data-company="01" data-branch="001"          (opcionales: datos del
+ *   data-email="ana@empresa.com"                  usuario que tiene sesión
+ *   data-name="Ana Pérez" data-user="aperez"      en el anfitrión)
+ *   data-role="Analista" data-area="Comercial"
+ *   data-phone="3001234567">
  * </script>
  *
  * Este archivo solo carga js/app.js. El HTML está en templates/*.html
@@ -32,12 +37,18 @@
 
   
 
+    // Datos del usuario que envía el anfitrión. Se usan para preseleccionar
+    // compañía/sucursal, llenar el correo y los campos automáticos
+    // (Solicitante, Área, Sede) de los formularios adicionales.
     const perfil = {
         company: currentScript?.dataset.company || "",
         branch:  currentScript?.dataset.branch  || "",
         email:   currentScript?.dataset.email   || "",
         name:    currentScript?.dataset.name    || "",
         phone:   currentScript?.dataset.phone   || "",
+        user:    currentScript?.dataset.user    || "",
+        role:    currentScript?.dataset.role    || "",
+        area:    currentScript?.dataset.area    || "",
         //lock:    currentScript?.dataset.lock === "true"
     };
 

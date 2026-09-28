@@ -612,6 +612,20 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 
 .ticket-layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
 .ticket-side { display: flex; flex-direction: column; gap: 16px; }
+.ticket-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+/* Respuestas del formulario adicional (Proyecto, Requerimiento, Incidente) */
+.form-answers { padding: 0; }
+.form-answers summary { list-style: none; cursor: pointer; padding: 18px 20px 14px; margin: 0; }
+.form-answers summary::-webkit-details-marker { display: none; }
+.form-answers details[open] summary { border-bottom: 1px solid var(--border); }
+.form-answers h2 { display: flex; align-items: center; gap: 8px; }
+.form-answers h2 .icon { width: 18px; height: 18px; color: var(--primary); }
+.answers { margin: 0; padding: 16px 20px 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 24px; }
+.answers div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.answers .answer-wide { grid-column: 1 / -1; }
+.answers dt { color: var(--muted); font-size: 12px; font-weight: 600; }
+.answers dd { margin: 0; font-weight: 500; word-break: break-word; line-height: 1.45; }
 
 .chat { display: flex; flex-direction: column; padding: 0; height: calc(100vh - 300px); min-height: 440px; }
 .chat .card-head { padding: 18px 20px 14px; margin: 0; border-bottom: 1px solid var(--border); }
@@ -762,6 +776,7 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
     .topbar { padding: 0 12px; gap: 10px; }
     .brand { width: auto; }
     .brand-name { display: none; }
+    .answers { grid-template-columns: minmax(0, 1fr); }
 
     .sidebar {
         position: fixed;

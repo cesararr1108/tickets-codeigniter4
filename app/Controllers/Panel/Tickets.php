@@ -3,6 +3,7 @@
 namespace App\Controllers\Panel;
 
 use App\Libraries\TicketRepository;
+use App\Models\TicketFormAnswerModel;
 use App\Models\TicketMessageModel;
 use App\Models\TicketModel;
 
@@ -65,6 +66,7 @@ class Tickets extends BasePanelController
             'title'       => ticket_code($id),
             'ticket'      => $ticket,
             'messages'    => model(TicketMessageModel::class)->forTicket($id),
+            'formAnswers' => $this->formAnswers($id),
             'attachments' => $db->table('TicketAttachments')->where('TicketId', $id)->orderBy('CreatedAt')->get()->getResultArray(),
             'history'     => $db->table('Tickets')
                 ->select('IdTicket, Subject, Status, CreatedAt')
@@ -248,6 +250,54 @@ class Tickets extends BasePanelController
 
         return redirect()->to(site_url("panel/tickets/{$id}"))
             ->with('success', 'Ticket ' . ticket_code($id) . ' creado.');
+    }
+
+    /**
+     * GET /panel/tickets/{id}/adjuntos/{attachmentId}
+     * Descarga un adjunto guardado en writable/uploads.
+     */
+    public function attachment(int $id, int $attachmentId)
+    {
+        $file = db_connect()->table('TicketAttachments')
+            ->where('AttachmentId', $attachmentId)
+            ->where('TicketId', $id)
+            ->get()
+            ->getRowArray();
+
+        if ($file === null) {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El adjunto no existe.');
+        }
+
+        if (preg_match('#^https?://#i', (string) $file['FilePath'])) {
+            return redirect()->to($file['FilePath']);
+        }
+
+        $base = realpath(WRITEPATH . 'uploads');
+        $path = realpath(WRITEPATH . 'uploads/' . ltrim((string) $file['FilePath'], '/\\'));
+
+        // Evita salir de writable/uploads con rutas manipuladas.
+        if ($base === false || $path === false || ! str_starts_with($path, $base . DIRECTORY_SEPARATOR) || ! is_file($path)) {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El archivo del adjunto no se encuentra en el servidor.');
+        }
+
+        return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+    }
+
+    /**
+     * Respuestas del formulario adicional del ticket (vacío si la tabla
+     * TicketFormAnswers aún no existe).
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function formAnswers(int $id): array
+    {
+        try {
+            return model(TicketFormAnswerModel::class)->forTicket($id);
+        } catch (\Throwable $e) {
+            log_message('warning', '[Panel] No se pudieron leer las respuestas del formulario: ' . $e->getMessage());
+
+            return [];
+        }
     }
 
     /**

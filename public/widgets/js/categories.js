@@ -28,7 +28,8 @@ export async function obtenerSubcategorias(apiUrl, categoryId) {
 
     return toList(result).map(sub => ({
         id: sub.IdSubCategory,
-        name: sub.SubCategory ?? "Subcategoría"
+        name: sub.SubCategory ?? "Subcategoría",
+        formId: sub.IdForm ?? null
     }));
 }
 
@@ -44,6 +45,21 @@ export async function obtenerTodasSubcategorias(apiUrl) {
     return toList(result).map(sub => ({
         id: sub.IdSubCategory,
         name: sub.SubCategory ?? "Subcategoría",
-        categoryId: sub.IdCategory
+        categoryId: sub.IdCategory,
+        formId: sub.IdForm ?? null
     }));
+}
+
+/*
+ * GET /ticket-forms
+ * Devuelve: Map { idForm -> nombre }
+ * Permite asociar un formulario a una subcategoría (SubCategory.IdForm).
+ */
+export async function obtenerFormularios(apiUrl) {
+
+    const result = await apiGet(apiUrl, "/ticket-forms");
+
+    return new Map(
+        toList(result).map(form => [String(form.IdForm), form.NameForm ?? ""])
+    );
 }

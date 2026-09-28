@@ -1,0 +1,223 @@
+<!--
+  Formulario "Requerimiento" (paso Detalle). Lo controla
+  js/forms/requirement-form.js.
+
+  Variables (no escribir los marcadores con llaves en este comentario):
+    requester, sede         -> datos automáticos del solicitante
+    areaOptions             -> HTML: <option> de áreas (preseleccionada la del perfil)
+    tipoOptions             -> HTML: <option> de tipos de requerimiento
+    impactoOptions          -> HTML: <option> de impacto
+    userOptions             -> HTML: <option> de usuarios (aprobador)
+
+  Título (Asunto), "¿Qué necesita?" (Descripción), categoría y subcategoría
+  ya se piden en el ticket. Los bloques data-variant dependen de la
+  subcategoría; los ocultos no se validan ni se guardan.
+-->
+<div class="tw-extra-form" data-form="requerimiento">
+
+    <!-- ============ SOLICITANTE ============ -->
+    <p class="tw-section-label">Solicitante</p>
+
+    <div class="tw-form-grid">
+        <div class="tw-field">
+            <label class="tw-label" for="rqRequester">Solicitante</label>
+            <input id="rqRequester" class="tw-input" type="text" data-field="solicitante" value="{{requester}}" readonly>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="rqSede">Sede</label>
+            <input id="rqSede" class="tw-input" type="text" data-field="sede" value="{{sede}}" readonly>
+        </div>
+    </div>
+
+    <div class="tw-form-grid">
+        <div class="tw-field">
+            <label class="tw-label" for="rqArea">Área</label>
+            <select id="rqArea" class="tw-input" data-field="area" required>
+                <option value="">Selecciona un área</option>
+                {{{areaOptions}}}
+            </select>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="rqTipo">Tipo de requerimiento</label>
+            <select id="rqTipo" class="tw-input" data-field="tipo_requerimiento" required>
+                <option value="">Selecciona un tipo</option>
+                {{{tipoOptions}}}
+            </select>
+        </div>
+    </div>
+
+    <!-- ============ DETALLE ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Detalle del requerimiento</p>
+
+        <div class="tw-field">
+            <label class="tw-label" for="rqJustificacion">Justificación</label>
+            <textarea id="rqJustificacion" class="tw-textarea" data-field="justificacion" maxlength="2000" required></textarea>
+        </div>
+
+        <div class="tw-form-grid">
+            <div class="tw-field">
+                <label class="tw-label" for="rqFecha">Fecha requerida</label>
+                <input id="rqFecha" class="tw-input" type="date" data-field="fecha_requerida" required>
+            </div>
+
+            <div class="tw-field">
+                <label class="tw-label" for="rqImpacto">Impacto</label>
+                <select id="rqImpacto" class="tw-input" data-field="impacto" required>
+                    <option value="">Selecciona el impacto</option>
+                    {{{impactoOptions}}}
+                </select>
+            </div>
+        </div>
+
+        <div class="tw-field">
+            <label class="tw-label" for="rqAprobador">Aprobador</label>
+            <select id="rqAprobador" class="tw-input" data-field="aprobador" required>
+                <option value="">Selecciona el jefe o responsable que aprueba</option>
+                {{{userOptions}}}
+            </select>
+        </div>
+    </div>
+
+    <!-- ============ USUARIO BENEFICIARIO ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Usuario beneficiario</p>
+
+        <!-- Biométrico -->
+        <div data-variant="biometrico" hidden>
+            <div class="tw-field">
+                <label class="tw-label" for="rqBioNombre">Nombre completo</label>
+                <input id="rqBioNombre" class="tw-input" type="text" data-field="beneficiario_nombre" maxlength="150" required>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqBioCedula">Cédula</label>
+                    <input id="rqBioCedula" class="tw-input" type="text" inputmode="numeric" data-field="beneficiario_cedula" maxlength="20" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqBioCargo">Cargo</label>
+                    <input id="rqBioCargo" class="tw-input" type="text" data-field="beneficiario_cargo" maxlength="100" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Creación de usuario ADG -->
+        <div data-variant="usuario-adg" hidden>
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgId">Identificación</label>
+                    <input id="rqAdgId" class="tw-input" type="text" inputmode="numeric" data-field="beneficiario_identificacion" maxlength="20" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgRol">Rol</label>
+                    <input id="rqAdgRol" class="tw-input" type="text" data-field="beneficiario_rol" maxlength="100" required>
+                </div>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgNombres">Nombres</label>
+                    <input id="rqAdgNombres" class="tw-input" type="text" data-field="beneficiario_nombres" maxlength="100" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgApellidos">Apellidos</label>
+                    <input id="rqAdgApellidos" class="tw-input" type="text" data-field="beneficiario_apellidos" maxlength="100" required>
+                </div>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgCorreo">Correo</label>
+                    <input id="rqAdgCorreo" class="tw-input" type="email" data-field="beneficiario_correo" maxlength="180" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqAdgCelular">Celular</label>
+                    <input id="rqAdgCelular" class="tw-input" type="tel" data-field="beneficiario_celular" maxlength="20" required>
+                </div>
+            </div>
+
+            <div class="tw-field">
+                <span class="tw-label">¿El usuario ya está creado en SAP?</span>
+                <div class="tw-chips" data-field="beneficiario_creado_sap" data-required="true">
+                    <button type="button" class="tw-chip" data-value="si" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        Sí
+                    </button>
+                    <button type="button" class="tw-chip" data-value="no" aria-pressed="false">
+                        <span class="tw-chip-dot" aria-hidden="true"></span>
+                        No
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Creación de usuario SAP -->
+        <div data-variant="usuario-sap" hidden>
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapId">Identificación</label>
+                    <input id="rqSapId" class="tw-input" type="text" inputmode="numeric" data-field="beneficiario_identificacion" maxlength="20" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapRol">Rol</label>
+                    <input id="rqSapRol" class="tw-input" type="text" data-field="beneficiario_rol" maxlength="100" required>
+                </div>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapNombres">Nombres</label>
+                    <input id="rqSapNombres" class="tw-input" type="text" data-field="beneficiario_nombres" maxlength="100" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapApellidos">Apellidos</label>
+                    <input id="rqSapApellidos" class="tw-input" type="text" data-field="beneficiario_apellidos" maxlength="100" required>
+                </div>
+            </div>
+
+            <div class="tw-form-grid">
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapCorreo">Correo</label>
+                    <input id="rqSapCorreo" class="tw-input" type="email" data-field="beneficiario_correo" maxlength="180" required>
+                </div>
+
+                <div class="tw-field">
+                    <label class="tw-label" for="rqSapCelular">Celular</label>
+                    <input id="rqSapCelular" class="tw-input" type="tel" data-field="beneficiario_celular" maxlength="20" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Otras subcategorías -->
+        <div data-variant="default">
+            <div class="tw-field">
+                <label class="tw-label" for="rqBeneficiario">Usuario beneficiario <span class="tw-optional">(opcional)</span></label>
+                <input id="rqBeneficiario" class="tw-input" type="text" data-field="beneficiario" maxlength="150" placeholder="Nombre de quien recibe el servicio">
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ EVIDENCIA ============ -->
+    <div class="tw-subsection">
+        <p class="tw-section-label">Evidencia / documentos</p>
+
+        <div class="tw-field">
+            <span class="tw-label">Documentos <span class="tw-optional">(formato de autorización, etc.)</span></span>
+            <label class="tw-dropzone" data-dropzone="documentos">
+                <input type="file" multiple hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/></svg>
+                <span data-file-names>Arrastra los archivos o haz clic para seleccionarlos</span>
+            </label>
+        </div>
+    </div>
+
+</div>

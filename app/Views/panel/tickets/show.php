@@ -22,6 +22,37 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
 </div>
 
 <div class="ticket-layout">
+    <div class="ticket-main">
+    <?php if (! empty($formAnswers)): ?>
+        <?php
+        $formTitles = [
+            'proyecto'      => 'Solicitud de proyecto / desarrollo',
+            'requerimiento' => 'Requerimiento',
+            'incidente'     => 'Incidente / soporte',
+        ];
+        $formKey = $formAnswers[0]['FormKey'];
+        ?>
+        <section class="card form-answers">
+            <details open>
+                <summary class="card-head">
+                    <div>
+                        <h2><?= icon('list') ?> <?= esc($formTitles[$formKey] ?? ucfirst($formKey)) ?></h2>
+                        <p class="muted">Información registrada por el solicitante al crear el ticket.</p>
+                    </div>
+                </summary>
+
+                <dl class="answers">
+                    <?php foreach ($formAnswers as $a): $value = trim((string) $a['Value']); $long = mb_strlen($value) > 70 || str_contains($value, "\n"); ?>
+                        <div class="<?= $long ? 'answer-wide' : '' ?>">
+                            <dt><?= esc($a['Label']) ?></dt>
+                            <dd class="<?= $value === '' ? 'muted' : '' ?>"><?= $value === '' ? '—' : nl2br(esc($value)) ?></dd>
+                        </div>
+                    <?php endforeach ?>
+                </dl>
+            </details>
+        </section>
+    <?php endif ?>
+
     <section class="card chat" id="chat">
         <div class="card-head">
             <div>
@@ -48,6 +79,7 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
             <button type="submit" class="btn btn-primary" aria-label="Enviar"><?= icon('send') ?> <span class="hide-mobile">Enviar</span></button>
         </form>
     </section>
+    </div>
 
     <aside class="ticket-side">
         <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
@@ -106,14 +138,10 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
                 <p class="empty">Sin archivos adjuntos.</p>
             <?php else: ?>
                 <ul class="files">
-                    <?php foreach ($attachments as $f): $isUrl = preg_match('#^https?://#i', $f['FilePath']); ?>
+                    <?php foreach ($attachments as $f): ?>
                         <li>
                             <?= icon('paperclip') ?>
-                            <?php if ($isUrl): ?>
-                                <a href="<?= esc($f['FilePath'], 'attr') ?>" target="_blank" rel="noopener"><?= esc($f['FileName']) ?></a>
-                            <?php else: ?>
-                                <span title="<?= esc($f['FilePath'], 'attr') ?>"><?= esc($f['FileName']) ?></span>
-                            <?php endif ?>
+                            <a href="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/adjuntos/' . $f['AttachmentId']) ?>" target="_blank" rel="noopener"><?= esc($f['FileName']) ?></a>
                             <span class="muted small"><?= format_date($f['CreatedAt'], 'd/m/Y') ?></span>
                         </li>
                     <?php endforeach ?>

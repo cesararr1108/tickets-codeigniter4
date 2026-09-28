@@ -2,21 +2,28 @@ import { apiGet, apiPost, apiUpload, toList } from "./api.js";
 
 /*
  * POST /tickets
- * Si hay archivo se envía como multipart/form-data.
+ * data puede incluir Description, SenderName, FormKey y Answers
+ * ([{ key, label, value }]); el backend guarda todo junto.
+ * Si hay archivos se envía como multipart/form-data (files[]).
  */
-export async function crearTicket(apiUrl, data, file = null) {
+export async function crearTicket(apiUrl, data, files = []) {
 
-    if (!file) {
+    const list = (Array.isArray(files) ? files : [files]).filter(Boolean);
+
+    if (!list.length) {
         return await apiPost(apiUrl, "/tickets", data);
     }
 
     const formData = new FormData();
 
     Object.entries(data).forEach(([key, value]) => {
-        formData.append(key, value ?? "");
+        formData.append(
+            key,
+            typeof value === "object" && value !== null ? JSON.stringify(value) : value ?? ""
+        );
     });
 
-    formData.append("file", file);
+    list.forEach(file => formData.append("files[]", file));
 
     return await apiUpload(apiUrl, "/tickets", formData);
 }

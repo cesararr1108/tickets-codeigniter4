@@ -19,15 +19,22 @@ import { obtenerCompanias } from "./companies.js";
 import { obtenerBranches } from "./branches.js";
 import {
     obtenerCategorias,
+    obtenerFormularios,
     obtenerSubcategorias,
     obtenerTodasSubcategorias
 } from "./categories.js";
-import { agregarMensaje, crearTicket, obtenerTickets } from "./tickets.js";
+import { crearTicket, obtenerTickets } from "./tickets.js";
 import { ProjectForm } from "./forms/project-form.js";
-const EXTRA_FORMS = [ProjectForm];
-console.log({
-    EXTRA_FORMS
-})
+import { RequirementForm } from "./forms/requirement-form.js";
+import { IncidentForm } from "./forms/incident-form.js";
+
+/*
+ * Formularios adicionales del paso Detalle. Se elige el primero cuyas
+ * palabras clave (static keywords) aparezcan en:
+ *   1. el nombre del formulario asociado a la subcategoría (SubCategory.IdForm), o
+ *   2. el nombre de la categoría.
+ */
+const EXTRA_FORMS = [ProjectForm, RequirementForm, IncidentForm];
 const TOTAL_STEPS = 4;
 const SEARCH_THRESHOLD = 6;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -113,8 +120,18 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         subcategory: null,
         priority: null,
         file: null,
-         extraForm: null
+        extraForm: null,
+        formNames: new Map()
     };
+
+    // Datos del usuario que envía el script del anfitrión (data-*).
+    perfil = perfil ?? {};
+
+    function prefillEmail() {
+        if (perfil.email && !el.email.value) {
+            el.email.value = perfil.email;
+        }
+    }
 
     // Evita pintar respuestas viejas si el usuario cambia rápido de opción.
     let branchRequest = 0;
@@ -320,10 +337,16 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         await showState(el.categoryGrid, "loading", "Cargando categorías...");
 
-        const [categoriesResult, subcategoriesResult] = await Promise.allSettled([
+        const [categoriesResult, subcategoriesResult, formsResult] = await Promise.allSettled([
             obtenerCategorias(apiUrl),
-            obtenerTodasSubcategorias(apiUrl)
+            obtenerTodasSubcategorias(apiUrl),
+            obtenerFormularios(apiUrl)
         ]);
+
+        // Nombres de TicketForms (para SubCategory.IdForm). Opcional.
+        if (formsResult.status === "fulfilled") {
+            state.formNames = formsResult.value;
+        }
 
         if (categoriesResult.status === "rejected") {
             console.error("[Tickets Widget] Error cargando categorías:", categoriesResult.reason);
@@ -418,18 +441,48 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     }
 
     /*
-     * Monta (o quita) el formulario adicional de la categoría en el paso 3.
+     * Clase de formulario adicional para la categoría/subcategoría elegidas.
      */
-    function setExtraForm(category) {
-        console.log({
-            category
-        })
-        const FormClass = EXTRA_FORMS.find(form => form.matches(category)) ?? null;
-        console.log({
-            FormClass
-        })
+    function resolveExtraForm(category, subcategory) {
+
+        const formName = subcategory?.formId != null
+            ? state.formNames.get(String(subcategory.formId))
+            : "";
+
+        for (const text of [formName, category?.name]) {
+            const FormClass = EXTRA_FORMS.find(form => form.matches(text));
+
+            if (FormClass) {
+                return FormClass;
+            }
+        }
+
+        return null;
+    }
+
+    /*
+     * Datos automáticos para los formularios (vienen del script anfitrión).
+     */
+    function formContext() {
+        return {
+            requester: perfil.name || el.email.value.trim() || perfil.email || "",
+            email: el.email.value.trim() || perfil.email || "",
+            area: perfil.area || "",
+            sede: state.branch?.name || "",
+            perfil
+        };
+    }
+
+    /*
+     * Monta (o quita) el formulario adicional en el paso 3.
+     */
+    function setExtraForm(category, subcategory = null) {
+
+        const FormClass = resolveExtraForm(category, subcategory);
+
         // Misma clase de formulario: se conservan las respuestas.
         if (FormClass && state.extraForm instanceof FormClass) {
+            state.extraForm.setSubcategory(subcategory);
             return;
         }
 
@@ -441,12 +494,11 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         }
 
         const form = new FormClass(el.extraForm, { apiUrl });
-        console.log({
-            form  , apiUrl
-        })
-        state.extraForm = form;
 
-        form.mount({ requester: el.email.value.trim() }).catch(error => {
+        state.extraForm = form;
+        form.subcategory = subcategory;
+
+        form.mount(formContext()).catch(error => {
             console.error("[Tickets Widget] Error cargando el formulario adicional:", error);
 
             if (state.extraForm === form) {
@@ -507,6 +559,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         state.subcategory = sub && sub !== state.subcategory ? sub : null;
 
         markSelected(el.subcategoryList, state.subcategory?.id ?? null);
+
+        // La subcategoría puede cambiar el formulario o sus campos.
+        setExtraForm(state.category, state.subcategory);
     }
 
     // ==========================================
@@ -626,6 +681,14 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             loadCategories();
         }
 
+        // Si se volvió a cambiar la sucursal o el correo, se actualizan
+        // los campos automáticos del formulario adicional.
+        if (step === 3 && state.extraForm) {
+            const context = formContext();
+            state.extraForm.setField("sede", context.sede);
+            state.extraForm.setField("solicitante", context.requester);
+        }
+
         if (step === 4) {
             renderReview();
         }
@@ -685,12 +748,21 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         el.file.value = "";
         updateCounter();
         setFile(null);
+        prefillEmail();
 
         goTo(1);
 
+        // Devuelve la promesa para poder mostrar un mensaje después de la
+        // preselección (que limpia las alertas).
         if (state.companies?.length === 1) {
-            selectCompany(state.companies[0].id);
+            return selectCompany(state.companies[0].id);
         }
+
+        if (perfil.company) {
+            return selectCompany(perfil.company, perfil.branch);
+        }
+
+        return Promise.resolve();
     }
 
     async function submit() {
@@ -711,15 +783,11 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         const email = el.email.value.trim();
 
-        // Las respuestas del formulario adicional se guardan junto a la descripción.
-        const description = [el.description.value.trim(), state.extraForm?.toText()]
-            .filter(Boolean)
-            .join("\n\n");
+        // Adjunto principal + documentos del formulario adicional.
+        const files = [state.file, ...(state.extraForm?.files ?? [])].filter(Boolean);
 
-        // La API recibe un archivo por ticket: si no hay adjunto principal,
-        // se envía el primer documento del formulario adicional.
-        const file = state.file ?? state.extraForm?.files[0] ?? null;
-
+        // El backend guarda en una sola transacción: ticket, descripción
+        // (primer mensaje), respuestas del formulario y adjuntos.
         const data = {
             CodCompanies: state.company.id,
             CodBranches: state.branch.id,
@@ -727,11 +795,18 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             RequesterEmail: email,
             Subject: el.subject.value.trim(),
             Priority: state.priority,
-            Status: "abierto"
+            Status: "abierto",
+            Description: el.description.value.trim(),
+            SenderName: perfil.name || email
         };
 
         if (state.subcategory) {
             data.IdSubCategory = state.subcategory.id;
+        }
+
+        if (state.extraForm) {
+            data.FormKey = state.extraForm.constructor.key;
+            data.Answers = state.extraForm.answers();
         }
 
         state.submitting = true;
@@ -739,20 +814,12 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         el.nextLabel.textContent = "Creando...";
 
         try {
-            const result = await crearTicket(apiUrl, data, file);
+            const result = await crearTicket(apiUrl, data, files);
 
             const ticketId =
                 result?.IdTicket ?? result?.data?.IdTicket ?? result?.id;
 
-            if (ticketId) {
-                try {
-                    await agregarMensaje(apiUrl, ticketId, email, description);
-                } catch (error) {
-                    console.error("[Tickets Widget] Error guardando la descripción:", error);
-                }
-            }
-
-            resetForm();
+            await resetForm();
 
             showAlert(
                 ticketId
@@ -876,9 +943,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     el.companySearch.addEventListener("input", filterCompanies);
     el.description.addEventListener("input", updateCounter);
 
-    // El campo "Solicitante" del formulario adicional sigue al correo.
+    // Si el anfitrión no envía el nombre, "Solicitante" sigue al correo.
     el.email.addEventListener("input", () =>
-        state.extraForm?.setRequester(el.email.value.trim())
+        state.extraForm?.setField("solicitante", formContext().requester)
     );
 
     el.file.addEventListener("change", () => setFile(el.file.files[0]));
@@ -924,6 +991,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     el.refreshTickets.addEventListener("click", loadTickets);
 
     updateCounter();
+    prefillEmail();
     goTo(1);
 
     return {

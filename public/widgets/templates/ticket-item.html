@@ -1,11 +1,13 @@
 <!--
-  Ticket en la pestaña "Mis tickets".
-  Variables: id, title, meta, status, statusClass
+  Ticket en la pestaña "Mis tickets" (clic = ver detalle).
+  Variables: id, title, category, date, priority, priorityClass, status, statusClass
 -->
-<article class="tw-ticket">
-    <div>
+<button type="button" class="tw-ticket" data-ticket="{{id}}">
+    <div class="tw-ticket-main">
         <div class="tw-ticket-title">{{title}}</div>
-        <div class="tw-ticket-meta">Ticket #{{id}} · {{meta}}</div>
+        <div class="tw-ticket-meta">#{{id}} · {{category}} · {{date}}</div>
     </div>
+    <span class="tw-ticket-prio tw-prio-{{priorityClass}}">{{priority}}</span>
     <span class="tw-status tw-status-{{statusClass}}">{{status}}</span>
-</article>
+    <svg class="tw-ticket-go" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+</button>

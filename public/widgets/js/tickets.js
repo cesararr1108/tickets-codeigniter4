@@ -46,6 +46,29 @@ export async function agregarMensaje(apiUrl, ticketId, senderName, message) {
 }
 
 /*
+ * GET /tickets/mine?email=&status=pendientes|resueltos&page=&perPage=
+ * Devuelve: { data: [...], page, pages, total, counts: { pendientes, resueltos } }
+ */
+export async function obtenerMisTickets(apiUrl, { email, status = "pendientes", page = 1, perPage = 5 }) {
+
+    const query = new URLSearchParams({ email, status, page, perPage });
+
+    return await apiGet(apiUrl, "/tickets/mine?" + query.toString());
+}
+
+/*
+ * GET /tickets/{id}/detalle?email=
+ * Devuelve: { ticket, answers, followUp, messages, attachments }
+ */
+export async function obtenerDetalleTicket(apiUrl, id, email) {
+
+    return await apiGet(
+        apiUrl,
+        "/tickets/" + encodeURIComponent(id) + "/detalle?email=" + encodeURIComponent(email)
+    );
+}
+
+/*
  * GET /tickets
  * Devuelve: [{ id, title, status, priority }]
  */

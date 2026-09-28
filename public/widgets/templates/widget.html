@@ -96,6 +96,10 @@
                             <h4 class="tw-section-label">Subcategoría <span class="tw-optional">(opcional)</span></h4>
                             <div id="subcategoryList" class="tw-chips"></div>
                         </div>
+
+                        <!-- Campos del tipo de solicitud (Proyecto, Requerimiento, Incidente):
+                             se despliegan al elegir la categoría o subcategoría. -->
+                        <div id="extraForm" class="tw-subsection" hidden></div>
                     </section>
 
                     <!-- PASO 3: DETALLE -->
@@ -144,9 +148,6 @@
                                 <span id="ticketFileName">Arrastra un archivo o haz clic para seleccionarlo</span>
                             </label>
                         </div>
-
-                        <!-- Formulario adicional según la categoría (ej. Proyecto) -->
-                        <div id="extraForm" class="tw-subsection" hidden></div>
                     </section>
 
                     <!-- PASO 4: REVISIÓN -->

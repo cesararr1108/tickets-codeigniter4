@@ -498,7 +498,12 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         state.extraForm = form;
         form.subcategory = subcategory;
 
-        form.mount(formContext()).catch(error => {
+        form.mount(formContext()).then(() => {
+            // Sin subcategorías, se lleva la vista a los campos recién abiertos.
+            if (state.extraForm === form && state.step === 2 && !state.subcategories.length) {
+                el.extraForm.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+        }).catch(error => {
             console.error("[Tickets Widget] Error cargando el formulario adicional:", error);
 
             if (state.extraForm === form) {
@@ -641,6 +646,10 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         if (step === 2) {
             if (!state.category) return "Selecciona una categoría.";
+
+            // Campos del tipo de solicitud (se muestran en este paso).
+            const extraError = state.extraForm?.validate();
+            if (extraError) return extraError;
         }
 
         if (step === 3) {
@@ -648,9 +657,6 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             if (!el.subject.value.trim()) return "Ingresa el asunto.";
             if (!state.priority) return "Selecciona la prioridad.";
             if (!el.description.value.trim()) return "Ingresa una descripción.";
-
-            const extraError = state.extraForm?.validate();
-            if (extraError) return extraError;
         }
 
         return null;
@@ -683,7 +689,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         // Si se volvió a cambiar la sucursal o el correo, se actualizan
         // los campos automáticos del formulario adicional.
-        if (step === 3 && state.extraForm) {
+        if (step === 2 && state.extraForm) {
             const context = formContext();
             state.extraForm.setField("sede", context.sede);
             state.extraForm.setField("solicitante", context.requester);

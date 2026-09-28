@@ -635,6 +635,8 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .btn-warning-soft { background: var(--warning-soft); color: var(--warning-text); border: 1px solid transparent; }
 .btn-warning-soft:hover { filter: brightness(.97); }
 .escalate-box { margin-top: 10px; }
+.assign-form { margin-top: 4px; }
+.assign-form .field { margin-bottom: 10px; }
 .escalate-box > summary { list-style: none; cursor: pointer; }
 .escalate-box > summary::-webkit-details-marker { display: none; }
 .escalate-box form { margin-top: 12px; }

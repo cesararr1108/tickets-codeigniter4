@@ -156,10 +156,33 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
                 <?php endif ?>
             </div>
 
-            <?php if ($perm['canTake']): ?>
+            <?php if ($perm['isAdmin']): ?>
+                <form class="assign-form" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
+                    <?= csrf_field() ?>
+                    <label class="field">
+                        <span class="field-label">Asignar a</span>
+                        <select name="AssignedUserId" class="select">
+                            <option value="">Sin responsable</option>
+                            <?php foreach ($lookups['agents'] as $a): ?>
+                                <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $ticket['AssignedUserId'] === $a['IdUser'] ? 'selected' : '' ?>>
+                                    <?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?>
+                                </option>
+                            <?php endforeach ?>
+                        </select>
+                    </label>
+                    <button type="submit" class="btn btn-primary btn-block"><?= icon('user') ?> Asignar</button>
+                </form>
+            <?php elseif ($perm['canTake']): ?>
                 <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/tomar') ?>">
                     <?= csrf_field() ?>
                     <button type="submit" class="btn btn-accent btn-block"><?= icon('user') ?> Tomar ticket</button>
+                </form>
+            <?php elseif ($perm['isAssignee']): ?>
+                <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>"
+                      data-confirm="¿Dejar de atender este ticket? Quedará sin responsable.">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="AssignedUserId" value="">
+                    <button type="submit" class="btn btn-outline btn-block">Dejar de atender</button>
                 </form>
             <?php endif ?>
 
@@ -202,20 +225,6 @@ $formAnswers = array_values(array_filter($formAnswers, static fn ($a) => ! isset
                             <option value="<?= $value ?>" <?= $ticket['Priority'] === $value ? 'selected' : '' ?>><?= esc($label) ?></option>
                         <?php endforeach ?>
                     </select>
-                </label>
-
-                <label class="field">
-                    <span class="field-label">Responsable</span>
-                    <select name="AssignedUserId" class="select">
-                        <option value="">Sin asignar</option>
-                        <?php foreach ($lookups['agents'] as $a): ?>
-                            <?php if (! $perm['isAdmin'] && $a['IdUser'] !== ($user['id'] ?? null)) continue; // el técnico solo puede elegirse a sí mismo ?>
-                            <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $ticket['AssignedUserId'] === $a['IdUser'] ? 'selected' : '' ?>>
-                                <?= esc($a['FullName']) ?><?= $a['IdUser'] === ($user['id'] ?? null) ? ' (yo)' : '' ?>
-                            </option>
-                        <?php endforeach ?>
-                    </select>
-                    <?php if (! $perm['isAdmin']): ?><span class="muted small">Solo el administrador puede asignar a otras personas.</span><?php endif ?>
                 </label>
 
                 <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>

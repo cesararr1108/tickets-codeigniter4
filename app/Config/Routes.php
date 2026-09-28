@@ -140,8 +140,6 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'apiaut
     $routes->post('tickets/(:num)/messages', 'TicketController::addMessage/$1');
     $routes->get('tickets/(:num)/attachments', 'TicketController::attachments/$1');
     $routes->post('tickets/(:num)/attachments', 'TicketController::addAttachment/$1');
-    $routes->get('tickets/mine', 'TicketController::mine');
-    $routes->get('tickets/(:num)/detalle', 'TicketController::requesterDetail/$1');
     $routes->get('tickets', 'TicketController::index');
     $routes->get('tickets/(:num)', 'TicketController::show/$1');
     $routes->post('tickets', 'TicketController::create');

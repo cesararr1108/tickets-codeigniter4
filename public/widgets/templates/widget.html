@@ -30,30 +30,11 @@
             </div>
             <nav class="tw-tabs">
                 <button type="button" class="tw-tab tw-active" data-tab="new">Nuevo ticket</button>
-                <button type="button" class="tw-tab" data-tab="mine">
-                    Mis tickets
-                    <span class="tw-tab-badge" id="mineBadge" title="Tickets pendientes" hidden>0</span>
-                </button>
+                <button type="button" class="tw-tab" data-tab="mine">Mis tickets</button>
             </nav>
 
             <!-- ============ NUEVO TICKET ============ -->
             <div id="panelNew" class="tw-panel tw-active">
-
-                <!-- Confirmación al crear el ticket -->
-                <div id="ticketSuccess" class="tw-success" role="status" hidden>
-                    <div class="tw-success-card">
-                        <div class="tw-success-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-                        </div>
-                        <h3 class="tw-success-title">¡Solicitud enviada!</h3>
-                        <p class="tw-success-ticket">Ticket <strong id="ticketSuccessId">#0</strong></p>
-                        <p class="tw-success-text">El equipo de TI ya recibió tu solicitud. Puedes seguir su estado en <strong>Mis tickets</strong>.</p>
-                        <div class="tw-success-actions">
-                            <button type="button" id="successMine" class="tw-btn tw-btn-primary">Ver mis tickets</button>
-                            <button type="button" id="successNew" class="tw-btn tw-btn-outline">Crear otra solicitud</button>
-                        </div>
-                    </div>
-                </div>
 
                 <ol class="tw-stepper" id="ticketStepper">
                     <li class="tw-stepper-item" data-step="1">
@@ -216,33 +197,10 @@
             <!-- ============ MIS TICKETS ============ -->
             <div id="panelMine" class="tw-panel">
                 <div class="tw-content">
-
-                    <!-- Listado -->
-                    <div id="mineListView">
-                        <div class="tw-pills" id="mineTabs" role="tablist">
-                            <button type="button" class="tw-pill tw-active" data-status="pendientes" role="tab">
-                                Pendientes <span class="tw-pill-count" id="countPendientes">0</span>
-                            </button>
-                            <button type="button" class="tw-pill" data-status="resueltos" role="tab">
-                                Resueltos <span class="tw-pill-count" id="countResueltos">0</span>
-                            </button>
-                        </div>
-
-                        <div id="ticketsList"></div>
-
-                        <nav class="tw-pager" id="minePager" hidden>
-                            <button type="button" class="tw-btn tw-btn-outline" id="minePrev">‹ Anterior</button>
-                            <span class="tw-pager-info" id="minePageInfo"></span>
-                            <button type="button" class="tw-btn tw-btn-outline" id="mineNext">Siguiente ›</button>
-                        </nav>
-                    </div>
-
-                    <!-- Detalle de un ticket -->
-                    <div id="mineDetailView" hidden></div>
+                    <div id="ticketsList"></div>
                 </div>
 
                 <footer class="tw-footer">
-                    <button type="button" id="mineBack" class="tw-btn tw-btn-ghost" hidden>‹ Volver a mis tickets</button>
                     <span></span>
                     <button type="button" id="refreshTickets" class="tw-btn tw-btn-outline">Actualizar</button>
                 </footer>

@@ -51,6 +51,23 @@ Además:
 - `GET /api/tickets/{id}/messages` y `POST /api/tickets/{id}/messages`
 - `GET /api/tickets/{id}/attachments` y `POST /api/tickets/{id}/attachments`
 
+## Seguridad
+
+| Qué | Dónde |
+|---|---|
+| API interna (`/api`) con `Authorization` + `X-Api-Key` | Solo servidor a servidor. **Nunca** en JavaScript de navegador |
+| API pública del widget (`/widget`) con token firmado (JWT HS256) | [`docs/widget-host/README.md`](docs/widget-host/README.md) |
+| Secretos (`widget.secret`, `api.token`, `api.key`, BD) | `.env` del servidor (no se sube a git; ver `env` como plantilla) |
+| CORS | Lista de dominios en `widget.origins`; el resto no recibe cabeceras CORS |
+| Límite de peticiones | `/widget` por IP, creación de tickets por IP y correo, login del panel |
+| Panel solo desde la red interna | `tickets.panelNetworks` en `.env` (IP/CIDR) |
+| Roles del panel | `adminRoles` en `app/Config/Tickets.php` (Administrador / Técnico) |
+
+```bash
+php spark widget:token secret     # genera widget.secret
+php spark widget:token sign -e ana@empresa.com -c 03 -b B05   # token de prueba
+```
+
 ## Panel web (dashboard)
 
 Panel para agentes en `/panel` (con `index.php`: `/index.php/panel`).

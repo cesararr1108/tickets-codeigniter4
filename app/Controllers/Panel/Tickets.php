@@ -474,7 +474,9 @@ class Tickets extends BasePanelController
             return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El archivo del adjunto no se encuentra en el servidor.');
         }
 
-        return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+        return $this->response->download($path, null)
+            ->setFileName((string) $file['FileName'])
+            ->setHeader('X-Content-Type-Options', 'nosniff');
     }
 
     /**

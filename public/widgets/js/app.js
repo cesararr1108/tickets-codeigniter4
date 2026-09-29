@@ -5,6 +5,8 @@
  * /widgets/css/widget.css. Este archivo solo conecta datos y eventos.
  */
 
+import { configureAuth, setToken } from "./api.js";
+import { obtenerPerfil } from "./identity.js";
 import {
     escapeHtml,
     loadTemplate,
@@ -58,9 +60,16 @@ const PRIORITY_LABELS = {
     baja: "Baja"
 };
 
-export async function mountWidget(container, { apiUrl, version = "",perfil }) {
-  //  console.log( { apiUrl, version = "",CompanieUrl,BarancheUrl })
+export async function mountWidget(container, { apiUrl, version = "", token = "", tokenUrl = "" }) {
+
     setAssetVersion(version);
+
+    // Autenticación: token firmado por el servidor del sitio anfitrión (sin claves en el widget).
+    configureAuth({ token, tokenUrl });
+
+    // Perfil del usuario (correo, compañía, sucursal, rol, área...). Sale del token,
+    // no de atributos data-* que el usuario podría editar desde el navegador.
+    const perfil = await obtenerPerfil(apiUrl);
 
     const [css, html] = await Promise.all([
         loadText("css/widget.css"),
@@ -164,19 +173,20 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         mine: { status: "pendientes", page: 1, pages: 1, from: "", to: "" }
     };
 
-    // Datos del usuario que envía el script del anfitrión (data-*).
-    perfil = perfil ?? {};
-
-    // Solo el rol "Administrador" (data-rol) puede cambiar compañía y sucursal.
-    // Los demás quedan con la compañía/sucursal enviadas por el anfitrión.
+    // Solo el rol "Administrador" (claim "role" del token) puede cambiar compañía y sucursal.
+    // Los demás quedan con la compañía/sucursal firmadas en el token (el servidor
+    // también lo exige, así que aunque se manipule el navegador no cambia nada).
     const isAdminRole = String(perfil.role ?? "")
         .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase().includes("administrador");
     const lockedLocation = !isAdminRole && !!perfil.company;
 
     function prefillEmail() {
-        if (perfil.email && !el.email.value) {
+        if (perfil.email) {
+            // Correo verificado por el sistema anfitrión: no se puede cambiar.
             el.email.value = perfil.email;
+            el.email.readOnly = true;
+            el.email.title = "Correo verificado por el sistema";
         }
     }
 
@@ -1526,6 +1536,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     return {
         open: openModal,
         close: closeModal,
-        reset: resetForm
+        reset: resetForm,
+        setToken
     };
 }

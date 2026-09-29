@@ -112,6 +112,22 @@ class Tickets extends BaseConfig
     ];
 
     /**
+     * Redes desde las que se puede abrir /login y /panel (IPs o CIDR separados
+     * por coma). Vacío = cualquier red. Ejemplo en el .env:
+     *
+     *   tickets.panelNetworks = '192.168.0.0/16,10.0.0.0/8'
+     */
+    public string $panelNetworks = '';
+
+    /**
+     * @return list<string>
+     */
+    public function allowedNetworks(): array
+    {
+        return array_values(array_filter(array_map('trim', explode(',', $this->panelNetworks))));
+    }
+
+    /**
      * Tickets por página en el listado.
      */
     public int $perPage = 20;

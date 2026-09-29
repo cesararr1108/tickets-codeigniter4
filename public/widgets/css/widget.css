@@ -612,6 +612,12 @@ svg {
     padding: 11px 12px;
 }
 
+.tw-input[readonly] {
+    background: var(--tw-bg);
+    color: var(--tw-muted);
+    cursor: not-allowed;
+}
+
 .tw-input:focus,
 .tw-textarea:focus {
     border-color: var(--tw-primary);

@@ -87,22 +87,3 @@ CI_ENVIRONMENT = production
 
 # api.token = CAMBIA_ESTE_TOKEN
 # api.key = CAMBIA_ESTA_CLAVE
-
-#--------------------------------------------------------------------
-# WIDGET (API pública /widget)
-#--------------------------------------------------------------------
-
-# Secreto compartido con la página anfitriona para firmar tokens.
-# Genera uno con:  php spark widget:token secret
-# widget.secret = 
-
-# Dominios autorizados a usar el widget desde el navegador (separados por coma).
-# widget.origins = 'https://intranet.empresa.com,https://portal.empresa.com'
-
-#--------------------------------------------------------------------
-# PANEL
-#--------------------------------------------------------------------
-
-# Redes desde las que se puede abrir /login y /panel (IP o CIDR, separadas por coma).
-# Vacío = cualquier red. Recomendado: solo la red interna.
-# tickets.panelNetworks = '192.168.0.0/16,10.0.0.0/8'

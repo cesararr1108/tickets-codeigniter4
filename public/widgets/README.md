@@ -22,8 +22,7 @@ widgets/
     ├── app.js              ← controlador: eventos, pasos, validaciones
     ├── template.js         ← carga los .html y reemplaza los {{marcadores}}
     ├── icons.js            ← colores e iconos de las cards
-    ├── api.js              ← peticiones a /widget con el token (sin claves)
-    ├── identity.js         ← lee /widget/me
+    ├── api.js
     ├── companies.js
     ├── branches.js
     ├── categories.js
@@ -67,51 +66,43 @@ Para crear un componente nuevo: agrega `templates/mi-componente.html` y llámalo
 
 ## Uso desde otra página
 
-El widget **no lleva claves**: se identifica con un token firmado que genera el
-servidor de la página anfitriona. Guía completa, con ejemplos en PHP, Node y
-Python, en [`docs/widget-host/README.md`](../../docs/widget-host/README.md).
-
 ```html
 <div id="tickets-widget"></div>
 
 <script
-    src="https://tu-servidor:8081/widgets/tickets.js"
+    src="https://200.122.206.204:8081/widgets/tickets.js"
     data-container="tickets-widget"
-    data-token="<token firmado por tu servidor>"
-    data-token-url="/token-endpoint.php"
+    data-api="https://200.122.206.204:8081/api"
     data-version="1">
 </script>
 ```
 
 - Los módulos, plantillas y CSS se cargan **relativos a la URL de `tickets.js`**.
-- `data-token-url` (recomendado) renueva el token cuando vence.
-- `data-api` es opcional: por defecto `https://tu-servidor:8081/widget`.
-- `data-version` se agrega como `?v=` para forzar la descarga de archivos nuevos.
+- `data-version` (opcional) se agrega como `?v=` para forzar al navegador a
+  descargar los archivos nuevos después de un cambio.
 
-## Endpoints utilizados (API pública `/widget`)
+## Endpoints utilizados
 
 ```text
-GET  /widget/me                           perfil firmado en el token
-GET  /widget/companies
-GET  /widget/branches?company={CodCompanies}
-GET  /widget/categories
-GET  /widget/subcategories
-GET  /widget/subcategories/category/{id}
-GET  /widget/ticket-forms
-GET  /widget/users                        solo nombres de usuarios activos
-GET  /widget/tickets/mine                 Mis tickets (pendientes/resueltos, fechas, paginación)
-GET  /widget/tickets/{id}/detalle         solo si el ticket es del correo del token
-POST /widget/tickets/{id}/responder       el solicitante escribe en su ticket
-POST /widget/tickets                      crea ticket (+ primer mensaje, formulario y adjuntos)
+GET  /api/companies
+GET  /api/branches?company={CodCompanies}
+GET  /api/categories
+GET  /api/subcategories                 (resumen dentro de cada card)
+GET  /api/subcategories/category/{id}   (respaldo si el anterior falla)
+POST /api/tickets
+POST /api/tickets/{id}/messages         (guarda la descripción como primer mensaje)
+GET  /api/tickets
 ```
 
-Todos exigen el header `X-Widget-Token`.
+El ticket se envía con los campos del modelo `TicketModel`:
+`CodCompanies, CodBranches, IdCategory, IdSubCategory, RequesterEmail, Subject, Priority, Status`.
 
 ## Importante
 
-- Como las plantillas y el CSS se leen con `fetch()` y los módulos con `import()`,
-  Nginx debe enviar `Access-Control-Allow-Origin: *` en `/widgets/` (son archivos
-  públicos sin secretos). Ver la sección 6 de la guía del anfitrión.
-- La API `/widget` responde CORS solo a los dominios de `widget.origins` (`.env`).
-- Si el certificado HTTPS no es válido para la IP, el navegador bloqueará las
-  peticiones. Para producción usa un dominio con certificado TLS válido.
+Como las plantillas y el CSS se leen con `fetch()`, si el widget se incrusta en otro
+dominio, Nginx/CodeIgniter debe responder con CORS también para `/widgets/*`
+(igual que ya se necesita para los módulos `import()`).
+
+Si el certificado HTTPS no es válido para la IP pública, el navegador también puede
+bloquear las peticiones. Lo recomendable para producción es utilizar un dominio con
+certificado TLS válido.

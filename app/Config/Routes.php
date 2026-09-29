@@ -9,11 +9,11 @@ $routes->get('/', static fn () => redirect()->to(site_url('panel')));
  * Panel web (dashboard de tickets).
  * Requiere sesión iniciada con un usuario de la tabla Users.
  */
-$routes->get('login', 'Panel\\Auth::login', ['filter' => 'panelnet']);
-$routes->post('login', 'Panel\\Auth::attempt', ['filter' => ['panelnet', 'csrf']]);
-$routes->get('logout', 'Panel\\Auth::logout', ['filter' => 'panelnet']);
+$routes->get('login', 'Panel\\Auth::login');
+$routes->post('login', 'Panel\\Auth::attempt', ['filter' => 'csrf']);
+$routes->get('logout', 'Panel\\Auth::logout');
 
-$routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => ['panelnet', 'panelauth', 'csrf']], static function (RouteCollection $routes) {
+$routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => ['panelauth', 'csrf']], static function (RouteCollection $routes) {
     $routes->get('/', 'Dashboard::index');
 
     $routes->get('tickets', 'Tickets::index');
@@ -63,32 +63,29 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
  * correspondiente del controlador (index/show/create/update/delete).
  */
 // Antes de las rutas GET/POST de /api
-$routes->options('(:any)', static fn () => service('response')->setStatusCode(204));
+$routes->options('(:any)', static function () {
+    $response = service('response');
 
-/*
- * API pública del widget. NO usa la clave de la API interna: exige un token
- * firmado por la página anfitriona (ver App\Libraries\WidgetToken) y solo
- * expone lo que el widget necesita.
- */
-$routes->group('widget', ['namespace' => 'App\Controllers\Widget', 'filter' => ['widgetthrottle', 'widgetauth']], static function (RouteCollection $routes) {
-    $routes->get('me', 'WidgetController::me');
-    $routes->get('companies', 'WidgetController::companies');
-    $routes->get('branches', 'WidgetController::branches');
-    $routes->get('categories', 'WidgetController::categories');
-    $routes->get('subcategories', 'WidgetController::subcategories');
-    $routes->get('subcategories/category/(:num)', 'WidgetController::subcategoriesByCategory/$1');
-    $routes->get('ticket-forms', 'WidgetController::ticketForms');
-    $routes->get('users', 'WidgetController::users');
-    $routes->get('tickets', 'WidgetController::tickets');
-    $routes->get('tickets/mine', 'WidgetController::mine');
-    $routes->get('tickets/(:num)/detalle', 'WidgetController::detail/$1');
-    $routes->post('tickets/(:num)/responder', 'WidgetController::reply/$1');
-    $routes->post('tickets', 'WidgetController::createTicket');
+    $response->setHeader('Access-Control-Allow-Origin', '*');
+    $response->setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    $response->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Api-Key, Accept');
+    $response->setHeader('Access-Control-Max-Age', '3600');
+
+    return $response->setStatusCode(204);
 });
 
 $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'apiauth'], static function (RouteCollection $routes) {
     // Antes de las rutas GET/POST de /api
-    $routes->options('(:any)', static fn () => service('response')->setStatusCode(204));
+    $routes->options('(:any)', static function () {
+        $response = service('response');
+
+        $response->setHeader('Access-Control-Allow-Origin', '*');
+        $response->setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+        $response->setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Api-Key, Accept');
+        $response->setHeader('Access-Control-Max-Age', '3600');
+
+        return $response->setStatusCode(204);
+    });
     // Companies (PK CodCompanies: alfanumérico)
     $routes->get('companies', 'CompanyController::index');
     $routes->get('companies/(:segment)', 'CompanyController::show/$1');

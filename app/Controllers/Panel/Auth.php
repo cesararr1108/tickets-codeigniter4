@@ -26,6 +26,17 @@ class Auth extends BasePanelController
         $email    = trim((string) $this->request->getPost('email'));
         $password = (string) $this->request->getPost('password');
 
+        // Freno a la fuerza bruta: 5 intentos cada 15 minutos por IP y por correo.
+        $throttler = service('throttler');
+        $ip        = $this->request->getIPAddress();
+
+        if (
+            ! $throttler->check('login_ip_' . md5($ip), 20, 15 * MINUTE)
+            || ! $throttler->check('login_' . md5($ip . '|' . mb_strtolower($email)), 5, 15 * MINUTE)
+        ) {
+            return redirect()->back()->withInput()->with('error', 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.');
+        }
+
         $user = model(UserModel::class)
             ->select('Users.IdUser, Users.FullName, Users.Email, Users.PasswordHash, Users.IsActive, Users.RoleId, Users.CodCompanies')
             ->where('Email', $email)

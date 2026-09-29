@@ -38,6 +38,9 @@ class Filters extends BaseFilters
         'apiauth'       => ApiAuthFilter::class,
         'panelauth'     => \App\Filters\PanelAuthFilter::class,
         'paneladmin'    => \App\Filters\PanelAdminFilter::class,
+        'panelnet'      => \App\Filters\PanelNetworkFilter::class,
+        'widgetauth'    => \App\Filters\WidgetAuthFilter::class,
+        'widgetthrottle' => \App\Filters\WidgetThrottleFilter::class,
         'cors' => \App\Filters\Cors::class,
     ];
 
@@ -85,6 +88,7 @@ class Filters extends BaseFilters
         'after' => [
             // 'honeypot',
             // 'secureheaders',
+            'cors',
         ],
     ];
 

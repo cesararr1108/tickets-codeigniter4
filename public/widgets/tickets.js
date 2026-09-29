@@ -5,7 +5,7 @@
  * <script
  *   src="https://200.122.206.204:8081/widgets/tickets.js"
  *   data-container="tickets-widget"
- *   data-api="https://200.122.206.204:8081/api"
+ *   data-token="<token firmado por tu servidor>"
  *   data-version="1">
  * </script>
  *
@@ -19,15 +19,30 @@
     const containerId =
         currentScript?.dataset.container || "tickets-widget";
 
-    const apiUrl =
-        currentScript?.dataset.api ||
-        "https://200.122.206.204:8081/api";
-
     const version =
         currentScript?.dataset.version || "";
 
+    // Token firmado por el servidor del sitio anfitrión (ver README).
+    const token =
+        currentScript?.dataset.token || "";
+
+    // URL del anfitrión que devuelve {"token": "..."} (renueva el token).
+    const tokenUrl =
+        currentScript?.dataset.tokenUrl || "";
+
     // Carpeta donde vive tickets.js (ej: https://host/widgets/).
     const baseUrl = new URL("./", currentScript?.src || location.href);
+
+    // API pública del widget. Por defecto: /widget en el mismo servidor.
+    const apiUrl =
+        currentScript?.dataset.api ||
+        new URL("../widget", baseUrl).href;
+
+    if (!token && !tokenUrl) {
+        console.warn(
+            "[Tickets Widget] Falta data-token o data-token-url: la API rechazará las peticiones."
+        );
+    }
 
     const container = document.getElementById(containerId);
 
@@ -53,7 +68,7 @@
     );
 
     import(appUrl.href)
-        .then(module => module.mountWidget(container, { apiUrl, version }))
+        .then(module => module.mountWidget(container, { apiUrl, version, token, tokenUrl }))
         .then(widget => {
             // API pública opcional.
             window.TicketsWidget = { ...widget, api: apiUrl };

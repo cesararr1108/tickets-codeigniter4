@@ -22,7 +22,9 @@ import {
     obtenerSubcategorias,
     obtenerTodasSubcategorias
 } from "./categories.js";
-import { agregarMensaje, crearTicket, obtenerTickets } from "./tickets.js";
+import { crearTicket, obtenerTickets } from "./tickets.js";
+import { obtenerIdentidad } from "./identity.js";
+import { configureAuth, setToken } from "./api.js";
 
 const TOTAL_STEPS = 4;
 const SEARCH_THRESHOLD = 6;
@@ -34,7 +36,9 @@ const PRIORITY_LABELS = {
     baja: "Baja"
 };
 
-export async function mountWidget(container, { apiUrl, version = "" }) {
+export async function mountWidget(container, { apiUrl, version = "", token = "", tokenUrl = "" }) {
+
+    configureAuth({ token, tokenUrl });
 
     setAssetVersion(version);
 
@@ -107,7 +111,12 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         category: null,
         subcategory: null,
         priority: null,
-        file: null
+        file: null,
+
+        // Datos firmados por el sitio anfitrión (GET /widget/me).
+        identity: null,
+        identityLoaded: false,
+        skippedStep1: false
     };
 
     // Evita pintar respuestas viejas si el usuario cambia rápido de opción.
@@ -201,7 +210,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         el.companySearchWrap.hidden = companies.length <= SEARCH_THRESHOLD;
 
         if (companies.length === 1) {
-            selectCompany(companies[0].id);
+            await selectCompany(companies[0].id);
         }
     }
 
@@ -274,7 +283,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
 
         if (branches.length === 1) {
             selectBranch(branches[0].id);
-        } else {
+        } else if (!state.skippedStep1) {
             el.branchBlock.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
     }
@@ -537,11 +546,13 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         return null;
     }
 
-    function goTo(step) {
+    function goTo(step, { keepAlert = false } = {}) {
 
         state.step = step;
 
-        hideAlert();
+        if (!keepAlert) {
+            hideAlert();
+        }
 
         shadow.querySelectorAll(".tw-step").forEach(section => {
             section.hidden = Number(section.dataset.step) !== step;
@@ -596,7 +607,8 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
             branch: null,
             category: null,
             subcategory: null,
-            priority: null
+            priority: null,
+            skippedStep1: false
         });
 
         markSelected(el.companyGrid, null);
@@ -611,7 +623,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         el.companySearch.value = "";
         filterCompanies();
 
-        el.email.value = "";
+        applyIdentity();
         el.subject.value = "";
         el.description.value = "";
         el.file.value = "";
@@ -621,8 +633,10 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         goTo(1);
 
         if (state.companies?.length === 1) {
-            selectCompany(state.companies[0].id);
+            return selectCompany(state.companies[0].id).then(skipStep1IfLocked);
         }
+
+        return Promise.resolve();
     }
 
     async function submit() {
@@ -651,7 +665,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
             RequesterEmail: email,
             Subject: el.subject.value.trim(),
             Priority: state.priority,
-            Status: "abierto"
+            Description: description
         };
 
         if (state.subcategory) {
@@ -668,15 +682,8 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
             const ticketId =
                 result?.IdTicket ?? result?.data?.IdTicket ?? result?.id;
 
-            if (ticketId) {
-                try {
-                    await agregarMensaje(apiUrl, ticketId, email, description);
-                } catch (error) {
-                    console.error("[Tickets Widget] Error guardando la descripción:", error);
-                }
-            }
-
-            resetForm();
+            // La preselección automática limpia los avisos: se espera antes de mostrar el éxito.
+            await resetForm();
 
             showAlert(
                 ticketId
@@ -745,12 +752,57 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
         }
     }
 
-    function openModal() {
+    // ==========================================
+    // DATOS FIRMADOS POR EL ANFITRIÓN (token)
+    // ==========================================
+
+    // Rellena el correo con el del token; si viene firmado, no se puede editar.
+    function applyIdentity() {
+
+        const email = state.identity?.email || "";
+
+        el.email.value = email;
+        el.email.readOnly = email !== "";
+        el.email.title = email !== "" ? "Correo verificado por el sistema" : "";
+    }
+
+    // Si el token trae compañía Y sucursal, el paso 1 no aporta nada: se salta.
+    function skipStep1IfLocked() {
+
+        if (
+            !state.skippedStep1 &&
+            state.step === 1 &&
+            state.identity?.company &&
+            state.identity?.branch &&
+            state.company &&
+            state.branch
+        ) {
+            state.skippedStep1 = true;
+            goTo(2, { keepAlert: true });
+        }
+    }
+
+    async function loadIdentity() {
+
+        if (state.identityLoaded) {
+            return;
+        }
+
+        state.identityLoaded = true;
+        state.identity = await obtenerIdentidad(apiUrl);
+
+        applyIdentity();
+    }
+
+    async function openModal() {
         el.overlay.classList.add("tw-open");
         el.overlay.setAttribute("aria-hidden", "false");
         document.addEventListener("keydown", onKeydown);
 
-        loadCompanies();
+        await loadIdentity();
+        await loadCompanies();
+
+        skipStep1IfLocked();
     }
 
     function closeModal() {
@@ -847,6 +899,7 @@ export async function mountWidget(container, { apiUrl, version = "" }) {
     return {
         open: openModal,
         close: closeModal,
-        reset: resetForm
+        reset: resetForm,
+        setToken
     };
 }

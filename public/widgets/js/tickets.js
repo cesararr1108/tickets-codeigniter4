@@ -1,8 +1,9 @@
 import { apiGet, apiPost, apiUpload, toList } from "./api.js";
 
 /*
- * POST /tickets
- * Si hay archivo se envía como multipart/form-data.
+ * POST /widget/tickets
+ * Si hay archivo se envía como multipart/form-data. La descripción viaja en
+ * `Description` y el servidor la guarda como primer mensaje del chat.
  */
 export async function crearTicket(apiUrl, data, file = null) {
 
@@ -19,23 +20,6 @@ export async function crearTicket(apiUrl, data, file = null) {
     formData.append("file", file);
 
     return await apiUpload(apiUrl, "/tickets", formData);
-}
-
-/*
- * POST /tickets/{id}/messages
- * Guarda la descripción como primer mensaje del ticket.
- */
-export async function agregarMensaje(apiUrl, ticketId, senderName, message) {
-
-    return await apiPost(
-        apiUrl,
-        "/tickets/" + encodeURIComponent(ticketId) + "/messages",
-        {
-            SenderType: "cliente",
-            SenderName: senderName,
-            Message: message
-        }
-    );
 }
 
 /*

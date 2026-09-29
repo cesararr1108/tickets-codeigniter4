@@ -112,7 +112,7 @@ $lastId    = $messages === [] ? 0 : (int) end($messages)['MessageId'];
                             <?php if ($isUrl): ?>
                                 <a href="<?= esc($f['FilePath'], 'attr') ?>" target="_blank" rel="noopener"><?= esc($f['FileName']) ?></a>
                             <?php else: ?>
-                                <span title="<?= esc($f['FilePath'], 'attr') ?>"><?= esc($f['FileName']) ?></span>
+                                <a href="<?= site_url('panel/adjuntos/' . (int) $f['AttachmentId']) ?>"><?= esc($f['FileName']) ?></a>
                             <?php endif ?>
                             <span class="muted small"><?= format_date($f['CreatedAt'], 'd/m/Y') ?></span>
                         </li>

@@ -1466,3 +1466,8 @@ svg {
         bottom: 18px;
     }
 }
+
+/* Compañía/sucursal fijadas por el anfitrión (rol distinto de Administrador) */
+.tw-locked { pointer-events: none; }
+.tw-locked .tw-card:not(.tw-selected):not([aria-pressed="true"]),
+.tw-locked [data-value]:not(.tw-selected):not([aria-pressed="true"]) { opacity: .45; }

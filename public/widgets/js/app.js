@@ -167,6 +167,13 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     // Datos del usuario que envía el script del anfitrión (data-*).
     perfil = perfil ?? {};
 
+    // Solo el rol "Administrador" (data-rol) puede cambiar compañía y sucursal.
+    // Los demás quedan con la compañía/sucursal enviadas por el anfitrión.
+    const isAdminRole = String(perfil.role ?? "")
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase().includes("administrador");
+    const lockedLocation = !isAdminRole && !!perfil.company;
+
     function prefillEmail() {
         if (perfil.email && !el.email.value) {
             el.email.value = perfil.email;
@@ -262,7 +269,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             }))
         );
 
-        el.companySearchWrap.hidden = companies.length <= SEARCH_THRESHOLD;
+        el.companySearchWrap.hidden = lockedLocation || companies.length <= SEARCH_THRESHOLD;
+        el.companyGrid.classList.toggle("tw-locked", lockedLocation);
+        el.branchList.classList.toggle("tw-locked", lockedLocation);
 
         if (companies.length === 1) {
             selectCompany(companies[0].id);
@@ -1377,8 +1386,8 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         tab.addEventListener("click", () => switchTab(tab))
     );
 
-    onOptionClick(el.companyGrid, selectCompany);
-    onOptionClick(el.branchList, selectBranch);
+    onOptionClick(el.companyGrid, value => { if (!lockedLocation) selectCompany(value); });
+    onOptionClick(el.branchList, value => { if (!lockedLocation) selectBranch(value); });
     onOptionClick(el.categoryGrid, selectCategory);
     onOptionClick(el.subcategoryList, selectSubcategory);
     onOptionClick(el.priorityList, selectPriority);

@@ -10,7 +10,9 @@
  *   data-company="01" data-branch="001"          (opcionales: datos del
  *   data-email="ana@empresa.com"                  usuario que tiene sesión
  *   data-name="Ana Pérez" data-user="aperez"      en el anfitrión)
- *   data-role="Analista" data-area="Comercial"
+ *   data-rol="Administrador" data-area="Comercial"   (solo "Administrador"
+ *                                   puede cambiar compañía y sucursal; los
+ *                                   demás quedan fijos en data-company/branch)
  *   data-phone="3001234567">
  * </script>
  *
@@ -47,7 +49,7 @@
         name:    currentScript?.dataset.name    || "",
         phone:   currentScript?.dataset.phone   || "",
         user:    currentScript?.dataset.user    || "",
-        role:    currentScript?.dataset.role    || "",
+        role:    currentScript?.dataset.rol || currentScript?.dataset.role || "",
         area:    currentScript?.dataset.area    || "",
         //lock:    currentScript?.dataset.lock === "true"
     };

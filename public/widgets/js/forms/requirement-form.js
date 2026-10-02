@@ -13,16 +13,6 @@
 
 import { AREAS, ExtraForm, loadUsers, normalize, options } from "./extra-form.js";
 
-const TIPOS = [
-    "Acceso",
-    "Creación / modificación de usuario",
-    "Instalación de software",
-    "Equipo / hardware",
-    "Configuración",
-    "Reporte / información",
-    "Otro"
-];
-
 const IMPACTOS = [
     "Un usuario",
     "Varios usuarios",
@@ -55,7 +45,6 @@ export class RequirementForm extends ExtraForm {
             sede: context.sede,
             today,
             areaOptions: options(AREAS, context.area),
-            tipoOptions: options(TIPOS),
             impactoOptions: options(IMPACTOS),
             userOptions: options(users)
         };

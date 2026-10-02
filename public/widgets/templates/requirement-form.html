@@ -6,7 +6,6 @@
     requester, sede         -> datos automáticos del solicitante
     today                   -> fecha de hoy (AAAA-MM-DD), valor inicial de "Fecha requerida"
     areaOptions             -> HTML: <option> de áreas (preseleccionada la del perfil)
-    tipoOptions             -> HTML: <option> de tipos de requerimiento
     impactoOptions          -> HTML: <option> de impacto
     userOptions             -> HTML: <option> de usuarios (aprobador)
 
@@ -38,14 +37,6 @@
             <select id="rqArea" class="tw-input" data-field="area" required>
                 <option value="">Selecciona un área</option>
                 {{{areaOptions}}}
-            </select>
-        </div>
-
-        <div class="tw-field">
-            <label class="tw-label" for="rqTipo">Tipo de requerimiento</label>
-            <select id="rqTipo" class="tw-input" data-field="tipo_requerimiento" required>
-                <option value="">Selecciona un tipo</option>
-                {{{tipoOptions}}}
             </select>
         </div>
     </div>

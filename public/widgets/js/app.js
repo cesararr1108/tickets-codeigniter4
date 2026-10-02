@@ -28,6 +28,7 @@ import { obtenerDetalleTicket, obtenerMisTickets, responderTicket } from "./my-t
 import { ProjectForm } from "./forms/project-form.js";
 import { RequirementForm } from "./forms/requirement-form.js";
 import { IncidentForm } from "./forms/incident-form.js";
+import { enableVoiceInput } from "./voice.js";
 
 /*
  * Formularios adicionales del paso Detalle. Se elige el primero cuyas
@@ -71,6 +72,9 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     const shadow = container.attachShadow({ mode: "open" });
 
     shadow.innerHTML = `<style>${css}</style>${html}`;
+
+    // Botón de micrófono (dictado) en los campos de texto, actuales y futuros.
+    enableVoiceInput(shadow);
 
     const $ = id => shadow.getElementById(id);
 

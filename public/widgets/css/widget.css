@@ -1471,3 +1471,49 @@ svg {
 .tw-locked { pointer-events: none; }
 .tw-locked .tw-card:not(.tw-selected):not([aria-pressed="true"]),
 .tw-locked [data-value]:not(.tw-selected):not([aria-pressed="true"]) { opacity: .45; }
+
+/* ---------- Dictado por voz ---------- */
+
+.tw-voice {
+    position: relative;
+}
+
+.tw-voice-field {
+    padding-right: 44px !important;
+}
+
+.tw-voice-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: .15s ease;
+}
+
+.tw-voice-btn:hover,
+.tw-voice-btn:focus-visible {
+    background: var(--tw-primary-soft);
+    color: var(--tw-primary);
+    outline: none;
+}
+
+.tw-voice-btn.is-listening {
+    background: #ef4444;
+    color: #fff;
+    animation: tw-voice-pulse 1.2s infinite;
+}
+
+@keyframes tw-voice-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, .5); }
+    70% { box-shadow: 0 0 0 9px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}

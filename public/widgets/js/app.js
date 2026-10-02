@@ -268,7 +268,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 description: "",
                 meta: "Código " + company.id,
                 color: colorFor(index),
-                icon: `<img src="https://200.122.206.204:8081/widgets/img/companies/${company.icon}" alt="">` /*escapeHtml(initials(company.name))*/,
+                icon: `<img src="https://api.pwmultiroma.com/widgets/img/companies/${company.icon}" alt="">` /*escapeHtml(initials(company.name))*/,
                 search: `${company.name} ${company.id}`.toLowerCase()
             }))
         );

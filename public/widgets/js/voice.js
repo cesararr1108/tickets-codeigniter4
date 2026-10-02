@@ -127,7 +127,7 @@ export function enableVoiceInput(root) {
     if (!SpeechRecognition) return;
 
     const scan = node => {
-        if (node.nodeType !== 1) return;
+        if (node.nodeType !== 1 && node.nodeType !== 11) return; // elemento o shadow root
         if (node.matches?.("input, textarea") && isEligible(node)) attach(node);
         node.querySelectorAll?.("input, textarea").forEach(field => {
             if (isEligible(field)) attach(field);

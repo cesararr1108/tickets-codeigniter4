@@ -3,9 +3,9 @@
  *
  * <div id="tickets-widget"></div>
  * <script
- *   src="https://200.122.206.204:8081/widgets/tickets.js"
+ *   src="https://api.pwmultiroma.com/widgets/tickets.js"
  *   data-container="tickets-widget"
- *   data-api="https://200.122.206.204:8081/api"
+ *   data-api="https://api.pwmultiroma.com/api"
  *   data-version="1"
  *   data-company="01" data-branch="001"          (opcionales: datos del
  *   data-email="ana@empresa.com"                  usuario que tiene sesión
@@ -29,7 +29,7 @@
 
     const apiUrl =
         currentScript?.dataset.api ||
-        "https://200.122.206.204:8081/api";
+        "https://api.pwmultiroma.com/api";
 
     const version =
         currentScript?.dataset.version || "";

@@ -70,9 +70,9 @@ Para crear un componente nuevo: agrega `templates/mi-componente.html` y llámalo
 <div id="tickets-widget"></div>
 
 <script
-    src="https://200.122.206.204:8081/widgets/tickets.js"
+    src="https://api.pwmultiroma.com/widgets/tickets.js"
     data-container="tickets-widget"
-    data-api="https://200.122.206.204:8081/api"
+    data-api="https://api.pwmultiroma.com/api"
     data-version="1">
 </script>
 ```

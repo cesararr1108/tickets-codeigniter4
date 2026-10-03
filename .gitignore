@@ -1,0 +1,12 @@
+# Archivos generados en tiempo de ejecución (cada servidor tiene los suyos)
+writable/session/ci_session*
+writable/debugbar/debugbar_*
+writable/logs/*.log
+writable/cache/*
+!writable/cache/index.html
+writable/uploads/*
+!writable/uploads/index.html
+
+# Credenciales de Firebase (nunca versionar la llave privada)
+writable/credentials/
+*firebase-adminsdk*.json

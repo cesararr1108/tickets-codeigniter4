@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Panel;
 
+use App\Libraries\FcmPush;
 use App\Models\FcmTokenModel;
 
 /**
@@ -27,5 +28,34 @@ class Push extends BasePanelController
         ]);
 
         return $this->response->setJSON(['ok' => true, 'csrf' => csrf_hash()]);
+    }
+
+    /**
+     * POST /panel/push/test
+     * Envía una notificación de prueba al usuario con sesión.
+     */
+    public function test()
+    {
+        $push = new FcmPush();
+
+        if (! $push->enabled()) {
+            return redirect()->back()->with('error', 'El envío no está configurado: falta fcm.credentialsPath en .env.');
+        }
+
+        $tokens = model(FcmTokenModel::class)->tokensForEmails([(string) $this->user['email']]);
+
+        if ($tokens === []) {
+            return redirect()->back()->with('error', 'Este navegador aún no tiene notificaciones activadas. Pulsa "Activar notificaciones" primero.');
+        }
+
+        $push->sendToEmails(
+            [(string) $this->user['email']],
+            'Notificación de prueba',
+            'Si ves esto, las notificaciones del panel funcionan.',
+            ['type' => 'test'],
+            site_url('panel'),
+        );
+
+        return redirect()->back()->with('success', 'Prueba enviada a ' . count($tokens) . ' dispositivo(s).');
     }
 }

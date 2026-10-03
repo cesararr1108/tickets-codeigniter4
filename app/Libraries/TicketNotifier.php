@@ -2,11 +2,19 @@
 
 namespace App\Libraries;
 
+use App\Models\NotificationRouteModel;
+
 /**
  * Push al panel cuando entra un ticket nuevo.
  *
- * Destinatarios: el responsable asignado o, si no hay, todos los usuarios
- * activos del panel (se resuelven por correo contra t_fcm_tokens).
+ * Destinatarios:
+ *  1. Si la compañía del ticket tiene reglas (Panel > Notificaciones): los
+ *     usuarios activos de esos roles.
+ *  2. Si no tiene reglas: el responsable asignado o, si no hay, todos los
+ *     usuarios activos del panel.
+ *
+ * Los correos se resuelven contra t_fcm_tokens. Un fallo nunca interrumpe
+ * la creación del ticket.
  */
 class TicketNotifier
 {
@@ -30,27 +38,11 @@ class TicketNotifier
 
             helper('panel');
 
-            $db       = db_connect();
-            $assigned = (string) ($ticket['AssignedUserId'] ?? '');
-            $users    = $db->table('Users')->select('IdUser, Email')->where('IsActive', 1);
-
-            if ($assigned !== '') {
-                $users->where('IdUser', $assigned);
-            }
-
-            $emails = [];
-
-            foreach ($users->get()->getResultArray() as $user) {
-                if ((string) $user['IdUser'] !== (string) $actorId) {
-                    $emails[] = $user['Email'];
-                }
-            }
-
             $id      = (int) $ticket['IdTicket'];
             $subject = trim((string) ($ticket['Subject'] ?? ''));
 
             $this->push->sendToEmails(
-                $emails,
+                $this->recipients($ticket, $actorId),
                 'Nuevo ticket ' . ticket_code($id),
                 mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject,
                 ['type' => 'ticket_created', 'ticketId' => $id],
@@ -59,5 +51,32 @@ class TicketNotifier
         } catch (\Throwable $e) {
             log_message('error', '[Push] ' . $e->getMessage());
         }
+    }
+
+    /**
+     * @param array<string, mixed> $ticket
+     *
+     * @return list<string> Correos
+     */
+    private function recipients(array $ticket, ?string $actorId): array
+    {
+        $users = db_connect()->table('Users')->select('IdUser, Email')->where('IsActive', 1);
+        $roles = NotificationRouteModel::rolesFor((string) ($ticket['CodCompanies'] ?? ''));
+
+        if ($roles !== []) {
+            $users->whereIn('RoleId', $roles);
+        } elseif (($assigned = (string) ($ticket['AssignedUserId'] ?? '')) !== '') {
+            $users->where('IdUser', $assigned);
+        }
+
+        $emails = [];
+
+        foreach ($users->get()->getResultArray() as $user) {
+            if ((string) $user['IdUser'] !== (string) $actorId) {
+                $emails[] = $user['Email'];
+            }
+        }
+
+        return $emails;
     }
 }

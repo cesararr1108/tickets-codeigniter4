@@ -40,6 +40,10 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
         $routes->get('usuarios', 'Users::index');
         $routes->post('usuarios', 'Users::create');
         $routes->post('usuarios/update/(:segment)', 'Users::update/$1');
+        // Enrutamiento de notificaciones (compañía -> rol).
+        $routes->get('notificaciones', 'NotificationRoutes::index');
+        $routes->post('notificaciones', 'NotificationRoutes::create');
+        $routes->post('notificaciones/delete/(:num)', 'NotificationRoutes::delete/$1');
         $routes->get('(:segment)', 'Admin::list/$1');
         $routes->post('(:segment)', 'Admin::create/$1');
         $routes->post('(:segment)/update/(:segment)', 'Admin::update/$1/$2');
@@ -48,6 +52,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
 
     // Token push (FCM) del usuario del panel.
     $routes->post('push/token', 'Push::register');
+    $routes->post('push/test', 'Push::test');
     $routes->get('lookups/branches', 'Lookups::branches');
     $routes->get('lookups/subcategories', 'Lookups::subcategories');
 });

@@ -13,7 +13,9 @@
  *   data-rol="Administrador" data-area="Comercial"   (solo "Administrador"
  *                                   puede cambiar compañía y sucursal; los
  *                                   demás quedan fijos en data-company/branch)
- *   data-phone="3001234567">
+ *   data-phone="3001234567"
+ *   data-push="true"                              (opcional: activa las notificaciones
+ *   data-sw="/service-worker.js">                  push; data-sw = service worker del anfitrión)
  * </script>
  *
  * Este archivo solo carga js/app.js. El HTML está en templates/*.html
@@ -84,6 +86,17 @@
         .then(widget => { 
             // API pública opcional.
             window.TicketsWidget = { ...widget, api: apiUrl };
+
+            // Notificaciones push (opcional): registra el token FCM del usuario.
+            if (currentScript?.dataset.push === "true") {
+                import(new URL("js/push.js" + (version ? "?v=" + encodeURIComponent(version) : ""), baseUrl).href)
+                    .then(m => m.iniciarNotificaciones({
+                        apiUrl,
+                        perfil,
+                        swUrl: currentScript.dataset.sw || "/service-worker.js"
+                    }))
+                    .catch(error => console.warn("[Tickets Widget] Push no disponible:", error));
+            }
         })
         .catch(error => {
             console.error("[Tickets Widget] No se pudo iniciar:", error);

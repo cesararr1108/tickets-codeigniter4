@@ -86,6 +86,10 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'apiaut
 
         return $response->setStatusCode(204);
     });
+    // Tokens de notificaciones push (FCM) -> tabla t_fcm_tokens
+    $routes->post('fcm-tokens', 'FcmTokenController::create');
+    $routes->post('fcm-tokens/delete', 'FcmTokenController::remove');
+
     // Companies (PK CodCompanies: alfanumérico)
     $routes->get('companies', 'CompanyController::index');
     $routes->get('companies/(:segment)', 'CompanyController::show/$1');

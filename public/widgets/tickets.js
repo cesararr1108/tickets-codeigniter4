@@ -15,7 +15,7 @@
  *                                   demás quedan fijos en data-company/branch)
  *   data-phone="3001234567"
  *   data-push="true"                              (opcional: activa las notificaciones
- *   data-sw="/service-worker.js">                  push; data-sw = service worker del anfitrión)
+ *   data-sw="/service-worker.js">                  push; data-sw = service worker del anfitrión; por defecto ../../service-worker.js)
  * </script>
  *
  * Este archivo solo carga js/app.js. El HTML está en templates/*.html
@@ -93,7 +93,7 @@
                     .then(m => m.iniciarNotificaciones({
                         apiUrl,
                         perfil,
-                        swUrl: currentScript.dataset.sw || "/service-worker.js"
+                        swUrl: currentScript.dataset.sw || "../../service-worker.js"
                     }))
                     .catch(error => console.warn("[Tickets Widget] Push no disponible:", error));
             }

@@ -6,7 +6,7 @@
  * del usuario. Reemplaza el script FCM que antes vivía en la página anfitriona.
  *
  * Requisito: el anfitrión debe tener un service worker con FCM en segundo plano
- * (por defecto /service-worker.js, configurable con data-sw en tickets.js).
+ * (por defecto ../../service-worker.js, configurable con data-sw en tickets.js).
  */
 import { apiPost } from "./api.js";
 
@@ -26,7 +26,7 @@ const VAPID_KEY =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function iniciarNotificaciones({ apiUrl, perfil, swUrl = "/service-worker.js" }) {
+export async function iniciarNotificaciones({ apiUrl, perfil, swUrl = "../../service-worker.js" }) {
 
     if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
         console.warn("[Tickets Widget] Este navegador no soporta notificaciones push.");

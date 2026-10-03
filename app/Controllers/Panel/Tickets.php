@@ -5,6 +5,7 @@ namespace App\Controllers\Panel;
 use App\Libraries\TicketRepository;
 use App\Models\TicketEscalationModel;
 use App\Models\TicketFormAnswerModel;
+use App\Libraries\TicketNotifier;
 use App\Models\TicketMessageModel;
 use App\Models\TicketModel;
 
@@ -305,6 +306,10 @@ class Tickets extends BasePanelController
                 'SenderName' => $data['RequesterEmail'],
                 'Message'    => $description,
             ]);
+        }
+
+        if ($created = $model->find($id)) {
+            (new TicketNotifier())->ticketCreated($created, panel_user_id());
         }
 
         return redirect()->to(site_url("panel/tickets/{$id}"))

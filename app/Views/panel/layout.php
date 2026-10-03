@@ -35,7 +35,15 @@ if (panel_is_admin()) {
     <meta name="fcm-config" content="<?= esc(json_encode($fcm->webConfig), 'attr') ?>">
     <meta name="fcm-vapid-key" content="<?= esc($fcm->vapidKey, 'attr') ?>">
     <meta name="fcm-sw-url" content="<?= base_url('firebase-messaging-sw.js') ?>">
+    <meta name="fcm-icon" content="<?= base_url('icons/icon-192.png') ?>">
     <meta name="fcm-register-url" content="<?= site_url('panel/push/token') ?>">
+    <link rel="manifest" href="<?= base_url('manifest.json') ?>">
+    <link rel="apple-touch-icon" href="<?= base_url('icons/apple-touch-icon.png') ?>">
+    <meta name="theme-color" content="#00897b">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Mesa de Ayuda">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title><?= esc($title ?? 'Panel') ?> · Mesa de Ayuda</title>
     <script>
         // Aplica el tema guardado antes de pintar para evitar parpadeo.
@@ -63,7 +71,7 @@ if (panel_is_admin()) {
         </form>
 
         <div class="topbar-actions">
-            <button type="button" class="btn hide-mobile" data-enable-push hidden title="Recibir avisos de tickets y mensajes">Activar notificaciones</button>
+            <button type="button" class="btn" data-enable-push hidden title="Recibir avisos de tickets y mensajes"><?= icon('bell') ?> <span>Activar notificaciones</span></button>
             <a href="<?= site_url('panel/tickets/nuevo') ?>" class="btn btn-accent hide-mobile"><?= icon('plus') ?> Nueva solicitud</a>
 
             <div class="user-menu">

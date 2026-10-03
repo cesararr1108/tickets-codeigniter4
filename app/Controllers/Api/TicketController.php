@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\TicketNotifier;
 use App\Models\TicketAttachmentModel;
 use App\Models\TicketEscalationModel;
 use App\Models\TicketFormAnswerModel;
@@ -103,7 +104,11 @@ class TicketController extends BaseApiController
             return $this->failServerError('No fue posible guardar el ticket.');
         }
 
-        return $this->respondCreated($model->find($id));
+        $ticket = $model->find($id);
+
+        (new TicketNotifier())->ticketCreated($ticket);
+
+        return $this->respondCreated($ticket);
     }
 
     /** Estados que cuentan como pendientes / resueltos en "Mis tickets". */

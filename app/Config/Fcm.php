@@ -10,6 +10,12 @@ use CodeIgniter\Config\BaseConfig;
  */
 class Fcm extends BaseConfig
 {
+    /** Ruta absoluta al JSON de la cuenta de servicio (fuera del webroot). Vacío = no se envían push. */
+    public string $credentialsPath = '';
+
+    /** Timeout (segundos) de las llamadas a Google. */
+    public int $timeout = 5;
+
     /** Clave pública VAPID (la usa el panel para obtener su token). */
     public string $vapidKey = 'BOMCZUnVmsZv4nuhWXALeGC2m5AsebnR3tP15yDPIji51boQPr66bGEjZ_ZHfWbu68aPNJhOiqcNDeLXb6Olfvw';
 

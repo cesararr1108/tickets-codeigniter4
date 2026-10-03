@@ -87,3 +87,9 @@ CI_ENVIRONMENT = production
 
 # api.token = CAMBIA_ESTE_TOKEN
 # api.key = CAMBIA_ESTA_CLAVE
+
+#--------------------------------------------------------------------
+# NOTIFICACIONES PUSH (Firebase Cloud Messaging)
+#--------------------------------------------------------------------
+# JSON de la cuenta de servicio, guardado FUERA del repo y del webroot.
+# fcm.credentialsPath = /var/www/secure/fcm-multiroma-firebase-adminsdk.json

@@ -1,0 +1,29 @@
+<?php
+
+namespace Config;
+
+use CodeIgniter\Config\BaseConfig;
+
+/**
+ * Notificaciones push con Firebase Cloud Messaging.
+ * Los valores web (webConfig y vapidKey) son públicos; pueden sobrescribirse en .env (fcm.vapidKey).
+ */
+class Fcm extends BaseConfig
+{
+    /** Clave pública VAPID (la usa el panel para obtener su token). */
+    public string $vapidKey = 'BOMCZUnVmsZv4nuhWXALeGC2m5AsebnR3tP15yDPIji51boQPr66bGEjZ_ZHfWbu68aPNJhOiqcNDeLXb6Olfvw';
+
+    /**
+     * Configuración web de Firebase (pública, es la misma que va en el navegador).
+     *
+     * @var array<string, string>
+     */
+    public array $webConfig = [
+        'apiKey'            => 'AIzaSyCRaATvfSIIBR3DtGri3vL8tMMwj4AzECc',
+        'authDomain'        => 'fcm-multiroma.firebaseapp.com',
+        'projectId'         => 'fcm-multiroma',
+        'storageBucket'     => 'fcm-multiroma.firebasestorage.app',
+        'messagingSenderId' => '221123124298',
+        'appId'             => '1:221123124298:web:8f61d4371e9bc3083f9ab3',
+    ];
+}

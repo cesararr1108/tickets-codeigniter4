@@ -31,6 +31,11 @@ if (panel_is_admin()) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token-name" content="<?= csrf_token() ?>">
     <meta name="csrf-token" content="<?= csrf_hash() ?>">
+    <?php $fcm = config(\Config\Fcm::class); ?>
+    <meta name="fcm-config" content="<?= esc(json_encode($fcm->webConfig), 'attr') ?>">
+    <meta name="fcm-vapid-key" content="<?= esc($fcm->vapidKey, 'attr') ?>">
+    <meta name="fcm-sw-url" content="<?= base_url('firebase-messaging-sw.js') ?>">
+    <meta name="fcm-register-url" content="<?= site_url('panel/push/token') ?>">
     <title><?= esc($title ?? 'Panel') ?> · Mesa de Ayuda</title>
     <script>
         // Aplica el tema guardado antes de pintar para evitar parpadeo.
@@ -58,6 +63,7 @@ if (panel_is_admin()) {
         </form>
 
         <div class="topbar-actions">
+            <button type="button" class="btn hide-mobile" data-enable-push hidden title="Recibir avisos de tickets y mensajes">Activar notificaciones</button>
             <a href="<?= site_url('panel/tickets/nuevo') ?>" class="btn btn-accent hide-mobile"><?= icon('plus') ?> Nueva solicitud</a>
 
             <div class="user-menu">
@@ -110,6 +116,7 @@ if (panel_is_admin()) {
 </div>
 
 <script src="<?= base_url('panel/panel.js') ?>" defer></script>
+<script type="module" src="<?= base_url('panel/push.js') ?>"></script>
 <?= $this->renderSection('scripts') ?>
 </body>
 </html>

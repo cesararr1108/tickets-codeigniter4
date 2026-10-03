@@ -46,6 +46,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
         $routes->post('(:segment)/delete/(:segment)', 'Admin::delete/$1/$2');
     });
 
+    // Token push (FCM) del usuario del panel.
+    $routes->post('push/token', 'Push::register');
     $routes->get('lookups/branches', 'Lookups::branches');
     $routes->get('lookups/subcategories', 'Lookups::subcategories');
 });

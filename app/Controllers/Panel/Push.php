@@ -19,11 +19,15 @@ class Push extends BasePanelController
             return $this->response->setStatusCode(422)->setJSON(['message' => 'Token inválido.', 'csrf' => csrf_hash()]);
         }
 
+        // La sucursal no va en la sesión: se lee del usuario.
+        $account = db_connect()->table('Users')->select('CodBranches, CodCompanies')->where('IdUser', $this->user['id'])->get()->getRowArray();
+
         model(FcmTokenModel::class)->register([
             'Email'     => $this->user['email'],
             'Token'     => $token,
             'Navigator' => $this->request->getUserAgent()->getBrowser(),
-            'Companies' => $this->user['company'] ?? null,
+            'Companies' => $account['CodCompanies'] ?? $this->user['company'] ?? null,
+            'branches'  => $account['CodBranches'] ?? null,
             'Rol'       => $this->user['role'] ?? 'panel',
         ]);
 

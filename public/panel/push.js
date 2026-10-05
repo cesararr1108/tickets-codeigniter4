@@ -50,7 +50,7 @@ async function enable() {
     if (!token) return false;
 
     try {
-        if (localStorage.getItem('panel-fcm-token') === token) return true;
+        if (localStorage.getItem('panel-fcm-token-v2') === token) return true;
     } catch (e) {}
 
     const body = new URLSearchParams({ token });
@@ -65,7 +65,7 @@ async function enable() {
     if (data.csrf) document.querySelector('meta[name="csrf-token"]').content = data.csrf;
     if (!response.ok) return false;
 
-    try { localStorage.setItem('panel-fcm-token', token); } catch (e) {}
+    try { localStorage.setItem('panel-fcm-token-v2', token); } catch (e) {}
 
     // Aviso con la pestaña abierta (FCM no lo muestra por sí solo).
     fm.onMessage(messaging, (payload) => {

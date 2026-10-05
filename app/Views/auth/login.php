@@ -11,7 +11,7 @@
             if (theme) document.documentElement.dataset.theme = theme;
         } catch (e) {}
     </script>
-    <link rel="stylesheet" href="<?= base_url('panel/panel.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/panel/panel.css') ?>">
 </head>
 <body class="login-page">
     <form class="login-card" method="post" action="<?= site_url('login') ?>">

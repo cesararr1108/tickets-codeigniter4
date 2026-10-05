@@ -55,7 +55,7 @@ if (panel_is_admin()) {
             if (theme) document.documentElement.dataset.theme = theme;
         } catch (e) {}
     </script>
-    <link rel="stylesheet" href="<?= base_url('panel/panel.css') ?>">
+    <link rel="stylesheet" href="<?= base_url('assets/panel/panel.css') ?>">
 </head>
 <body>
 <div class="app">
@@ -126,8 +126,8 @@ if (panel_is_admin()) {
     </main>
 </div>
 
-<script src="<?= base_url('panel/panel.js') ?>" defer></script>
-<script type="module" src="<?= base_url('panel/push.js') ?>"></script>
+<script src="<?= base_url('assets/panel/panel.js') ?>" defer></script>
+<script type="module" src="<?= base_url('assets/panel/push.js') ?>"></script>
 <?= $this->renderSection('scripts') ?>
 </body>
 </html>

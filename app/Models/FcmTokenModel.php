@@ -17,6 +17,9 @@ class FcmTokenModel extends Model
     protected $protectFields    = true;
     protected $useTimestamps    = false;
 
+    /** Prefijo de Navigator que identifica los tokens registrados desde el panel. */
+    public const PANEL_TAG = 'PANEL';
+
     protected $allowedFields = [
         'Email', 'Token', 'Navigator', 'fecha_registro', 'Companies', 'Rol', 'branches',
     ];
@@ -56,7 +59,7 @@ class FcmTokenModel extends Model
      *
      * @return list<string>
      */
-    public function tokensForEmails(array $emails): array
+    public function tokensForEmails(array $emails, ?bool $panel = null): array
     {
         $emails = array_values(array_unique(array_filter(array_map('trim', $emails))));
 
@@ -64,7 +67,16 @@ class FcmTokenModel extends Model
             return [];
         }
 
-        $rows = $this->select('Token')->whereIn('Email', $emails)->findAll();
+        $query = $this->select('Token')->whereIn('Email', $emails);
+
+        // Los tokens del panel llevan el prefijo "PANEL " en Navigator.
+        if ($panel === true) {
+            $query->like('Navigator', self::PANEL_TAG, 'after');
+        } elseif ($panel === false) {
+            $query->groupStart()->notLike('Navigator', self::PANEL_TAG, 'after')->orWhere('Navigator', null)->groupEnd();
+        }
+
+        $rows = $query->findAll();
 
         return array_values(array_unique(array_column($rows, 'Token')));
     }

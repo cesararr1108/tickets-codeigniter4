@@ -50,7 +50,7 @@ async function enable() {
     if (!token) return false;
 
     try {
-        if (localStorage.getItem('panel-fcm-token-v2') === token) return true;
+        if (localStorage.getItem('panel-fcm-token-v3') === token) return true;
     } catch (e) {}
 
     const body = new URLSearchParams({ token });
@@ -62,10 +62,16 @@ async function enable() {
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
     });
     const data = await response.json().catch(() => ({}));
-    if (data.csrf) document.querySelector('meta[name="csrf-token"]').content = data.csrf;
+    if (data.csrf) {
+        // El servidor rota el token CSRF en cada petición: se actualiza en toda la página
+        // para que los formularios ya pintados no fallen con "The action you requested is not allowed".
+        const { name } = csrf();
+        document.querySelector('meta[name="csrf-token"]').content = data.csrf;
+        document.querySelectorAll(`input[name="${name}"]`).forEach((input) => { input.value = data.csrf; });
+    }
     if (!response.ok) return false;
 
-    try { localStorage.setItem('panel-fcm-token-v2', token); } catch (e) {}
+    try { localStorage.setItem('panel-fcm-token-v3', token); } catch (e) {}
 
     // Aviso con la pestaña abierta (FCM no lo muestra por sí solo).
     fm.onMessage(messaging, (payload) => {

@@ -25,7 +25,7 @@ class Push extends BasePanelController
         model(FcmTokenModel::class)->register([
             'Email'     => $this->user['email'],
             'Token'     => $token,
-            'Navigator' => $this->request->getUserAgent()->getBrowser(),
+            'Navigator' => FcmTokenModel::PANEL_TAG . ' ' . $this->request->getUserAgent()->getBrowser(),
             'Companies' => $account['CodCompanies'] ?? $this->user['company'] ?? null,
             'branches'  => $account['CodBranches'] ?? null,
             'Rol'       => $this->user['role'] ?? 'panel',
@@ -46,7 +46,7 @@ class Push extends BasePanelController
             return redirect()->back()->with('error', 'Envío no disponible: ' . $problem);
         }
 
-        $tokens = model(FcmTokenModel::class)->tokensForEmails([(string) $this->user['email']]);
+        $tokens = model(FcmTokenModel::class)->tokensForEmails([(string) $this->user['email']], true);
 
         if ($tokens === []) {
             return redirect()->back()->with('error', 'Este navegador aún no tiene notificaciones activadas. Pulsa "Activar notificaciones" primero.');
@@ -58,6 +58,7 @@ class Push extends BasePanelController
             'Si ves esto, las notificaciones del panel funcionan.',
             ['type' => 'test'],
             site_url('panel'),
+            true,
         );
 
         return redirect()->back()->with('success', 'Prueba enviada a ' . count($tokens) . ' dispositivo(s).');

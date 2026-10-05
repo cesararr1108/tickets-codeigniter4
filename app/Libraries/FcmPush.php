@@ -62,14 +62,14 @@ class FcmPush
      * @param list<string>          $emails
      * @param array<string, scalar> $data   Datos extra (todos se envían como string)
      */
-    public function sendToEmails(array $emails, string $title, string $body, array $data = [], ?string $link = null): void
+    public function sendToEmails(array $emails, string $title, string $body, array $data = [], ?string $link = null, ?bool $panel = null): void
     {
         try {
             if (! $this->enabled()) {
                 return;
             }
 
-            $tokens = model(FcmTokenModel::class)->tokensForEmails($emails);
+            $tokens = model(FcmTokenModel::class)->tokensForEmails($emails, $panel);
 
             foreach ($tokens as $token) {
                 $this->sendToToken($token, $title, $body, $data, $link);

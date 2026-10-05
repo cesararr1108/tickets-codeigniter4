@@ -7,14 +7,16 @@ use App\Models\NotificationRouteModel;
 /**
  * Push al panel cuando entra un ticket nuevo.
  *
- * Destinatarios:
+ * Destinatarios (usuarios activos del panel, nunca quien creó el ticket):
  *  1. Si la compañía del ticket tiene reglas (Panel > Notificaciones): los
- *     usuarios activos de esos roles.
- *  2. Si no tiene reglas: el responsable asignado o, si no hay, todos los
- *     usuarios activos del panel.
+ *     usuarios de esos roles que pertenecen a la sucursal del ticket. Si en
+ *     esa sucursal no hay nadie con ese rol, se avisa a los de ese rol de
+ *     cualquier sucursal para que el aviso no se pierda.
+ *  2. Si no hay reglas: el responsable asignado o, si no hay, todos los
+ *     usuarios activos.
  *
- * Los correos se resuelven contra t_fcm_tokens. Un fallo nunca interrumpe
- * la creación del ticket.
+ * Solo se envía a los navegadores donde el usuario activó las notificaciones
+ * desde el panel. Un fallo nunca interrumpe la creación del ticket.
  */
 class TicketNotifier
 {
@@ -47,6 +49,7 @@ class TicketNotifier
                 mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject,
                 ['type' => 'ticket_created', 'ticketId' => $id],
                 site_url('panel/tickets/' . $id),
+                true,
             );
         } catch (\Throwable $e) {
             log_message('error', '[Push] ' . $e->getMessage());
@@ -60,23 +63,57 @@ class TicketNotifier
      */
     private function recipients(array $ticket, ?string $actorId): array
     {
-        $users = db_connect()->table('Users')->select('IdUser, Email')->where('IsActive', 1);
-        $roles = NotificationRouteModel::rolesFor((string) ($ticket['CodCompanies'] ?? ''));
+        $roles  = NotificationRouteModel::rolesFor((string) ($ticket['CodCompanies'] ?? ''));
+        $branch = trim((string) ($ticket['CodBranches'] ?? ''));
+        $users  = [];
 
         if ($roles !== []) {
-            $users->whereIn('RoleId', $roles);
+            if ($branch !== '') {
+                $users = $this->users($roles, $branch);
+            }
+
+            $users = $users ?: $this->users($roles);
         } elseif (($assigned = (string) ($ticket['AssignedUserId'] ?? '')) !== '') {
-            $users->where('IdUser', $assigned);
+            $users = $this->users([], null, $assigned);
+        } else {
+            $users = $this->users();
         }
 
-        $emails = [];
+        $requester = strtolower(trim((string) ($ticket['RequesterEmail'] ?? '')));
+        $emails    = [];
 
-        foreach ($users->get()->getResultArray() as $user) {
-            if ((string) $user['IdUser'] !== (string) $actorId) {
-                $emails[] = $user['Email'];
+        foreach ($users as $user) {
+            if ((string) $user['IdUser'] === (string) $actorId || strtolower(trim((string) $user['Email'])) === $requester) {
+                continue;
             }
+
+            $emails[] = $user['Email'];
         }
 
         return $emails;
+    }
+
+    /**
+     * @param list<int> $roles
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function users(array $roles = [], ?string $branch = null, ?string $userId = null): array
+    {
+        $query = db_connect()->table('Users')->select('IdUser, Email')->where('IsActive', 1);
+
+        if ($roles !== []) {
+            $query->whereIn('RoleId', $roles);
+        }
+
+        if ($branch !== null) {
+            $query->where('CodBranches', $branch);
+        }
+
+        if ($userId !== null) {
+            $query->where('IdUser', $userId);
+        }
+
+        return $query->get()->getResultArray();
     }
 }

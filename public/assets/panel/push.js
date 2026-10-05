@@ -21,9 +21,12 @@ const syncSoundLabel = () => {
     if (label) label.textContent = soundEnabled() ? 'Sonido de avisos: activado' : 'Sonido de avisos: silenciado';
 };
 const playSound = () => {
-    if (!soundUrl || !soundEnabled()) return;
+    if (!soundUrl) { console.warn('[Push] sonido: falta la meta fcm-sound (¿se hizo git pull y Ctrl+Shift+R?)'); return; }
+    if (!soundEnabled()) { console.info('[Push] sonido: silenciado desde el menú de usuario.'); return; }
     // Los navegadores bloquean el audio hasta que el usuario interactúa con la página.
-    new Audio(soundUrl).play().catch(() => {});
+    const audio = new Audio(soundUrl);
+    audio.addEventListener('error', () => console.warn('[Push] sonido: no se pudo cargar', soundUrl, '(¿existe el archivo? ¿error 404?)'));
+    audio.play().catch((error) => console.warn('[Push] sonido: el navegador no lo reprodujo:', error.name, error.message));
 };
 
 syncSoundLabel();
@@ -79,6 +82,7 @@ async function enable() {
     // Aviso con la pestaña abierta (FCM no lo muestra por sí solo). Debe registrarse en
     // CADA carga de página, antes de decidir si el token ya estaba guardado.
     fm.onMessage(messaging, (payload) => {
+        console.info('[Push] aviso recibido con la página abierta:', payload.notification?.title);
         playSound();
         const { title, body } = payload.notification || {};
         registration.showNotification(title || 'Mesa de Ayuda', {

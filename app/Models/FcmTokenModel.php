@@ -87,6 +87,22 @@ class FcmTokenModel extends Model
     }
 
     /**
+     * Todos los dispositivos registrados desde el panel.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function panelRows(): array
+    {
+        $unique = [];
+
+        foreach ($this->select('Email, Token, Navigator')->like('Navigator', self::PANEL_TAG, 'after')->findAll() as $row) {
+            $unique[$row['Token']] = $row;
+        }
+
+        return array_values($unique);
+    }
+
+    /**
      * Tokens de uno o varios correos.
      *
      * @param list<string> $emails

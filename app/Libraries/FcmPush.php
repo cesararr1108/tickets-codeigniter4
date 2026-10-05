@@ -67,6 +67,35 @@ class FcmPush
      */
     public function sendToEmails(array $emails, string $title, string $body, array $data = [], ?string $link = null, ?bool $panel = null): array
     {
+        return $this->sendToRows(
+            $emails === [] ? [] : model(FcmTokenModel::class)->rowsForEmails($emails, $panel),
+            $title,
+            $body,
+            $data,
+            $link,
+        );
+    }
+
+    /**
+     * Envía a todos los dispositivos registrados desde el panel.
+     *
+     * @param array<string, scalar> $data
+     *
+     * @return list<array{email: string, token: string, navigator: string, ok: bool, status: int, response: string}>
+     */
+    public function sendToPanel(string $title, string $body, array $data = [], ?string $link = null): array
+    {
+        return $this->sendToRows(model(FcmTokenModel::class)->panelRows(), $title, $body, $data, $link);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $rows Filas de t_fcm_tokens
+     * @param array<string, scalar>      $data
+     *
+     * @return list<array{email: string, token: string, navigator: string, ok: bool, status: int, response: string}>
+     */
+    private function sendToRows(array $rows, string $title, string $body, array $data, ?string $link): array
+    {
         $results = [];
 
         try {
@@ -74,7 +103,7 @@ class FcmPush
                 return [];
             }
 
-            foreach (model(FcmTokenModel::class)->rowsForEmails($emails, $panel) as $row) {
+            foreach ($rows as $row) {
                 $result    = $this->sendToToken($row['Token'], $title, $body, $data, $link);
                 $results[] = $result + [
                     'email'     => (string) $row['Email'],
@@ -146,8 +175,8 @@ class FcmPush
             return ['ok' => true, 'status' => 200, 'response' => $raw];
         }
 
-        // Token caducado o inválido: se elimina para no reintentarlo.
-        if ($status === 404 || str_contains($raw, 'UNREGISTERED')) {
+        // Solo se elimina el token cuando FCM confirma que ya no está registrado.
+        if (str_contains($raw, 'UNREGISTERED')) {
             model(FcmTokenModel::class)->forget($token);
         }
 

@@ -44,20 +44,26 @@ class TicketNotifier
             $id      = (int) $ticket['IdTicket'];
             $subject = trim((string) ($ticket['Subject'] ?? ''));
 
+            $title = 'Nuevo ticket ' . ticket_code($id);
+            $text  = mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject;
+            $data  = ['type' => 'ticket_created', 'ticketId' => $id];
+            $link  = site_url('panel/tickets/' . $id);
+
+            // Paso 1 (por defecto): a todos los dispositivos registrados desde el panel.
+            if (! config(\Config\Fcm::class)->useRoutes) {
+                $this->push->sendToPanel($title, $text, $data, $link);
+
+                return;
+            }
+
+            // Paso 2 (fcm.useRoutes = true): según las reglas de Panel > Notificaciones.
             $emails = $this->recipients($ticket, $actorId);
 
             if (config(\Config\Fcm::class)->debug) {
                 log_message('error', '[FCM debug] Ticket ' . $id . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
             }
 
-            $this->push->sendToEmails(
-                $emails,
-                'Nuevo ticket ' . ticket_code($id),
-                mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject,
-                ['type' => 'ticket_created', 'ticketId' => $id],
-                site_url('panel/tickets/' . $id),
-                true,
-            );
+            $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
         } catch (\Throwable $e) {
             log_message('error', '[Push] ' . $e->getMessage());
         }

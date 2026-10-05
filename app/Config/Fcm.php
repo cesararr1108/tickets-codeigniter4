@@ -16,6 +16,13 @@ class Fcm extends BaseConfig
     /** Modo diagnóstico (solo desarrollo): fcm.debug = true en .env. Muestra tokens y respuestas de FCM. */
     public bool $debug = false;
 
+    /**
+     * Aplicar las reglas de Panel > Notificaciones (compañía -> rol -> sucursal).
+     * false (por ahora): cada ticket nuevo avisa a todos los dispositivos registrados desde el panel.
+     * Se activa con fcm.useRoutes = true en .env.
+     */
+    public bool $useRoutes = false;
+
     /** Timeout (segundos) de las llamadas a Google. */
     public int $timeout = 5;
 

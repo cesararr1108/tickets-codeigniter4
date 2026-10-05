@@ -19,6 +19,10 @@
     </form>
 </div>
 
+<?php if (! config(\Config\Fcm::class)->useRoutes): ?>
+    <div class="flash flash-error" style="background:#fff7e6;color:#8a5a00"><?= icon('alert') ?> Las reglas están desactivadas por ahora: cada ticket nuevo avisa a <strong>todos los dispositivos registrados desde el panel</strong>. Para aplicarlas, agrega <code>fcm.useRoutes = true</code> al .env.</div>
+<?php endif ?>
+
 <?php if ($report = session()->getFlashdata('pushReport')):
     $mask = static fn (string $t) => ($report['debug'] ?? false) ? $t : substr($t, 0, 12) . '…';
 ?>

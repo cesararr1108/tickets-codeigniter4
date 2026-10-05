@@ -13,6 +13,9 @@ class Fcm extends BaseConfig
     /** Ruta absoluta al JSON de la cuenta de servicio (fuera del webroot). Vacío = no se envían push. */
     public string $credentialsPath = '';
 
+    /** Modo diagnóstico (solo desarrollo): fcm.debug = true en .env. Muestra tokens y respuestas de FCM. */
+    public bool $debug = false;
+
     /** Timeout (segundos) de las llamadas a Google. */
     public int $timeout = 5;
 

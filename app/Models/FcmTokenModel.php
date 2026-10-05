@@ -53,13 +53,14 @@ class FcmTokenModel extends Model
     }
 
     /**
-     * Tokens de uno o varios correos.
+     * Filas (Email, Token, Navigator) de uno o varios correos.
      *
      * @param list<string> $emails
+     * @param bool|null    $panel  true = solo tokens del panel, false = solo los demás, null = todos
      *
-     * @return list<string>
+     * @return list<array<string, mixed>>
      */
-    public function tokensForEmails(array $emails, ?bool $panel = null): array
+    public function rowsForEmails(array $emails, ?bool $panel = null): array
     {
         $emails = array_values(array_unique(array_filter(array_map('trim', $emails))));
 
@@ -67,7 +68,7 @@ class FcmTokenModel extends Model
             return [];
         }
 
-        $query = $this->select('Token')->whereIn('Email', $emails);
+        $query = $this->select('Email, Token, Navigator')->whereIn('Email', $emails);
 
         // Los tokens del panel llevan el prefijo "PANEL " en Navigator.
         if ($panel === true) {
@@ -76,9 +77,25 @@ class FcmTokenModel extends Model
             $query->groupStart()->notLike('Navigator', self::PANEL_TAG, 'after')->orWhere('Navigator', null)->groupEnd();
         }
 
-        $rows = $query->findAll();
+        $unique = [];
 
-        return array_values(array_unique(array_column($rows, 'Token')));
+        foreach ($query->findAll() as $row) {
+            $unique[$row['Token']] = $row;
+        }
+
+        return array_values($unique);
+    }
+
+    /**
+     * Tokens de uno o varios correos.
+     *
+     * @param list<string> $emails
+     *
+     * @return list<string>
+     */
+    public function tokensForEmails(array $emails, ?bool $panel = null): array
+    {
+        return array_column($this->rowsForEmails($emails, $panel), 'Token');
     }
 
     public function forget(string $token): void

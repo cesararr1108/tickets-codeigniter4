@@ -19,6 +19,39 @@
     </form>
 </div>
 
+<?php if ($report = session()->getFlashdata('pushReport')):
+    $mask = static fn (string $t) => ($report['debug'] ?? false) ? $t : substr($t, 0, 12) . '…';
+?>
+    <section class="card" style="padding:16px;margin-bottom:16px">
+        <h2 style="margin-top:0">Resultado de la prueba</h2>
+        <table class="table">
+            <?php foreach ($report['steps'] as $step): ?>
+                <tr>
+                    <td><?= $step['ok'] ? '✅' : '❌' ?> <strong><?= esc($step['step']) ?></strong></td>
+                    <td class="muted small" style="word-break:break-all"><?= esc($step['detail']) ?></td>
+                </tr>
+            <?php endforeach ?>
+        </table>
+
+        <?php if (isset($report['devices'])): ?>
+            <h3>Dispositivos de <?= esc($report['email']) ?> registrados desde el panel: <?= count($report['devices']) ?></h3>
+            <?php if ($report['devices'] === []): ?>
+                <p class="muted">Ninguno. Pulsa "Activar notificaciones" en este navegador (o recarga el panel si ya diste permiso) y repite la prueba.</p>
+            <?php endif ?>
+            <?php foreach ($report['results'] as $r): ?>
+                <p class="small" style="word-break:break-all">
+                    <?= $r['ok'] ? '✅ Enviado' : '❌ Falló' ?> · HTTP <?= (int) $r['status'] ?> · <?= esc($r['navigator']) ?><br>
+                    <span class="muted">Token: <?= esc($mask($r['token'])) ?></span>
+                    <?php if (! $r['ok'] || ($report['debug'] ?? false)): ?><br><span class="muted">Respuesta de FCM: <?= esc(substr($r['response'], 0, 500)) ?></span><?php endif ?>
+                </p>
+            <?php endforeach ?>
+        <?php endif ?>
+        <?php if (! ($report['debug'] ?? false)): ?>
+            <p class="muted small">Para ver los tokens completos y registrar cada envío en <code>writable/logs</code>, agrega <code>fcm.debug = true</code> al .env (solo en desarrollo).</p>
+        <?php endif ?>
+    </section>
+<?php endif ?>
+
 <?php if (! $available): ?>
     <div class="flash flash-error"><?= icon('alert') ?> Falta crear la tabla en SQL Server: ejecuta <code>app/Database/sql/NotificationRoutes.sql</code>.</div>
 <?php endif ?>

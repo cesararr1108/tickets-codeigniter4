@@ -37,6 +37,7 @@ if (panel_is_admin()) {
     <meta name="fcm-vapid-key" content="<?= esc($fcm->vapidKey, 'attr') ?>">
     <meta name="fcm-sw-url" content="<?= base_url('firebase-messaging-sw.js') ?>">
     <meta name="fcm-icon" content="<?= base_url('icons/icon-192.png') ?>">
+    <?php if ($fcm->debug): ?><meta name="fcm-debug" content="1"><?php endif ?>
     <meta name="fcm-register-url" content="<?= site_url('panel/push/token') ?>">
     <link rel="manifest" href="<?= base_url('manifest.json') ?>">
     <link rel="apple-touch-icon" href="<?= base_url('icons/apple-touch-icon.png') ?>">

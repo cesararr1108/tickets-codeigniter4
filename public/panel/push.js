@@ -49,6 +49,9 @@ async function enable() {
     const token = await fm.getToken(messaging, { vapidKey, serviceWorkerRegistration: registration });
     if (!token) return false;
 
+    // Solo con fcm.debug = true en .env (desarrollo): muestra el token de este navegador.
+    if (meta('fcm-debug')) console.info('[Push] token FCM de este navegador:', token);
+
     try {
         if (localStorage.getItem('panel-fcm-token-v3') === token) return true;
     } catch (e) {}

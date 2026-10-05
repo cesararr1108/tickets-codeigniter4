@@ -43,8 +43,14 @@ class TicketNotifier
             $id      = (int) $ticket['IdTicket'];
             $subject = trim((string) ($ticket['Subject'] ?? ''));
 
+            $emails = $this->recipients($ticket, $actorId);
+
+            if (config(\Config\Fcm::class)->debug) {
+                log_message('error', '[FCM debug] Ticket ' . $id . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
+            }
+
             $this->push->sendToEmails(
-                $this->recipients($ticket, $actorId),
+                $emails,
                 'Nuevo ticket ' . ticket_code($id),
                 mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject,
                 ['type' => 'ticket_created', 'ticketId' => $id],

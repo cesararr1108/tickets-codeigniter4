@@ -93,3 +93,5 @@ CI_ENVIRONMENT = production
 #--------------------------------------------------------------------
 # JSON de la cuenta de servicio, guardado FUERA del repo y del webroot.
 # fcm.credentialsPath = /var/www/secure/fcm-multiroma-firebase-adminsdk.json
+# Solo desarrollo: muestra tokens y respuestas de FCM (pantalla de prueba, consola y writable/logs)
+# fcm.debug = true

@@ -36,31 +36,33 @@ class Push extends BasePanelController
 
     /**
      * POST /panel/push/test
-     * Envía una notificación de prueba al usuario con sesión.
+     * Revisa la configuración y envía una notificación de prueba al usuario con sesión.
+     * Deja un informe (flashdata "pushReport") que muestra Panel > Notificaciones.
      */
     public function test()
     {
-        $push = new FcmPush();
+        $push   = new FcmPush();
+        $debug  = (bool) config(\Config\Fcm::class)->debug;
+        $email  = (string) $this->user['email'];
+        $report = ['steps' => $push->diagnose(), 'results' => [], 'debug' => $debug, 'email' => $email];
 
-        if ($problem = $push->problem()) {
-            return redirect()->back()->with('error', 'Envío no disponible: ' . $problem);
+        $configured = array_reduce($report['steps'], static fn ($ok, $step) => $ok && $step['ok'], true);
+
+        if ($configured) {
+            $report['devices'] = model(FcmTokenModel::class)->rowsForEmails([$email], true);
+
+            if ($report['devices'] !== []) {
+                $report['results'] = $push->sendToEmails(
+                    [$email],
+                    'Notificación de prueba',
+                    'Si ves esto, las notificaciones del panel funcionan.',
+                    ['type' => 'test'],
+                    site_url('panel'),
+                    true,
+                );
+            }
         }
 
-        $tokens = model(FcmTokenModel::class)->tokensForEmails([(string) $this->user['email']], true);
-
-        if ($tokens === []) {
-            return redirect()->back()->with('error', 'Este navegador aún no tiene notificaciones activadas. Pulsa "Activar notificaciones" primero.');
-        }
-
-        $push->sendToEmails(
-            [(string) $this->user['email']],
-            'Notificación de prueba',
-            'Si ves esto, las notificaciones del panel funcionan.',
-            ['type' => 'test'],
-            site_url('panel'),
-            true,
-        );
-
-        return redirect()->back()->with('success', 'Prueba enviada a ' . count($tokens) . ' dispositivo(s).');
+        return redirect()->back()->with('pushReport', $report);
     }
 }

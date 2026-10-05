@@ -23,6 +23,9 @@ class Fcm extends BaseConfig
      */
     public bool $useRoutes = false;
 
+    /** Página que se abre al tocar una notificación dirigida al solicitante (la que aloja el widget). fcm.widgetUrl en .env. */
+    public string $widgetUrl = 'https://www.pwmultiroma.com/calidad/views/Menu.php';
+
     /** Timeout (segundos) de las llamadas a Google. */
     public int $timeout = 5;
 

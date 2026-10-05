@@ -169,6 +169,8 @@ class Tickets extends BasePanelController
         // Solo se validan los campos que cambian.
         $model->skipValidation(true)->update($id, $data);
 
+        $this->notifyRequester($ticket, $data);
+
         return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Ticket actualizado.');
     }
 
@@ -341,6 +343,8 @@ class Tickets extends BasePanelController
 
         $model->skipValidation(true)->update($id, $data);
 
+        $this->notifyRequester($ticket, $data);
+
         return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Ahora eres el responsable de este ticket.');
     }
 
@@ -378,6 +382,8 @@ class Tickets extends BasePanelController
             'Reason'          => $reason,
         ]);
 
+        (new TicketNotifier())->requesterEscalated($ticket);
+
         return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Ticket escalado al administrador.');
     }
 
@@ -407,7 +413,13 @@ class Tickets extends BasePanelController
                 return redirect()->back()->with('error', 'El usuario seleccionado no existe.');
             }
 
+            $before = model(TicketModel::class)->find($id);
+
             model(TicketModel::class)->skipValidation(true)->update($id, ['AssignedUserId' => $assignTo]);
+
+            if ($before !== null) {
+                $this->notifyRequester($before, ['AssignedUserId' => $assignTo]);
+            }
         }
 
         $model->update($escalation['IdEscalation'], [
@@ -480,6 +492,32 @@ class Tickets extends BasePanelController
         }
 
         return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+    }
+
+    /**
+     * Push al solicitante: finalizado (prioridad), nuevo responsable o cambio de estado.
+     *
+     * @param array<string, mixed> $before Ticket antes del cambio
+     * @param array<string, mixed> $data   Campos que se actualizaron
+     */
+    private function notifyRequester(array $before, array $data): void
+    {
+        $after    = array_merge($before, $data);
+        $notifier = new TicketNotifier();
+
+        $statusChanged   = isset($data['Status']) && $data['Status'] !== $before['Status'];
+        $assigneeChanged = array_key_exists('AssignedUserId', $data)
+            && $data['AssignedUserId'] !== null
+            && (string) $data['AssignedUserId'] !== (string) ($before['AssignedUserId'] ?? '');
+
+        if ($statusChanged && $data['Status'] === 'cerrado') {
+            $notifier->requesterStatus($after);
+        } elseif ($assigneeChanged) {
+            // Un solo aviso aunque además pase de "abierto" a "en progreso".
+            $notifier->requesterAssigned($after);
+        } elseif ($statusChanged) {
+            $notifier->requesterStatus($after);
+        }
     }
 
     /**

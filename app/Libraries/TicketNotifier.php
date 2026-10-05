@@ -70,6 +70,94 @@ class TicketNotifier
     }
 
     /**
+     * Avisos al solicitante (llegan a los navegadores registrados desde el widget
+     * con el correo del ticket; no a los del panel).
+     */
+    public function requesterAssigned(array $ticket): void
+    {
+        $name = '';
+
+        if (! empty($ticket['AssignedUserId'])) {
+            $user = db_connect()->table('Users')->select('FullName')->where('IdUser', $ticket['AssignedUserId'])->get()->getRowArray();
+            $name = (string) ($user['FullName'] ?? '');
+        }
+
+        $this->toRequester(
+            $ticket,
+            'assigned',
+            'Tu ticket ' . $this->code($ticket) . ' ya tiene responsable',
+            $name !== '' ? $name . ' atenderá tu solicitud.' : 'Un técnico atenderá tu solicitud.',
+        );
+    }
+
+    /** @param array<string, mixed> $ticket */
+    public function requesterEscalated(array $ticket): void
+    {
+        $this->toRequester(
+            $ticket,
+            'escalated',
+            'Tu ticket ' . $this->code($ticket) . ' fue escalado',
+            'Un administrador está revisando tu solicitud.',
+        );
+    }
+
+    /** @param array<string, mixed> $ticket Ticket ya actualizado */
+    public function requesterStatus(array $ticket): void
+    {
+        $status = (string) ($ticket['Status'] ?? '');
+        $label  = match ($status) {
+            'cerrado'     => 'finalizado',
+            'en_progreso' => 'en progreso',
+            default       => 'abierto de nuevo',
+        };
+
+        $this->toRequester($ticket, 'status_' . $status, 'Tu ticket ' . $this->code($ticket) . ' está ' . $label, $this->subject($ticket));
+    }
+
+    /** @param array<string, mixed> $ticket */
+    private function toRequester(array $ticket, string $type, string $title, string $body): void
+    {
+        try {
+            $email = trim((string) ($ticket['RequesterEmail'] ?? ''));
+
+            if ($email === '' || ! $this->push->enabled()) {
+                return;
+            }
+
+            $results = $this->push->sendToEmails(
+                [$email],
+                $title,
+                $body,
+                ['type' => $type, 'ticketId' => (int) $ticket['IdTicket'], 'status' => (string) ($ticket['Status'] ?? '')],
+                config(\Config\Fcm::class)->widgetUrl ?: null,
+                false,
+            );
+
+            if (config(\Config\Fcm::class)->debug) {
+                log_message('error', '[FCM debug] ' . $type . ' ticket ' . $ticket['IdTicket'] . ' -> solicitante ' . $email . ': ' . count($results) . ' dispositivo(s)');
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[Push] ' . $e->getMessage());
+        }
+    }
+
+    /** @param array<string, mixed> $ticket */
+    private function code(array $ticket): string
+    {
+        helper('panel');
+
+        return ticket_code((int) $ticket['IdTicket']);
+    }
+
+    /** @param array<string, mixed> $ticket */
+    private function subject(array $ticket): string
+    {
+        $subject = trim((string) ($ticket['Subject'] ?? ''));
+
+        return mb_strlen($subject) > 140 ? mb_substr($subject, 0, 137) . '…' : $subject;
+    }
+
+    /**
      * @param array<string, mixed> $ticket
      *
      * @return list<string> Correos

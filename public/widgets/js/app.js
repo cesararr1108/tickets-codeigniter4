@@ -1530,6 +1530,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     return {
         open: openModal,
         close: closeModal,
-        reset: resetForm
+        reset: resetForm,
+        root: shadow
     };
 }

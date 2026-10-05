@@ -93,6 +93,7 @@
                     .then(m => m.iniciarNotificaciones({
                         apiUrl,
                         perfil,
+                        root: widget.root,
                         swUrl: currentScript.dataset.sw || "../../service-worker.js"
                     }))
                     .catch(error => console.warn("[Tickets Widget] Push no disponible:", error));

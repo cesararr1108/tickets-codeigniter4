@@ -1,9 +1,11 @@
 /*
  * Notificaciones push (FCM) del widget.
  *
- * Registra el service worker del anfitrión, pide permiso, obtiene el token
- * y lo guarda en la API (POST /fcm-tokens -> tabla t_fcm_tokens) con el correo
- * del usuario. Reemplaza el script FCM que antes vivía en la página anfitriona.
+ * - Si el usuario ya dio permiso: registra el token en silencio.
+ * - Si aún no lo ha decidido: muestra el botón "Activar notificaciones" en la
+ *   cabecera del widget; al pulsarlo se pide el permiso (los navegadores,
+ *   sobre todo Safari/iOS, exigen que sea por un clic) y se guarda el token
+ *   en la API (POST /fcm-tokens -> tabla t_fcm_tokens) con el correo del usuario.
  *
  * Requisito: el anfitrión debe tener un service worker con FCM en segundo plano
  * (por defecto ../../service-worker.js, configurable con data-sw en tickets.js).
@@ -26,22 +28,75 @@ const VAPID_KEY =
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export async function iniciarNotificaciones({ apiUrl, perfil, swUrl = "../../service-worker.js" }) {
+const IOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const STANDALONE = window.navigator.standalone === true
+    || window.matchMedia?.("(display-mode: standalone)").matches;
 
-    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
-        console.warn("[Tickets Widget] Este navegador no soporta notificaciones push.");
-        return;
-    }
+const IOS_HELP = "Para recibir notificaciones en iPhone/iPad:\n\n"
+    + "1. Abre esta página en Safari.\n"
+    + "2. Toca Compartir y elige \"Añadir a pantalla de inicio\".\n"
+    + "3. Abre la app desde el icono nuevo y pulsa de nuevo \"Activar notificaciones\".\n\n"
+    + "Requiere iOS 16.4 o superior.";
+
+export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../../service-worker.js" }) {
+
+    const button = root?.getElementById("ticketPush");
+    const soportado = "serviceWorker" in navigator && "Notification" in window && "PushManager" in window;
 
     if (!EMAIL_RE.test(perfil.email || "")) {
         return;
     }
 
-    if (Notification.permission === "denied") {
+    if (!soportado && !(IOS && !STANDALONE)) {
+        console.warn("[Tickets Widget] Este navegador no soporta notificaciones push.");
         return;
     }
 
-    try {
+    if (soportado && Notification.permission === "denied") {
+        return;
+    }
+
+    // Permiso ya concedido: registro silencioso.
+    if (soportado && Notification.permission === "granted") {
+        activar(false).catch(error => console.error("[Tickets Widget] Error FCM:", error));
+        return;
+    }
+
+    // Permiso pendiente: botón en la cabecera.
+    if (!button) {
+        return;
+    }
+
+    button.hidden = false;
+    button.addEventListener("click", async () => {
+
+        if (!soportado) {
+            alert(IOS_HELP);
+            return;
+        }
+
+        // requestPermission debe llamarse directo desde el clic.
+        const permiso = await Notification.requestPermission();
+
+        if (permiso !== "granted") {
+            if (permiso === "denied") {
+                button.hidden = true;
+                alert("Bloqueaste las notificaciones. Puedes activarlas desde los ajustes del sitio en tu navegador.");
+            }
+            return;
+        }
+
+        try {
+            await activar(true);
+            button.hidden = true;
+        } catch (error) {
+            console.error("[Tickets Widget] Error FCM:", error);
+            alert("No se pudieron activar las notificaciones.");
+        }
+    });
+
+    async function activar(mostrarAviso) {
         const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
         const [{ initializeApp, getApps }, { getMessaging, getToken, onMessage }] = await Promise.all([
             import(`${base}/firebase-app.js`),
@@ -49,17 +104,9 @@ export async function iniciarNotificaciones({ apiUrl, perfil, swUrl = "../../ser
         ]);
 
         const registration = await navigator.serviceWorker.register(swUrl);
+        await navigator.serviceWorker.ready;
 
-        if (Notification.permission !== "granted") {
-            const permiso = await Notification.requestPermission();
-
-            if (permiso !== "granted") {
-                return;
-            }
-        }
-
-        const app = getApps()[0] || initializeApp(FIREBASE_CONFIG);
-        const messaging = getMessaging(app);
+        const messaging = getMessaging(getApps()[0] || initializeApp(FIREBASE_CONFIG));
 
         const token = await getToken(messaging, {
             vapidKey: VAPID_KEY,
@@ -67,46 +114,41 @@ export async function iniciarNotificaciones({ apiUrl, perfil, swUrl = "../../ser
         });
 
         if (!token) {
-            console.warn("[Tickets Widget] No se obtuvo token FCM.");
-            return;
+            throw new Error("No se obtuvo token FCM.");
         }
 
         // Evita llamar a la API en cada carga si nada cambió.
-        const firma = `${perfil.email.toLowerCase()}|${token}`;
+        const firma = `${perfil.email.toLowerCase()}|${perfil.company}|${perfil.branch}|${token}`;
+        let guardado = false;
 
-        try {
-            if (localStorage.getItem("tw-fcm") === firma) {
-                escucharPrimerPlano(messaging, onMessage, registration);
-                return;
-            }
-        } catch (e) { /* sin localStorage */ }
+        try { guardado = localStorage.getItem("tw-fcm") === firma; } catch (e) { /* sin localStorage */ }
 
-        await apiPost(apiUrl, "/fcm-tokens", {
-            Email: perfil.email,
-            Token: token,
-            Navigator: navigator.userAgent.slice(0, 100),
-            Companies: perfil.company,
-            branches: perfil.branch,
-            Rol: perfil.role
+        if (!guardado) {
+            await apiPost(apiUrl, "/fcm-tokens", {
+                Email: perfil.email,
+                Token: token,
+                Navigator: navigator.userAgent.slice(0, 100),
+                Companies: perfil.company,
+                branches: perfil.branch,
+                Rol: perfil.role
+            });
+
+            try { localStorage.setItem("tw-fcm", firma); } catch (e) { /* ignorar */ }
+        }
+
+        // Con la pestaña abierta FCM no muestra nada: aviso local.
+        onMessage(messaging, payload => {
+            const n = payload.notification || {};
+            const d = payload.data || {};
+
+            registration.showNotification(n.title || d.title || "Notificación", {
+                body: n.body || d.body || "",
+                data: { url: d.url || d.link || payload.fcmOptions?.link || "/" }
+            });
         });
 
-        try { localStorage.setItem("tw-fcm", firma); } catch (e) { /* ignorar */ }
-
-        escucharPrimerPlano(messaging, onMessage, registration);
-    } catch (error) {
-        console.error("[Tickets Widget] Error FCM:", error);
+        if (mostrarAviso) {
+            alert("Notificaciones activadas.");
+        }
     }
-}
-
-// Con la pestaña abierta FCM no muestra nada: se avisa con una notificación local.
-function escucharPrimerPlano(messaging, onMessage, registration) {
-    onMessage(messaging, payload => {
-        const n = payload.notification || {};
-        const d = payload.data || {};
-
-        registration.showNotification(n.title || d.title || "Notificación", {
-            body: n.body || d.body || "",
-            data: { url: d.url || d.link || payload.fcmOptions?.link || "/" }
-        });
-    });
 }

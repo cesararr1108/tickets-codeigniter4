@@ -42,8 +42,8 @@ class Push extends BasePanelController
     {
         $push = new FcmPush();
 
-        if (! $push->enabled()) {
-            return redirect()->back()->with('error', 'El envío no está configurado: falta fcm.credentialsPath en .env.');
+        if ($problem = $push->problem()) {
+            return redirect()->back()->with('error', 'Envío no disponible: ' . $problem);
         }
 
         $tokens = model(FcmTokenModel::class)->tokensForEmails([(string) $this->user['email']]);

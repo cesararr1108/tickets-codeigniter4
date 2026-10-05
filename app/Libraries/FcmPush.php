@@ -31,6 +31,32 @@ class FcmPush
     }
 
     /**
+     * Motivo por el que el envío no está disponible (null si todo está bien).
+     */
+    public function problem(): ?string
+    {
+        $path = $this->config->credentialsPath;
+
+        if ($path === '') {
+            return 'PHP no recibe fcm.credentialsPath. Revisa que la línea esté en el .env de la raíz del proyecto, sin # al inicio, y que CI_ENVIRONMENT no use otro .env.';
+        }
+
+        if (! file_exists($path)) {
+            return 'No se encuentra el archivo en "' . $path . '" (o PHP no puede entrar a esa carpeta: revisa nombre, permisos de la carpeta y open_basedir).';
+        }
+
+        if (! is_readable($path)) {
+            return 'El archivo "' . $path . '" existe pero PHP no tiene permiso de lectura (usuario: ' . (function_exists('posix_getpwuid') ? posix_getpwuid(posix_geteuid())['name'] : get_current_user()) . ').';
+        }
+
+        if ($this->credentials() === null) {
+            return 'El archivo se leyó pero no es un JSON de cuenta de servicio válido (¿se copió completo?).';
+        }
+
+        return null;
+    }
+
+    /**
      * Envía a todos los tokens de los correos indicados.
      *
      * @param list<string>          $emails

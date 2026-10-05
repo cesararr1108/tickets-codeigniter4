@@ -39,6 +39,7 @@ if (panel_is_admin()) {
     <meta name="fcm-icon" content="<?= base_url('icons/icon-192.png') ?>">
     <?php if ($fcm->debug): ?><meta name="fcm-debug" content="1"><?php endif ?>
     <meta name="fcm-user" content="<?= esc($user['email'] ?? '', 'attr') ?>">
+    <meta name="fcm-sound" content="<?= base_url('assets/sounds/notificacion.wav') ?>">
     <meta name="fcm-register-url" content="<?= site_url('panel/push/token') ?>">
     <link rel="manifest" href="<?= base_url('manifest.json') ?>">
     <link rel="apple-touch-icon" href="<?= base_url('icons/apple-touch-icon.png') ?>">
@@ -85,6 +86,9 @@ if (panel_is_admin()) {
                         <span><?= esc($user['email'] ?? '') ?></span>
                         <?php if (! empty($user['role'])): ?><span class="chip"><?= esc($user['role']) ?></span><?php endif ?>
                     </div>
+                    <button type="button" class="menu-item" data-toggle-sound style="width:100%;border:0;background:none;font:inherit;cursor:pointer;text-align:left">
+                        <?= icon('bell') ?> <span data-sound-label>Sonido de avisos: activado</span>
+                    </button>
                     <a href="<?= site_url('logout') ?>" class="menu-item"><?= icon('logout') ?> Cerrar sesión</a>
                 </div>
             </div>

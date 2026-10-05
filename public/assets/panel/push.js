@@ -10,6 +10,29 @@ const swUrl = meta('fcm-sw-url');
 const registerUrl = meta('fcm-register-url');
 const userEmail = meta('fcm-user').toLowerCase();
 
+// Sonido de los avisos (solo suena con el panel abierto; en segundo plano lo decide el sistema).
+const soundUrl = meta('fcm-sound');
+const soundButton = document.querySelector('[data-toggle-sound]');
+const soundEnabled = () => {
+    try { return localStorage.getItem('panel-sound') !== 'off'; } catch (e) { return true; }
+};
+const syncSoundLabel = () => {
+    const label = soundButton?.querySelector('[data-sound-label]');
+    if (label) label.textContent = soundEnabled() ? 'Sonido de avisos: activado' : 'Sonido de avisos: silenciado';
+};
+const playSound = () => {
+    if (!soundUrl || !soundEnabled()) return;
+    // Los navegadores bloquean el audio hasta que el usuario interactúa con la página.
+    new Audio(soundUrl).play().catch(() => {});
+};
+
+syncSoundLabel();
+soundButton?.addEventListener('click', () => {
+    try { localStorage.setItem('panel-sound', soundEnabled() ? 'off' : 'on'); } catch (e) {}
+    syncSoundLabel();
+    playSound();
+});
+
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = window.navigator.standalone === true
@@ -56,6 +79,7 @@ async function enable() {
     // Aviso con la pestaña abierta (FCM no lo muestra por sí solo). Debe registrarse en
     // CADA carga de página, antes de decidir si el token ya estaba guardado.
     fm.onMessage(messaging, (payload) => {
+        playSound();
         const { title, body } = payload.notification || {};
         registration.showNotification(title || 'Mesa de Ayuda', {
             body,

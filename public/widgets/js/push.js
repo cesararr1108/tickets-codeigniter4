@@ -149,6 +149,9 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
 
         // Con la pestaña abierta FCM no muestra nada: aviso local.
         onMessage(messaging, payload => {
+            // Sonido solo con la página abierta (los navegadores lo bloquean hasta que el usuario interactúa).
+            new Audio(new URL("../../assets/sounds/notificacion.wav", import.meta.url).href).play().catch(() => {});
+
             const n = payload.notification || {};
             const d = payload.data || {};
 

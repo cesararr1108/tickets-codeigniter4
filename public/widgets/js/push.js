@@ -44,7 +44,10 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
     const button = root?.getElementById("ticketPush");
     const soportado = "serviceWorker" in navigator && "Notification" in window && "PushManager" in window;
 
+    const log = mensaje => console.info("[Tickets Widget] Push:", mensaje);
+
     if (!EMAIL_RE.test(perfil.email || "")) {
+        log(`no se activa: data-email no es un correo válido ("${perfil.email}").`);
         return;
     }
 
@@ -54,20 +57,24 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
     }
 
     if (soportado && Notification.permission === "denied") {
+        log("no se activa: el permiso de notificaciones está bloqueado en este navegador (candado de la barra de direcciones > Notificaciones > Permitir).");
         return;
     }
 
     // Permiso ya concedido: registro silencioso.
     if (soportado && Notification.permission === "granted") {
+        log("permiso ya concedido; registrando el token en silencio con el service worker " + swUrl);
         activar(false).catch(error => console.error("[Tickets Widget] Error FCM:", error));
         return;
     }
 
     // Permiso pendiente: botón en la cabecera.
     if (!button) {
+        log("no se encontró el botón #ticketPush: el navegador tiene en caché una plantilla vieja del widget (Ctrl+F5).");
         return;
     }
 
+    log("permiso pendiente: mostrando el botón Activar notificaciones.");
     button.hidden = false;
     button.addEventListener("click", async () => {
 
@@ -104,6 +111,7 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
         ]);
 
         const registration = await navigator.serviceWorker.register(swUrl);
+        log("service worker registrado: " + registration.scope);
         await navigator.serviceWorker.ready;
 
         const messaging = getMessaging(getApps()[0] || initializeApp(FIREBASE_CONFIG));
@@ -134,6 +142,9 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
             });
 
             try { localStorage.setItem("tw-fcm", firma); } catch (e) { /* ignorar */ }
+            log("token guardado en la API para " + perfil.email);
+        } else {
+            log("el token ya estaba guardado para " + perfil.email);
         }
 
         // Con la pestaña abierta FCM no muestra nada: aviso local.

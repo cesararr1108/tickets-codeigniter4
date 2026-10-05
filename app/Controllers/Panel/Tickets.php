@@ -231,6 +231,8 @@ class Tickets extends BasePanelController
 
         $row = $model->find($model->getInsertID());
 
+        (new TicketNotifier())->chatFromAgent($ticket, $message, (string) $this->user['name']);
+
         if (! $isAjax) {
             return redirect()->to(site_url("panel/tickets/{$id}") . '#chat');
         }

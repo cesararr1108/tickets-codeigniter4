@@ -248,6 +248,8 @@ class TicketController extends BaseApiController
 
         $row = $model->find($model->getInsertID());
 
+        (new TicketNotifier())->chatFromRequester($ticket, $message, (string) $row['SenderName']);
+
         return $this->respondCreated([
             'sender'    => $row['SenderName'],
             'type'      => $row['SenderType'],
@@ -442,7 +444,32 @@ class TicketController extends BaseApiController
             return $this->failValidationErrors($model->errors());
         }
 
-        return $this->respondCreated($model->find($model->getInsertID()));
+        $row = $model->find($model->getInsertID());
+
+        if ($row !== null && trim((string) ($row['Message'] ?? '')) !== '') {
+            $ticket   = $this->model()->find($id);
+            $notifier = new TicketNotifier();
+
+            if ($row['SenderType'] === 'agente') {
+                $notifier->chatFromAgent($ticket, $row['Message'], $row['SenderName']);
+            } elseif ($this->hasPriorMessages((int) $id, (int) $row['MessageId'])) {
+                // El primer mensaje (la descripción) ya se avisó con el ticket nuevo.
+                $notifier->chatFromRequester($ticket, $row['Message'], $row['SenderName']);
+            }
+        }
+
+        return $this->respondCreated($row);
+    }
+
+    /**
+     * ¿Hay mensajes anteriores en el ticket?
+     */
+    private function hasPriorMessages(int $ticketId, int $messageId): bool
+    {
+        return model(TicketMessageModel::class)
+            ->where('IdTicket', $ticketId)
+            ->where('MessageId <', $messageId)
+            ->countAllResults() > 0;
     }
 
     /**

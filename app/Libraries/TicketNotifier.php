@@ -49,24 +49,82 @@ class TicketNotifier
             $data  = ['type' => 'ticket_created', 'ticketId' => $id];
             $link  = site_url('panel/tickets/' . $id);
 
-            // Paso 1 (por defecto): a todos los dispositivos registrados desde el panel.
-            if (! config(\Config\Fcm::class)->useRoutes) {
-                $this->push->sendToPanel($title, $text, $data, $link);
+            $this->toStaff($ticket, $title, $text, $data, $link, $actorId);
+        } catch (\Throwable $e) {
+            log_message('error', '[Push] ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mensaje del solicitante en el chat -> responsable del ticket (o, sin responsable,
+     * los mismos destinatarios que un ticket nuevo).
+     *
+     * @param array<string, mixed> $ticket
+     */
+    public function chatFromRequester(array $ticket, string $message, string $senderName): void
+    {
+        try {
+            if (! $this->push->enabled()) {
+                return;
+            }
+
+            $assigned = (string) ($ticket['AssignedUserId'] ?? '');
+            $title    = 'Mensaje en el ticket ' . $this->code($ticket);
+            $text     = $this->short(($senderName !== '' ? $senderName . ': ' : '') . $message);
+            $data     = ['type' => 'chat_message', 'ticketId' => (int) $ticket['IdTicket']];
+            $link     = site_url('panel/tickets/' . (int) $ticket['IdTicket'] . '#chat');
+
+            if ($assigned !== '') {
+                $emails = array_column($this->users([], null, $assigned), 'Email');
+                $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
 
                 return;
             }
 
-            // Paso 2 (fcm.useRoutes = true): según las reglas de Panel > Notificaciones.
-            $emails = $this->recipients($ticket, $actorId);
-
-            if (config(\Config\Fcm::class)->debug) {
-                log_message('error', '[FCM debug] Ticket ' . $id . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
-            }
-
-            $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
+            $this->toStaff($ticket, $title, $text, $data, $link);
         } catch (\Throwable $e) {
             log_message('error', '[Push] ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Mensaje del agente en el chat -> solicitante.
+     *
+     * @param array<string, mixed> $ticket
+     */
+    public function chatFromAgent(array $ticket, string $message, string $agentName): void
+    {
+        $this->toRequester(
+            $ticket,
+            'chat_message',
+            'Nuevo mensaje en tu ticket ' . $this->code($ticket),
+            $this->short(($agentName !== '' ? $agentName . ': ' : '') . $message),
+        );
+    }
+
+    /**
+     * Destinatarios del panel según fcm.useRoutes (todos los dispositivos del panel o reglas).
+     *
+     * @param array<string, mixed>  $ticket
+     * @param array<string, scalar> $data
+     */
+    private function toStaff(array $ticket, string $title, string $text, array $data, string $link, ?string $actorId = null): void
+    {
+        // Paso 1 (por defecto): a todos los dispositivos registrados desde el panel.
+        if (! config(\Config\Fcm::class)->useRoutes) {
+            $this->push->sendToPanel($title, $text, $data, $link);
+
+            return;
+        }
+
+        // Paso 2 (fcm.useRoutes = true): según las reglas de Panel > Notificaciones.
+        $emails = $this->recipients($ticket, $actorId);
+
+        if (config(\Config\Fcm::class)->debug) {
+            log_message('error', '[FCM debug] Ticket ' . $ticket['IdTicket'] . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
+        }
+
+        $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
     }
 
     /**
@@ -147,6 +205,13 @@ class TicketNotifier
         helper('panel');
 
         return ticket_code((int) $ticket['IdTicket']);
+    }
+
+    private function short(string $text): string
+    {
+        $text = trim(preg_replace('/\s+/', ' ', $text) ?? $text);
+
+        return mb_strlen($text) > 140 ? mb_substr($text, 0, 137) . '…' : $text;
     }
 
     /** @param array<string, mixed> $ticket */

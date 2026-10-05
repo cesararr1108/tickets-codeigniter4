@@ -52,6 +52,17 @@ async function enable() {
     // Solo con fcm.debug = true en .env (desarrollo): muestra el token de este navegador.
     if (meta('fcm-debug')) console.info('[Push] token FCM de este navegador:', token);
 
+    // Aviso con la pestaña abierta (FCM no lo muestra por sí solo). Debe registrarse en
+    // CADA carga de página, antes de decidir si el token ya estaba guardado.
+    fm.onMessage(messaging, (payload) => {
+        const { title, body } = payload.notification || {};
+        registration.showNotification(title || 'Mesa de Ayuda', {
+            body,
+            icon: meta('fcm-icon'),
+            data: { url: payload.data?.url }
+        });
+    });
+
     try {
         if (localStorage.getItem('panel-fcm-token-v3') === token) return true;
     } catch (e) {}
@@ -75,16 +86,6 @@ async function enable() {
     if (!response.ok) return false;
 
     try { localStorage.setItem('panel-fcm-token-v3', token); } catch (e) {}
-
-    // Aviso con la pestaña abierta (FCM no lo muestra por sí solo).
-    fm.onMessage(messaging, (payload) => {
-        const { title, body } = payload.notification || {};
-        registration.showNotification(title || 'Mesa de Ayuda', {
-            body,
-            icon: meta('fcm-icon'),
-            data: { url: payload.data?.url }
-        });
-    });
 
     return true;
 }

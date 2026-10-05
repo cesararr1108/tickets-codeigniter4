@@ -8,6 +8,7 @@ const config = JSON.parse(meta('fcm-config') || '{}');
 const vapidKey = meta('fcm-vapid-key');
 const swUrl = meta('fcm-sw-url');
 const registerUrl = meta('fcm-register-url');
+const userEmail = meta('fcm-user').toLowerCase();
 
 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent)
     || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -63,8 +64,12 @@ async function enable() {
         });
     });
 
+    // El token es del navegador, no del usuario: se recuerda junto con el correo para volver
+    // a registrarlo cuando entra otro usuario en el mismo navegador.
+    const signature = `${userEmail}|${token}`;
+
     try {
-        if (localStorage.getItem('panel-fcm-token-v3') === token) return true;
+        if (localStorage.getItem('panel-fcm-token-v4') === signature) return true;
     } catch (e) {}
 
     const body = new URLSearchParams({ token });
@@ -85,7 +90,7 @@ async function enable() {
     }
     if (!response.ok) return false;
 
-    try { localStorage.setItem('panel-fcm-token-v3', token); } catch (e) {}
+    try { localStorage.setItem('panel-fcm-token-v4', signature); } catch (e) {}
 
     return true;
 }

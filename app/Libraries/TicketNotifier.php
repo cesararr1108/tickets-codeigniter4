@@ -7,7 +7,8 @@ use App\Models\NotificationRouteModel;
 /**
  * Push al panel cuando entra un ticket nuevo.
  *
- * Destinatarios (usuarios activos del panel, nunca quien creó el ticket):
+ * Destinatarios (usuarios activos del panel; no se avisa a quien creó el ticket,
+ * salvo con fcm.debug = true para pruebas):
  *  1. Si la compañía del ticket tiene reglas (Panel > Notificaciones): los
  *     usuarios de esos roles que pertenecen a la sucursal del ticket. Si en
  *     esa sucursal no hay nadie con ese rol, se avisa a los de ese rol de
@@ -88,8 +89,11 @@ class TicketNotifier
         $requester = strtolower(trim((string) ($ticket['RequesterEmail'] ?? '')));
         $emails    = [];
 
+        // En modo debug (fcm.debug = true) también se avisa a quien creó el ticket, para poder probar con un solo usuario.
+        $excludeCreator = ! config(\Config\Fcm::class)->debug;
+
         foreach ($users as $user) {
-            if ((string) $user['IdUser'] === (string) $actorId || strtolower(trim((string) $user['Email'])) === $requester) {
+            if ($excludeCreator && ((string) $user['IdUser'] === (string) $actorId || strtolower(trim((string) $user['Email'])) === $requester)) {
                 continue;
             }
 

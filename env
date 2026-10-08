@@ -100,7 +100,7 @@ CI_ENVIRONMENT = production
 # CORREO SALIENTE (recuperación de contraseña)
 #--------------------------------------------------------------------
 # email.fromEmail = soporte@tuempresa.com
-# email.fromName = Mesa de Ayuda
+# email.fromName = 'Mesa de Ayuda'
 # email.protocol = smtp
 # email.SMTPHost = smtp.tuempresa.com
 # email.SMTPUser = soporte@tuempresa.com

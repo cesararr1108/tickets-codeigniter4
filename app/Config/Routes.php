@@ -13,6 +13,12 @@ $routes->get('login', 'Panel\\Auth::login');
 $routes->post('login', 'Panel\\Auth::attempt', ['filter' => 'csrf']);
 $routes->get('logout', 'Panel\\Auth::logout');
 
+// Recuperación de contraseña (enlace por correo).
+$routes->get('recuperar', 'Panel\\Auth::forgot');
+$routes->post('recuperar', 'Panel\\Auth::sendReset', ['filter' => 'csrf']);
+$routes->get('restablecer/(:segment)', 'Panel\\Auth::resetForm/$1');
+$routes->post('restablecer/(:segment)', 'Panel\\Auth::resetSave/$1', ['filter' => 'csrf']);
+
 $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => ['panelauth', 'csrf']], static function (RouteCollection $routes) {
     $routes->get('/', 'Dashboard::index');
 

@@ -82,7 +82,13 @@ $activeValue = old('IsActive') !== null ? (bool) old('IsActive') : ($isEdit ? (b
                                     <span class="muted small"><?= esc($row['Email']) ?></span>
                                 </td>
                                 <td><span class="chip <?= $isAdminRole($row['RoleName']) ? 'role-admin' : 'role-tech' ?>"><?= esc($row['RoleName'] ?? 'Sin rol') ?></span></td>
-                                <td><?= esc($row['Companies'] ?? $row['CodCompanies']) ?><span class="muted small" style="display:block"><?= esc($row['Branches'] ?? $row['CodBranches']) ?></span></td>
+                                <td>
+                                    <?= esc($row['Companies'] ?? $row['CodCompanies']) ?>
+                                    <span class="muted small" style="display:block"><?= esc($row['Branches'] ?? $row['CodBranches']) ?></span>
+                                    <?php $more = $extras[(string) $row['IdUser']] ?? []; if ($more !== []): ?>
+                                        <span class="muted small" style="display:block" title="<?= esc(implode(', ', array_map(static fn ($c) => $branchNames[$c] ?? $c, $more)), 'attr') ?>">+ <?= count($more) ?> sede<?= count($more) === 1 ? '' : 's' ?> más</span>
+                                    <?php endif ?>
+                                </td>
                                 <td><?= (int) $row['IsActive'] ? '<span class="badge badge-cerrado">Activo</span>' : '<span class="badge">Inactivo</span>' ?></td>
                                 <td class="actions-col">
                                     <a class="btn btn-outline btn-sm" href="<?= $baseUrl . '?' . http_build_query(array_filter(['q' => $q, 'role' => $role, 'edit' => $row['IdUser']])) ?>#formulario">Editar</a>
@@ -170,6 +176,27 @@ $activeValue = old('IsActive') !== null ? (bool) old('IsActive') : ($isEdit ? (b
                 </select>
                 <?= $err('CodBranches') ?>
             </label>
+
+            <?php if ($extrasAvailable): ?>
+                <?php
+                $extraSelected = old('ExtraBranches') !== null ? (array) old('ExtraBranches') : ($isEdit ? ($edit['ExtraBranches'] ?? []) : []);
+                $extraSelected = array_map('strval', $extraSelected);
+                ?>
+                <fieldset class="field" style="border:0;padding:0;margin:0">
+                    <span class="field-label">Sedes adicionales <span class="muted">(opcional)</span></span>
+                    <div style="max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+                        <?php foreach ($allBranches as $b): ?>
+                            <label style="display:flex;gap:8px;align-items:center;padding:3px 0;cursor:pointer">
+                                <input type="checkbox" name="ExtraBranches[]" value="<?= esc($b['CodBranches'], 'attr') ?>" <?= in_array((string) $b['CodBranches'], $extraSelected, true) ? 'checked' : '' ?>>
+                                <span><?= esc($b['Branches']) ?> <span class="muted small">· <?= esc($b['Companies'] ?? '') ?></span></span>
+                            </label>
+                        <?php endforeach ?>
+                    </div>
+                    <?= $err('ExtraBranches') ?: '<span class="muted small">Además de la sucursal principal. Los avisos de tickets llegan por todas las sedes asignadas.</span>' ?>
+                </fieldset>
+            <?php else: ?>
+                <p class="muted small">Para asignar más de una sede, ejecuta <code>app/Database/sql/SedesYRecuperacion.sql</code>.</p>
+            <?php endif ?>
 
             <label class="field field-check">
                 <input type="checkbox" name="IsActive" value="1" <?= $activeValue ? 'checked' : '' ?>>

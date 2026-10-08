@@ -25,6 +25,10 @@
         <h1>Iniciar sesión</h1>
         <p class="muted">Ingresa con tu usuario del sistema de tickets.</p>
 
+        <?php if (! empty($success)): ?>
+            <div class="flash flash-success"><?= icon('check') ?> <?= esc($success) ?></div>
+        <?php endif ?>
+
         <?php if (! empty($error)): ?>
             <div class="flash flash-error"><?= icon('alert') ?> <?= esc($error) ?></div>
         <?php endif ?>
@@ -40,6 +44,7 @@
         </label>
 
         <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        <p style="text-align:center;margin-top:16px"><a href="<?= site_url('recuperar') ?>">¿Olvidaste tu contraseña?</a></p>
     </form>
 </body>
 </html>

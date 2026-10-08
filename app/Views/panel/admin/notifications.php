@@ -19,8 +19,18 @@
     </form>
 </div>
 
-<?php if (! config(\Config\Fcm::class)->useRoutes): ?>
-    <div class="flash flash-error" style="background:#fff7e6;color:#8a5a00"><?= icon('alert') ?> Las reglas están desactivadas por ahora: cada ticket nuevo avisa a <strong>todos los dispositivos registrados desde el panel</strong>. Para aplicarlas, agrega <code>fcm.useRoutes = true</code> al .env.</div>
+<?php $fcmCfg = config(\Config\Fcm::class); ?>
+<?php if (! $fcmCfg->useRoutes): ?>
+    <div class="flash flash-error" style="background:#fff7e6;color:#8a5a00"><?= icon('alert') ?>
+        Las reglas de esta pantalla están desactivadas por ahora (agrega <code>fcm.useRoutes = true</code> al .env para aplicarlas).
+        <?php if ($fcmCfg->filterByBranch): ?>
+            Mientras tanto, cada ticket nuevo avisa a los usuarios que tienen asignada <strong>la sede del ticket</strong> (sede principal o adicional).
+        <?php else: ?>
+            Cada ticket nuevo avisa a <strong>todos los dispositivos registrados desde el panel</strong>.
+        <?php endif ?>
+    </div>
+<?php elseif ($fcmCfg->filterByBranch): ?>
+    <div class="flash" style="background:#eef6ff;color:#1d4f91"><?= icon('check') ?> Además de estas reglas, solo se avisa a los usuarios que tienen asignada la sede del ticket.</div>
 <?php endif ?>
 
 <?php if ($report = session()->getFlashdata('pushReport')):

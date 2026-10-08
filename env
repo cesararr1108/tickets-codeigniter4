@@ -95,3 +95,15 @@ CI_ENVIRONMENT = production
 # fcm.credentialsPath = /var/www/secure/fcm-multiroma-firebase-adminsdk.json
 # Solo desarrollo: muestra tokens y respuestas de FCM (pantalla de prueba, consola y writable/logs)
 # fcm.debug = true
+
+#--------------------------------------------------------------------
+# CORREO SALIENTE (recuperación de contraseña)
+#--------------------------------------------------------------------
+# email.fromEmail = soporte@tuempresa.com
+# email.fromName = Mesa de Ayuda
+# email.protocol = smtp
+# email.SMTPHost = smtp.tuempresa.com
+# email.SMTPUser = soporte@tuempresa.com
+# email.SMTPPass = 
+# email.SMTPPort = 587
+# email.SMTPCrypto = tls

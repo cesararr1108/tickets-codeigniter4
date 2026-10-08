@@ -26,6 +26,12 @@ class Fcm extends BaseConfig
     /** Página que se abre al tocar una notificación dirigida al solicitante (la que aloja el widget). fcm.widgetUrl en .env. */
     public string $widgetUrl = 'https://www.pwmultiroma.com/calidad/views/Menu.php';
 
+    /**
+     * Los avisos de tickets solo llegan a los usuarios que tienen asignada la sede del ticket
+     * (sede principal o adicional). fcm.filterByBranch = false para avisar sin filtrar por sede.
+     */
+    public bool $filterByBranch = true;
+
     /** Timeout (segundos) de las llamadas a Google. */
     public int $timeout = 5;
 

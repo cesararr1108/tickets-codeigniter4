@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Panel;
 
+use App\Libraries\UserBranches;
 use App\Models\UserModel;
 
 /**
@@ -52,6 +53,14 @@ class Users extends BasePanelController
             ->get()
             ->getRowArray();
 
+        $extras = UserBranches::extrasFor(array_map('strval', array_column($rows, 'IdUser')));
+
+        if ($edit !== null) {
+            $edit['ExtraBranches'] = UserBranches::extrasFor([(string) $edit['IdUser']])[(string) $edit['IdUser']] ?? [];
+        }
+
+        $branchNames = array_column($db->table('Branches')->select('CodBranches, Branches')->get()->getResultArray(), 'Branches', 'CodBranches');
+
         return $this->render('admin/users', [
             'active'    => 'users',
             'title'     => 'Usuarios',
@@ -65,6 +74,14 @@ class Users extends BasePanelController
             'roles'     => $db->table('Roles')->orderBy('Descripcion')->get()->getResultArray(),
             'companies' => $db->table('Companies')->orderBy('Companies')->get()->getResultArray(),
             'adminRoles' => array_map('mb_strtolower', $this->config->adminRoles),
+            'extras'    => $extras,
+            'branchNames' => $branchNames,
+            'allBranches' => $db->table('Branches b')
+                ->select('b.CodBranches, b.Branches, c.Companies')
+                ->join('Companies c', 'c.CodCompanies = b.CodCompanies', 'left')
+                ->orderBy('c.Companies')->orderBy('b.Branches')
+                ->get()->getResultArray(),
+            'extrasAvailable' => UserBranches::available(),
             'errors'    => session()->getFlashdata('errors') ?? [],
         ]);
     }
@@ -91,6 +108,8 @@ class Users extends BasePanelController
             'CodBranches'  => $data['CodBranches'],
             'IsActive'     => $data['IsActive'],
         ]);
+
+        UserBranches::saveExtras($data['IdUser'], $data['ExtraBranches']);
 
         return redirect()->to(site_url('panel/admin/usuarios'))->with('success', 'Usuario ' . $data['IdUser'] . ' creado.');
     }
@@ -129,6 +148,8 @@ class Users extends BasePanelController
 
         $model->skipValidation(true)->update($id, $update);
 
+        UserBranches::saveExtras($id, $data['ExtraBranches']);
+
         return redirect()->to(site_url('panel/admin/usuarios'))->with('success', 'Usuario ' . $id . ' actualizado.');
     }
 
@@ -139,6 +160,8 @@ class Users extends BasePanelController
     {
         $post = $this->request->getPost();
 
+        $main = trim((string) ($post['CodBranches'] ?? ''));
+
         return [
             'IdUser'       => trim((string) ($post['IdUser'] ?? '')),
             'FullName'     => trim((string) ($post['FullName'] ?? '')),
@@ -146,8 +169,13 @@ class Users extends BasePanelController
             'Password'     => (string) ($post['Password'] ?? ''),
             'RoleId'       => (int) ($post['RoleId'] ?? 0),
             'CodCompanies' => trim((string) ($post['CodCompanies'] ?? '')),
-            'CodBranches'  => trim((string) ($post['CodBranches'] ?? '')),
+            'CodBranches'  => $main,
             'IsActive'     => empty($post['IsActive']) ? 0 : 1,
+            // Sedes adicionales (la principal no se repite).
+            'ExtraBranches' => array_values(array_diff(array_unique(array_filter(array_map(
+                static fn ($v) => trim((string) $v),
+                (array) ($post['ExtraBranches'] ?? []),
+            ))), [$main])),
         ];
     }
 
@@ -208,6 +236,15 @@ class Users extends BasePanelController
             $errors['CodCompanies'] = 'Selecciona la compañía.';
         } elseif (! $branchOk) {
             $errors['CodBranches'] = 'Selecciona una sucursal de la compañía.';
+        }
+
+        // Sedes adicionales: deben existir.
+        if ($data['ExtraBranches'] !== []) {
+            $found = $db->table('Branches')->whereIn('CodBranches', $data['ExtraBranches'])->countAllResults();
+
+            if ($found !== count($data['ExtraBranches'])) {
+                $errors['ExtraBranches'] = 'Alguna de las sedes seleccionadas no existe.';
+            }
         }
 
         // Evita que el administrador se quite el acceso a sí mismo.

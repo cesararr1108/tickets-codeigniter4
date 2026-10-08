@@ -110,17 +110,18 @@ class TicketNotifier
      */
     private function toStaff(array $ticket, string $title, string $text, array $data, string $link, ?string $actorId = null): void
     {
-        // Paso 1 (por defecto): a todos los dispositivos registrados desde el panel.
-        if (! config(\Config\Fcm::class)->useRoutes) {
+        $fcm = config(\Config\Fcm::class);
+
+        // Sin reglas ni filtro por sede: a todos los dispositivos registrados desde el panel.
+        if (! $fcm->useRoutes && ! $fcm->filterByBranch) {
             $this->push->sendToPanel($title, $text, $data, $link);
 
             return;
         }
 
-        // Paso 2 (fcm.useRoutes = true): según las reglas de Panel > Notificaciones.
         $emails = $this->recipients($ticket, $actorId);
 
-        if (config(\Config\Fcm::class)->debug) {
+        if ($fcm->debug) {
             log_message('error', '[FCM debug] Ticket ' . $ticket['IdTicket'] . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
         }
 
@@ -223,33 +224,35 @@ class TicketNotifier
     }
 
     /**
+     * Correos que deben recibir el aviso:
+     *  - ticket con responsable: solo el responsable;
+     *  - si no: usuarios activos de los roles de la regla de la compañía (fcm.useRoutes) y/o
+     *    que tengan asignada la sede del ticket (fcm.filterByBranch, sede principal o adicional).
+     *
      * @param array<string, mixed> $ticket
      *
-     * @return list<string> Correos
+     * @return list<string>
      */
     private function recipients(array $ticket, ?string $actorId): array
     {
-        $roles  = NotificationRouteModel::rolesFor((string) ($ticket['CodCompanies'] ?? ''));
-        $branch = trim((string) ($ticket['CodBranches'] ?? ''));
-        $users  = [];
+        $fcm      = config(\Config\Fcm::class);
+        $assigned = (string) ($ticket['AssignedUserId'] ?? '');
+        $branch   = trim((string) ($ticket['CodBranches'] ?? ''));
 
-        if ($roles !== []) {
-            if ($branch !== '') {
-                $users = $this->users($roles, $branch);
-            }
-
-            $users = $users ?: $this->users($roles);
-        } elseif (($assigned = (string) ($ticket['AssignedUserId'] ?? '')) !== '') {
+        if ($assigned !== '') {
             $users = $this->users([], null, $assigned);
         } else {
-            $users = $this->users();
+            $roles = $fcm->useRoutes ? NotificationRouteModel::rolesFor((string) ($ticket['CodCompanies'] ?? '')) : [];
+            $ids   = $fcm->filterByBranch && $branch !== '' ? UserBranches::usersWithBranch($branch) : null;
+
+            // Nadie tiene esa sede: no se avisa a otros (el ticket sigue visible en el panel).
+            $users = $ids === [] ? [] : $this->users($roles, $ids);
         }
 
         $requester = strtolower(trim((string) ($ticket['RequesterEmail'] ?? '')));
-        $emails    = [];
-
-        // En modo debug (fcm.debug = true) también se avisa a quien creó el ticket, para poder probar con un solo usuario.
-        $excludeCreator = ! config(\Config\Fcm::class)->debug;
+        // En modo debug (fcm.debug = true) también se avisa a quien creó el ticket, para probar con un solo usuario.
+        $excludeCreator = ! $fcm->debug;
+        $emails = [];
 
         foreach ($users as $user) {
             if ($excludeCreator && ((string) $user['IdUser'] === (string) $actorId || strtolower(trim((string) $user['Email'])) === $requester)) {
@@ -263,11 +266,14 @@ class TicketNotifier
     }
 
     /**
-     * @param list<int> $roles
+     * Usuarios activos, opcionalmente filtrados por roles, por una lista de IdUser o por un IdUser.
+     *
+     * @param list<int>         $roles
+     * @param list<string>|null $ids
      *
      * @return list<array<string, mixed>>
      */
-    private function users(array $roles = [], ?string $branch = null, ?string $userId = null): array
+    private function users(array $roles = [], ?array $ids = null, ?string $userId = null): array
     {
         $query = db_connect()->table('Users')->select('IdUser, Email')->where('IsActive', 1);
 
@@ -275,8 +281,8 @@ class TicketNotifier
             $query->whereIn('RoleId', $roles);
         }
 
-        if ($branch !== null) {
-            $query->where('CodBranches', $branch);
+        if ($ids !== null) {
+            $query->whereIn('IdUser', $ids);
         }
 
         if ($userId !== null) {

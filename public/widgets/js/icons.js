@@ -43,32 +43,50 @@ const ICONS = {
     phone: svg('<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>'),
     alert: svg('<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/>'),
     tools: svg('<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>'),
+    project: svg('<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M2 13h20"/>'),
+    code: svg('<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>'),
+    clipboard: svg('<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M9 12h6M9 16h4"/>'),
     help: svg('<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.5"/>')
 };
 
 /*
- * Palabra clave (en minúsculas y sin tildes) -> icono.
- * Agrega aquí nuevas palabras según tus categorías reales.
+ * Icono fijo por Id de categoría (tabla Category). Tiene prioridad sobre el nombre,
+ * así el icono no cambia si renombras la categoría. Ejemplo: { 1: "alert", 2: "project" }
+ * Iconos disponibles: las claves de ICONS (hardware, software, network, mail, printer,
+ * access, database, phone, alert, tools, project, code, clipboard, help).
+ */
+const ICON_BY_ID = {};
+
+/*
+ * Palabra clave (en minúsculas y sin tildes) -> clave de ICONS.
+ * Se evalúa de arriba hacia abajo y gana la primera que coincida.
  */
 const KEYWORDS = [
-    [/hardware|equipo|computador|pc|laptop|monitor/, "hardware"],
-    [/software|aplicaci|programa|sistema/, "software"],
-    [/red|internet|wifi|conexi|vpn/, "internet"],
-    [/correo|mail|outlook/, "correo"],
-    [/impres|escan/, "impresora"],
-    [/acceso|usuario|contrase|clave|permiso/, "acceso"],
-    [/sap|erp|base de datos|reporte/, "database"],
-    [/telefon|celular|movil/, "telefono"],
     [/incidente|falla|error|soporte/, "alert"],
+    [/proyecto/, "project"],
+    [/desarrollo|programaci/, "code"],
+    [/requerimiento|solicitud/, "clipboard"],
+    [/hardware|equipo|computador|\bpc\b|laptop|monitor/, "hardware"],
+    [/software|aplicaci|programa|sistema/, "software"],
+    [/\bred\b|internet|wifi|conexi|vpn/, "network"],
+    [/correo|mail|outlook/, "mail"],
+    [/impres|escan/, "printer"],
+    [/acceso|usuario|contrase|clave|permiso/, "access"],
+    [/\bsap\b|erp|base de datos|reporte/, "database"],
+    [/telefon|celular|movil/, "phone"],
     [/mantenimiento|ajuste|instalaci|configur/, "tools"]
 ];
 
-export function iconFor(name) {
+export function iconFor(name, id) {
+
+    if (id !== undefined && ICON_BY_ID[id] && ICONS[ICON_BY_ID[id]]) {
+        return ICONS[ICON_BY_ID[id]];
+    }
 
     const text = String(name ?? "")
         .toLowerCase()
         .normalize("NFD")
-        .replace(/[̀-ͯ]/g, "");
+        .replace(/[\u0300-\u036f]/g, "");
 
     const match = KEYWORDS.find(([regex]) => regex.test(text));
 

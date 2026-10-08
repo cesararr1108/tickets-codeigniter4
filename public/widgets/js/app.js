@@ -434,9 +434,6 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         el.categoryGrid.replaceChildren(
             await renderList("option-card", categories, (category, index) => {
-                    console.log({
-                        categories
-                    })
                 const subs = state.subcategoriesByCategory?.get(String(category.id));
 
                 return {
@@ -445,7 +442,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                     description: subs ? summarize(subs) : category.description,
                     meta: subs ? countLabel(subs.length) : "",
                     color: colorFor(index),
-                    icon: iconFor(category.name),
+                    icon: iconFor(category.name, category.id),
                     search: category.name.toLowerCase()
                 };
             })

@@ -2,6 +2,7 @@
 
 namespace App\Libraries;
 
+use App\Models\TicketTimeLogModel;
 use CodeIgniter\Database\BaseConnection;
 use Config\Tickets;
 use DateTimeImmutable;
@@ -289,6 +290,115 @@ class TicketStats
         usort($groups, static fn ($a, $b) => $b['total'] <=> $a['total']);
 
         return $groups;
+    }
+
+    /**
+     * Tickets por estado agrupados por el área del solicitante (respuesta
+     * "Área" del formulario del widget; tickets sin ese dato van a "Sin dato").
+     * Se agrupa en PHP porque TicketFormAnswers.Value es nvarchar(max).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function areaMatrix(?string $sinceUtc = null): array
+    {
+        $builder = $this->db->table('Tickets t')
+            ->select('t.IdTicket, t.Status, fa.Value AS AreaName')
+            ->join('TicketFormAnswers fa', "fa.IdTicket = t.IdTicket AND fa.FieldKey IN ('area', 'area_solicitante')", 'left');
+
+        if ($sinceUtc !== null) {
+            $builder->where('t.CreatedAt >=', $sinceUtc);
+        }
+
+        $groups = [];
+        $seen   = [];
+
+        foreach ($builder->get()->getResultArray() as $row) {
+            // Un ticket cuenta una sola vez aunque tenga más de una respuesta de área.
+            if (isset($seen[$row['IdTicket']])) {
+                continue;
+            }
+
+            $seen[$row['IdTicket']] = true;
+
+            $name = trim((string) ($row['AreaName'] ?? ''));
+            $key  = mb_strtolower($name);
+
+            $groups[$key] ??= [
+                'id'          => $name === '' ? null : $name,
+                'name'        => $name,
+                'abierto'     => 0,
+                'en_progreso' => 0,
+                'cerrado'     => 0,
+                'total'       => 0,
+            ];
+
+            $groups[$key][$row['Status']]++;
+            $groups[$key]['total']++;
+        }
+
+        usort($groups, static fn ($a, $b) => $b['total'] <=> $a['total']);
+
+        return $groups;
+    }
+
+    /**
+     * Tiempo de trabajo (cronómetro) por usuario en el periodo.
+     * Una sesión cuenta en el periodo en que se inició.
+     *
+     * @return list<array{id: string, name: string, tickets: int, closed: int, sessions: int, seconds: int, average: int}>
+     */
+    public function timeByUser(?string $sinceUtc = null): array
+    {
+        if (! TicketTimeLogModel::available()) {
+            return [];
+        }
+
+        $builder = $this->db->table('TicketTimeLogs l')
+            ->select('l.IdTicket, l.IdUser, l.StartedAt, l.EndedAt, t.Status, t.AssignedUserId, u.FullName')
+            ->join('Tickets t', 't.IdTicket = l.IdTicket', 'left')
+            ->join('Users u', 'u.IdUser = l.IdUser', 'left');
+
+        if ($sinceUtc !== null) {
+            $builder->where('l.StartedAt >=', $sinceUtc);
+        }
+
+        $users = [];
+        $now   = time();
+
+        foreach ($builder->get()->getResultArray() as $row) {
+            $id = (string) $row['IdUser'];
+
+            $users[$id] ??= [
+                'id'       => $id,
+                'name'     => $row['FullName'] ?? $id,
+                'tickets'  => [],
+                'sessions' => 0,
+                'seconds'  => 0,
+            ];
+
+            $users[$id]['sessions']++;
+            $users[$id]['seconds'] += TicketTimeLogModel::duration($row, $now);
+            $users[$id]['tickets'][$row['IdTicket']] = $row['Status'] === 'cerrado';
+        }
+
+        $result = [];
+
+        foreach ($users as $u) {
+            $count    = count($u['tickets']);
+            $result[] = [
+                'id'       => $u['id'],
+                'name'     => $u['name'],
+                'tickets'  => $count,
+                'closed'   => count(array_filter($u['tickets'])),
+                'sessions' => $u['sessions'],
+                'seconds'  => $u['seconds'],
+                'average'  => $count > 0 ? intdiv($u['seconds'], $count) : 0,
+            ];
+        }
+
+        usort($result, static fn ($a, $b) => $b['seconds'] <=> $a['seconds']);
+
+        return $result;
     }
 
     /**

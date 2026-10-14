@@ -219,8 +219,38 @@ foreach ($attachments as $f) {
             <?php endif ?>
         </div>
 
+        <?php if ($timer !== null && ($perm['isAssignee'] || $timer['running'] !== null || $timer['total'] > 0)): ?>
+            <div class="card work-timer">
+                <h2>Tiempo de trabajo</h2>
+                <div class="timer-clock mono" data-timer
+                     data-base="<?= (int) $timer['total'] ?>"
+                     data-started="<?= $timer['running'] ? esc(gmdate('c', strtotime($timer['running']['StartedAt'] . ' UTC')), 'attr') : '' ?>">00:00:00</div>
+                <p class="muted small">
+                    <?php if ($timer['running']): ?>
+                        Corriendo desde <?= format_date($timer['running']['StartedAt']) ?> (<?= esc($timer['running']['UserName']) ?>).
+                    <?php else: ?>
+                        Total acumulado en este ticket. Inícialo cuando empieces a trabajar en él.
+                    <?php endif ?>
+                </p>
+
+                <?php if ($ticket['Status'] !== 'cerrado' && ($perm['isAssignee'] || ($perm['isAdmin'] && $timer['running']))): ?>
+                    <?php if ($timer['running']): ?>
+                        <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/tiempo/finalizar') ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-outline btn-block"><?= icon('check') ?> Finalizar tiempo</button>
+                        </form>
+                    <?php else: ?>
+                        <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/tiempo/iniciar') ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn btn-accent btn-block"><?= icon('clock') ?> Iniciar tiempo</button>
+                        </form>
+                    <?php endif ?>
+                <?php endif ?>
+            </div>
+        <?php endif ?>
+
         <?php if ($perm['canManage']): ?>
-            <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
+            <form class="card" method="post" enctype="multipart/form-data" data-manage-form action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
                 <?= csrf_field() ?>
                 <h2>Gestión</h2>
 
@@ -244,6 +274,18 @@ foreach ($attachments as $f) {
                         <?php endforeach ?>
                     </select>
                 </label>
+
+                <div class="field close-evidence" data-close-evidence hidden>
+                    <span class="field-label">Evidencia del cierre <span class="muted">(opcional)</span></span>
+                    <div class="dropzone" tabindex="0" data-dropzone>
+                        <?= icon('paperclip') ?>
+                        <span>Pega una imagen con <kbd>Ctrl</kbd> + <kbd>V</kbd>, arrástrala aquí o <button type="button" class="link-btn" data-pick>elige archivos</button></span>
+                        <input type="file" name="files[]" multiple hidden data-file-input
+                               accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp,.zip,.rar,.msg,.eml">
+                    </div>
+                    <ul class="evidence-list" data-file-list></ul>
+                    <p class="muted small">Máximo 10 MB por archivo. El tiempo en curso se detiene al cerrar.</p>
+                </div>
 
                 <button type="submit" class="btn btn-primary btn-block">Guardar cambios</button>
             </form>

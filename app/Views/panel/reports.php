@@ -7,7 +7,7 @@ $prioMax  = max(1, ...array_values($byPriority));
 <div class="page-head">
     <div>
         <h1>Reportes</h1>
-        <p class="muted">Volumen y estado de los tickets por compañía, agente y categoría.</p>
+        <p class="muted">Volumen, estado y tiempo de atención por usuario, área, categoría, oficina y organización.</p>
     </div>
     <form method="get" class="period" data-autosubmit>
         <select name="period" class="select">
@@ -67,8 +67,62 @@ $prioMax  = max(1, ...array_values($byPriority));
 </section>
 
 <section class="card">
-    <div class="card-head"><div><h2>Por compañía</h2><p class="muted">Clic en una compañía para ver sus tickets</p></div></div>
-    <?= view('panel/partials/status_table', ['rows' => $byCompany, 'label' => 'Compañía', 'filterKey' => 'company']) ?>
+    <div class="card-head"><div><h2>Tiempo de resolución por usuario</h2><p class="muted">Tiempo medido con el cronómetro (Iniciar / Finalizar) — <?= esc($periods[$period]) ?></p></div></div>
+    <?php if ($timeByUser === []): ?>
+        <p class="empty">Aún no hay tiempo registrado en el periodo. Los responsables lo registran con «Iniciar tiempo» en cada ticket.</p>
+    <?php else: ?>
+        <div class="table-wrap">
+            <table class="table table-compact">
+                <thead>
+                    <tr>
+                        <th>Usuario</th>
+                        <th class="num">Tickets trabajados</th>
+                        <th class="num">Cerrados</th>
+                        <th class="num">Sesiones</th>
+                        <th class="num">Tiempo total</th>
+                        <th class="num">Promedio por ticket</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($timeByUser as $r): ?>
+                        <tr>
+                            <td><a href="<?= site_url('panel/tickets?' . http_build_query(['assigned' => $r['id']])) ?>"><?= esc($r['name']) ?></a></td>
+                            <td class="num"><?= $r['tickets'] ?></td>
+                            <td class="num"><?= $r['closed'] ?></td>
+                            <td class="num"><?= $r['sessions'] ?></td>
+                            <td class="num"><b><?= format_duration($r['seconds']) ?></b></td>
+                            <td class="num"><?= format_duration($r['average']) ?></td>
+                        </tr>
+                    <?php endforeach ?>
+                </tbody>
+            </table>
+        </div>
+    <?php endif ?>
+</section>
+
+<section class="card">
+    <div class="card-head"><div><h2>Por organización</h2><p class="muted">Clic en una organización para ver sus tickets</p></div></div>
+    <?= view('panel/partials/status_table', ['rows' => $byCompany, 'label' => 'Organización', 'filterKey' => 'company']) ?>
+</section>
+
+<section class="card">
+    <div class="card-head"><div><h2>Por oficina</h2><p class="muted">Sede o sucursal del ticket</p></div></div>
+    <?= view('panel/partials/status_table', ['rows' => $byBranch, 'label' => 'Oficina', 'filterKey' => 'branch']) ?>
+</section>
+
+<section class="card">
+    <div class="card-head"><div><h2>Por área</h2><p class="muted">Área indicada por el solicitante en el formulario</p></div></div>
+    <?= view('panel/partials/status_table', ['rows' => $byArea, 'label' => 'Área', 'filterKey' => '', 'emptyName' => 'Sin área']) ?>
+</section>
+
+<section class="card">
+    <div class="card-head"><div><h2>Por categoría</h2><p class="muted">Clic en una categoría para ver sus tickets</p></div></div>
+    <?= view('panel/partials/status_table', ['rows' => $byCategoryMatrix, 'label' => 'Categoría', 'filterKey' => 'category', 'emptyName' => 'Sin categoría']) ?>
+</section>
+
+<section class="card">
+    <div class="card-head"><div><h2>Por subcategoría</h2><p class="muted">Clic en una subcategoría para ver sus tickets</p></div></div>
+    <?= view('panel/partials/status_table', ['rows' => $bySubCategoryMatrix, 'label' => 'Subcategoría', 'filterKey' => 'subcategory', 'emptyName' => 'Sin subcategoría']) ?>
 </section>
 
 <section class="card">

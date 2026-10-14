@@ -59,7 +59,7 @@ class TicketRepository
             $builder->where('t.Status', $status);
         }
 
-        foreach (['priority' => 't.Priority', 'company' => 't.CodCompanies', 'branch' => 't.CodBranches', 'category' => 't.IdCategory'] as $key => $column) {
+        foreach (['priority' => 't.Priority', 'company' => 't.CodCompanies', 'branch' => 't.CodBranches', 'category' => 't.IdCategory', 'subcategory' => 't.IdSubCategory'] as $key => $column) {
             if (($filters[$key] ?? '') !== '') {
                 $builder->where($column, $filters[$key]);
             }

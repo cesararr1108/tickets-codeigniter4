@@ -61,7 +61,7 @@ Panel para agentes en `/panel` (con `index.php`: `/index.php/panel`).
 | Tickets | `/panel/tickets` | Listado con búsqueda, filtros (estado, prioridad, compañía, categoría, agente) y paginación |
 | Detalle | `/panel/tickets/{id}` | Chat con el cliente (`TicketMessages`), cambio de estado/prioridad/agente, adjuntos |
 | Nueva solicitud | `/panel/tickets/nuevo` | Alta de ticket con matriz impacto × urgencia |
-| Reportes | `/panel/reportes` | Volumen por compañía, agente, categoría y prioridad por periodo |
+| Reportes | `/panel/reportes` | Tiempo por usuario (cronómetro) y volumen por organización, oficina, área, categoría, subcategoría, agente y prioridad |
 | Catálogo | `/panel/catalogo` | Categorías y subcategorías con su volumen |
 | Administración | `/panel/admin` | Alta, edición y baja de compañías, sucursales, categorías y subcategorías |
 
@@ -106,6 +106,14 @@ basta con añadir su definición (tabla, clave, campos y tablas que lo usan).
 El chat usa la tabla `TicketMessages`. Si no existe, créala con
 `app/Database/sql/TicketMessages.sql`. Las respuestas del panel se guardan con
 `SenderType = 'agente'`; el chat consulta mensajes nuevos cada `chatPollSeconds` segundos.
+
+### Tiempo de trabajo y evidencia de cierre
+
+Ejecuta `app/Database/sql/TiempoDeTrabajo.sql` (crea `TicketTimeLogs`). El responsable
+usa **Iniciar tiempo / Finalizar tiempo** en el ticket; el cronómetro también se detiene
+al cerrar o reasignar el ticket. `/panel/reportes` suma el tiempo por usuario.
+Al elegir el estado *Cerrado* se puede pegar una imagen (Ctrl+V), arrastrar o elegir
+archivos como evidencia; se guardan como adjuntos del ticket.
 
 ### Archivos
 

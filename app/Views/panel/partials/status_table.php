@@ -26,8 +26,10 @@
                 <?php foreach ($rows as $r): ?>
                     <tr>
                         <td>
-                            <?php if ($r['id'] !== null && $r['id'] !== ''): ?>
+                            <?php if ($r['id'] !== null && $r['id'] !== '' && ! empty($filterKey)): ?>
                                 <a href="<?= site_url('panel/tickets?' . http_build_query([$filterKey => $r['id']])) ?>"><?= esc($r['name'] ?? $r['id']) ?></a>
+                            <?php elseif ($r['id'] !== null && $r['id'] !== ''): ?>
+                                <?= esc($r['name'] ?? $r['id']) ?>
                             <?php else: ?>
                                 <span class="muted"><?= esc($emptyName ?? 'Sin dato') ?></span>
                             <?php endif ?>

@@ -32,6 +32,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('tickets/(:num)/adjuntos/(:num)', 'Tickets::attachment/$1/$2');
     $routes->post('tickets/(:num)/seguimiento', 'Tickets::followUp/$1');
     $routes->post('tickets/(:num)/tomar', 'Tickets::take/$1');
+    $routes->post('tickets/(:num)/tiempo/iniciar', 'Tickets::startTimer/$1');
+    $routes->post('tickets/(:num)/tiempo/finalizar', 'Tickets::stopTimer/$1');
     $routes->post('tickets/(:num)/escalar', 'Tickets::escalate/$1');
     $routes->post('tickets/(:num)/escalamiento', 'Tickets::resolveEscalation/$1');
 

@@ -27,13 +27,14 @@ INSERT INTO @tablas (Orden, Nombre) VALUES
     (2, N'TicketAttachments'),
     (3, N'TicketEscalations'),
     (4, N'TicketFormAnswers'),
-    (5, N'Tickets');
+    (5, N'TicketTimeLogs'),
+    (6, N'Tickets');
 
 DECLARE @orden int = 1, @n sysname, @sql nvarchar(max), @filas int;
 
 -- 1) Resumen de lo que hay ahora
 PRINT 'Registros actuales:';
-WHILE @orden <= 5
+WHILE @orden <= 6
 BEGIN
     SELECT @n = Nombre FROM @tablas WHERE Orden = @orden;
 
@@ -60,7 +61,7 @@ END
 BEGIN TRAN;
 
 SET @orden = 1;
-WHILE @orden <= 5
+WHILE @orden <= 6
 BEGIN
     SELECT @n = Nombre FROM @tablas WHERE Orden = @orden;
 

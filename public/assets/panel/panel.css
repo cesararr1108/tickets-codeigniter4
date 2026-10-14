@@ -891,3 +891,21 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
     .admin-layout { grid-template-columns: minmax(0, 1fr); }
     .admin-form { position: static; order: -1; }
 }
+
+/* Cronómetro de trabajo */
+.work-timer .timer-clock { margin: 6px 0; font-size: 32px; font-weight: 700; letter-spacing: .02em; }
+.work-timer form { margin-top: 10px; }
+
+/* Evidencia al cerrar */
+.dropzone {
+    display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 16px 12px;
+    border: 2px dashed var(--border); border-radius: 12px; background: var(--surface-2);
+    color: var(--text-2); font-size: 12px; text-align: center;
+}
+.dropzone:focus-visible, .dropzone.is-over { border-color: var(--primary); box-shadow: var(--focus); }
+.dropzone kbd { padding: 1px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); font-size: 11px; }
+.link-btn { padding: 0; border: 0; background: none; color: var(--primary); font: inherit; text-decoration: underline; cursor: pointer; }
+.evidence-list { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.evidence-list li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.evidence-list img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
+.evidence-list span { flex: 1; min-width: 0; word-break: break-all; }

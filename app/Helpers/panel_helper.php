@@ -277,3 +277,23 @@ if (! function_exists('panel_user_id')) {
         return $id === null ? null : (string) $id;
     }
 }
+
+if (! function_exists('format_duration')) {
+    /**
+     * Segundos -> "2 h 05 min" / "35 min" / "40 s".
+     */
+    function format_duration(int $seconds): string
+    {
+        if ($seconds < 60) {
+            return $seconds . ' s';
+        }
+
+        $minutes = intdiv($seconds, 60);
+
+        if ($minutes < 60) {
+            return $minutes . ' min';
+        }
+
+        return intdiv($minutes, 60) . ' h ' . str_pad((string) ($minutes % 60), 2, '0', STR_PAD_LEFT) . ' min';
+    }
+}

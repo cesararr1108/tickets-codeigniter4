@@ -2,16 +2,18 @@
 
 namespace App\Controllers\Panel;
 
+use App\Libraries\AttachmentStore;
 use App\Libraries\TicketRepository;
 use App\Models\TicketEscalationModel;
 use App\Models\TicketFormAnswerModel;
 use App\Libraries\TicketNotifier;
 use App\Models\TicketMessageModel;
 use App\Models\TicketModel;
+use App\Models\TicketTimeLogModel;
 
 class Tickets extends BasePanelController
 {
-    private const FILTER_KEYS = ['q', 'status', 'priority', 'company', 'branch', 'category', 'assigned', 'escalated', 'sort'];
+    private const FILTER_KEYS = ['q', 'status', 'priority', 'company', 'branch', 'category', 'subcategory', 'assigned', 'escalated', 'sort'];
 
     /**
      * GET /panel/tickets
@@ -69,6 +71,7 @@ class Tickets extends BasePanelController
         $isAdmin    = panel_is_admin();
         $isAssignee = $ticket['AssignedUserId'] !== null && (string) $ticket['AssignedUserId'] === $me;
         $escalation = model(TicketEscalationModel::class);
+        $timer      = TicketTimeLogModel::available() ? model(TicketTimeLogModel::class) : null;
 
         return $this->render('tickets/show', [
             'active'      => 'tickets',
@@ -84,6 +87,10 @@ class Tickets extends BasePanelController
                 'canTake'  => ! $isAssignee && ($isAdmin || $ticket['AssignedUserId'] === null),
                 'canEscalate' => $isAssignee && TicketEscalationModel::available(),
                 'isAssignee'  => $isAssignee,
+            ],
+            'timer'       => $timer === null ? null : [
+                'running' => $timer->runningFor($id),
+                'total'   => $timer->totalSeconds($id),
             ],
             'escalation'  => $escalation->activeFor($id),
             'escalations' => $escalation->historyFor($id),
@@ -162,16 +169,50 @@ class Tickets extends BasePanelController
             $data['AssignedUserId'] = $assigned === '' ? null : $assigned;
         }
 
-        if ($data === []) {
+        $files = AttachmentStore::uploaded('files');
+
+        if ($data === [] && $files === []) {
             return redirect()->back();
         }
 
+        $closing = ($data['Status'] ?? '') === 'cerrado';
+
+        // La evidencia solo se adjunta al cerrar; se valida antes de tocar el ticket.
+        if (! $closing) {
+            $files = [];
+        }
+
+        foreach ($files as $file) {
+            if ($error = AttachmentStore::error($file)) {
+                return redirect()->back()->with('error', $error);
+            }
+        }
+
         // Solo se validan los campos que cambian.
-        $model->skipValidation(true)->update($id, $data);
+        if ($data !== []) {
+            $model->skipValidation(true)->update($id, $data);
+        }
+
+        // El cronómetro se detiene al cerrar o al cambiar de responsable.
+        $reassigned = array_key_exists('AssignedUserId', $data) && (string) ($data['AssignedUserId'] ?? '') !== $current;
+
+        if (($closing || $reassigned) && TicketTimeLogModel::available()) {
+            model(TicketTimeLogModel::class)->stop($id);
+        }
+
+        try {
+            foreach ($files as $file) {
+                AttachmentStore::store($id, $file);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[Panel] Adjuntos de cierre: ' . $e->getMessage());
+
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El ticket se actualizó, pero no se pudieron guardar los adjuntos.');
+        }
 
         $this->notifyRequester($ticket, $data);
 
-        return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Ticket actualizado.');
+        return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', $files === [] ? 'Ticket actualizado.' : 'Ticket actualizado y evidencia adjuntada.');
     }
 
     /**
@@ -345,9 +386,72 @@ class Tickets extends BasePanelController
 
         $model->skipValidation(true)->update($id, $data);
 
+        if ((string) $ticket['AssignedUserId'] !== panel_user_id() && TicketTimeLogModel::available()) {
+            model(TicketTimeLogModel::class)->stop($id);
+        }
+
         $this->notifyRequester($ticket, $data);
 
         return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Ahora eres el responsable de este ticket.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/tiempo/iniciar
+     * El responsable inicia el cronómetro de trabajo del ticket.
+     */
+    public function startTimer(int $id)
+    {
+        $model  = model(TicketModel::class);
+        $ticket = $model->find($id);
+        $back   = redirect()->to(site_url("panel/tickets/{$id}"));
+
+        if ($ticket === null || (string) ($ticket['AssignedUserId'] ?? '') !== panel_user_id()) {
+            return $back->with('error', 'Solo el responsable del ticket puede iniciar el tiempo.');
+        }
+
+        if (! TicketTimeLogModel::available()) {
+            return $back->with('error', 'Falta crear la tabla TicketTimeLogs (app/Database/sql/TiempoDeTrabajo.sql).');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return $back->with('error', 'El ticket está cerrado.');
+        }
+
+        $timer = model(TicketTimeLogModel::class);
+
+        if ($timer->runningFor($id) !== null) {
+            return $back->with('error', 'El tiempo ya está corriendo.');
+        }
+
+        $timer->start($id, panel_user_id(), (string) ($this->user['name'] ?? panel_user_id()));
+
+        if ($ticket['Status'] === 'abierto') {
+            $model->skipValidation(true)->update($id, ['Status' => 'en_progreso']);
+            $this->notifyRequester($ticket, ['Status' => 'en_progreso']);
+        }
+
+        return $back->with('success', 'Tiempo iniciado.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/tiempo/finalizar
+     */
+    public function stopTimer(int $id)
+    {
+        $ticket = model(TicketModel::class)->find($id);
+        $back   = redirect()->to(site_url("panel/tickets/{$id}"));
+
+        if ($ticket === null || (! panel_is_admin() && (string) ($ticket['AssignedUserId'] ?? '') !== panel_user_id())) {
+            return $back->with('error', 'Solo el responsable o el administrador pueden detener el tiempo.');
+        }
+
+        if (! TicketTimeLogModel::available() || model(TicketTimeLogModel::class)->runningFor($id) === null) {
+            return $back->with('error', 'El tiempo no está corriendo.');
+        }
+
+        model(TicketTimeLogModel::class)->stop($id);
+
+        return $back->with('success', 'Tiempo detenido.');
     }
 
     /**
@@ -418,6 +522,10 @@ class Tickets extends BasePanelController
             $before = model(TicketModel::class)->find($id);
 
             model(TicketModel::class)->skipValidation(true)->update($id, ['AssignedUserId' => $assignTo]);
+
+            if ($before !== null && (string) $before['AssignedUserId'] !== $assignTo && TicketTimeLogModel::available()) {
+                model(TicketTimeLogModel::class)->stop($id);
+            }
 
             if ($before !== null) {
                 $this->notifyRequester($before, ['AssignedUserId' => $assignTo]);

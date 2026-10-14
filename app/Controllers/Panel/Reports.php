@@ -30,6 +30,11 @@ class Reports extends BasePanelController
             'byPriority' => $stats->byPriority($since),
             'byCategory' => $stats->byCategory(false, $since),
             'byCompany'  => $stats->statusMatrix('t.CodCompanies', 'c.Companies', 'Companies c', 'c.CodCompanies = t.CodCompanies', $since),
+            'byBranch'   => $stats->statusMatrix('t.CodBranches', 'b.Branches', 'Branches b', 'b.CodBranches = t.CodBranches', $since),
+            'byCategoryMatrix'    => $stats->statusMatrix('t.IdCategory', 'cat.Category', 'Category cat', 'cat.IdCategory = t.IdCategory', $since),
+            'bySubCategoryMatrix' => $stats->statusMatrix('t.IdSubCategory', 'sc.SubCategory', 'SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', $since),
+            'byArea'     => $stats->areaMatrix($since),
+            'timeByUser' => $stats->timeByUser($since),
             'byAgent'    => $stats->statusMatrix('t.AssignedUserId', 'u.FullName', 'Users u', 'u.IdUser = t.AssignedUserId', $since),
             'trend'      => $stats->weeklyTrend(12),
         ]);

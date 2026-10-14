@@ -275,4 +275,105 @@
         setInterval(poll, Math.max(3, Number(thread.dataset.pollSeconds || 10)) * 1000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) poll(); });
     }
+
+    // ==========================================
+    // CRONÓMETRO DE TRABAJO
+    // ==========================================
+    const clock = $('[data-timer]');
+
+    if (clock) {
+        const base = Number(clock.dataset.base || 0);
+        const started = clock.dataset.started ? Date.parse(clock.dataset.started) : null;
+        const t0 = Date.now();
+        const pad = n => String(n).padStart(2, '0');
+
+        const render = () => {
+            // El total del servidor ya incluye la sesión en curso al momento de cargar.
+            const secs = base + (started ? Math.floor((Date.now() - t0) / 1000) : 0);
+            clock.textContent = `${pad(Math.floor(secs / 3600))}:${pad(Math.floor(secs / 60) % 60)}:${pad(secs % 60)}`;
+        };
+
+        render();
+        if (started) setInterval(render, 1000);
+    }
+
+    // ==========================================
+    // EVIDENCIA AL CERRAR (pegar, arrastrar o elegir archivos)
+    // ==========================================
+    const manageForm = $('[data-manage-form]');
+
+    if (manageForm) {
+        const box = $('[data-close-evidence]', manageForm);
+        const zone = $('[data-dropzone]', manageForm);
+        const input = $('[data-file-input]', manageForm);
+        const list = $('[data-file-list]', manageForm);
+        const radios = $$('input[name="Status"]', manageForm);
+        let files = [];
+
+        const isClosing = () => radios.some(r => r.checked && r.value === 'cerrado');
+        const sync = () => { box.hidden = !isClosing(); };
+        const size = bytes => bytes > 1048576 ? (bytes / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(bytes / 1024)) + ' KB';
+
+        const refresh = () => {
+            const dt = new DataTransfer();
+            files.forEach(f => dt.items.add(f));
+            input.files = dt.files;
+
+            list.innerHTML = '';
+            files.forEach((file, i) => {
+                const li = document.createElement('li');
+                if (file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = URL.createObjectURL(file);
+                    img.alt = '';
+                    li.appendChild(img);
+                }
+                const name = document.createElement('span');
+                name.textContent = `${file.name} · ${size(file.size)}`;
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.className = 'link-btn';
+                remove.textContent = 'Quitar';
+                remove.addEventListener('click', () => { files.splice(i, 1); refresh(); });
+                li.append(name, remove);
+                list.appendChild(li);
+            });
+        };
+
+        const add = incoming => {
+            const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+
+            Array.from(incoming).forEach(file => {
+                // Las capturas pegadas llegan como "image.png": se les da un nombre útil.
+                const named = /^image\.\w+$/i.test(file.name)
+                    ? new File([file], `captura-${stamp}-${files.length + 1}.${file.type.split('/')[1] || 'png'}`, { type: file.type })
+                    : file;
+                files.push(named);
+            });
+            refresh();
+        };
+
+        radios.forEach(r => r.addEventListener('change', sync));
+        sync();
+
+        $('[data-pick]', manageForm).addEventListener('click', () => {
+            const picker = document.createElement('input');
+            picker.type = 'file';
+            picker.multiple = true;
+            picker.addEventListener('change', () => add(picker.files));
+            picker.click();
+        });
+
+        document.addEventListener('paste', event => {
+            if (!isClosing()) return;
+            const pasted = Array.from(event.clipboardData?.files || []);
+            if (!pasted.length) return;
+            event.preventDefault();
+            add(pasted);
+        });
+
+        ['dragenter', 'dragover'].forEach(name => zone.addEventListener(name, e => { e.preventDefault(); zone.classList.add('is-over'); }));
+        ['dragleave', 'drop'].forEach(name => zone.addEventListener(name, e => { e.preventDefault(); zone.classList.remove('is-over'); }));
+        zone.addEventListener('drop', e => add(e.dataTransfer.files));
+    }
 })();

@@ -1524,8 +1524,22 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     prefillEmail();
     goTo(1);
 
+    /*
+     * Abre el widget directo en "Mis tickets" (y en el detalle si se indica un id).
+     * Lo usa la PWA /widgets/.
+     */
+    function openMine(id = null) {
+        openModal();
+        switchTab(tabByName("mine"));
+
+        if (id !== null) {
+            openTicketDetail(id);
+        }
+    }
+
     return {
         open: openModal,
+        openMine,
         close: closeModal,
         reset: resetForm,
         root: shadow

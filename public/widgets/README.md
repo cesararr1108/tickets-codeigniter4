@@ -106,3 +106,18 @@ dominio, Nginx/CodeIgniter debe responder con CORS también para `/widgets/*`
 Si el certificado HTTPS no es válido para la IP pública, el navegador también puede
 bloquear las peticiones. Lo recomendable para producción es utilizar un dominio con
 certificado TLS válido.
+
+## PWA "Mis tickets" (`/widgets/`)
+
+`index.html` es una app instalable (PWA) para montar y seguir tickets desde el celular,
+incluso sin estar dentro del sistema anfitrión:
+
+- Muestra los tickets del solicitante (pendientes / resueltos) y el botón **Montar ticket**,
+  que abre este mismo widget; al tocar un ticket abre su detalle y conversación.
+- El anfitrión puede enlazarla pasando los datos del usuario por la URL, p. ej.
+  `https://api.pwmultiroma.com/widgets/?email=ana@empresa.com&name=Ana%20Pérez&company=01&branch=001&area=Comercial&user=aperez&phone=300...&rol=Usuario`.
+  Se guardan en el dispositivo y se quitan de la barra de direcciones.
+- Quien entra sin esos datos ve un formulario de perfil una sola vez (nombre, correo, compañía, sede, área).
+- Archivos: `index.html`, `manifest.webmanifest`, `sw.js` (funciona sin conexión), `css/pwa.css`, `js/pwa.js`.
+  Al cambiar archivos de la PWA, sube `VERSION` en `sw.js`.
+- Las notificaciones push usan `/firebase-messaging-sw.js` (en iPhone requieren instalar la app primero).

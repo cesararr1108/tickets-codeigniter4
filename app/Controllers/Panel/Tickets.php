@@ -170,6 +170,7 @@ class Tickets extends BasePanelController
         }
 
         $files = AttachmentStore::uploaded('files');
+        $note  = mb_substr(trim((string) $this->request->getPost('CloseNote')), 0, 2000);
 
         if ($data === [] && $files === []) {
             return redirect()->back();
@@ -180,6 +181,7 @@ class Tickets extends BasePanelController
         // La evidencia solo se adjunta al cerrar; se valida antes de tocar el ticket.
         if (! $closing) {
             $files = [];
+            $note  = '';
         }
 
         foreach ($files as $file) {
@@ -191,6 +193,16 @@ class Tickets extends BasePanelController
         // Solo se validan los campos que cambian.
         if ($data !== []) {
             $model->skipValidation(true)->update($id, $data);
+        }
+
+        // Comentario opcional de cierre: queda en la conversación con el solicitante.
+        if ($closing && $note !== '') {
+            model(TicketMessageModel::class)->insert([
+                'IdTicket'   => $id,
+                'SenderType' => 'agente',
+                'SenderName' => $this->user['name'],
+                'Message'    => $note,
+            ]);
         }
 
         // El cronómetro se detiene al cerrar o al cambiar de responsable.

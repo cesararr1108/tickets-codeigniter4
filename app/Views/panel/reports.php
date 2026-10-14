@@ -66,10 +66,11 @@ $prioMax  = max(1, ...array_values($byPriority));
     </div>
 </section>
 
+<?php foreach ($timeByType as [$typeLabel, $timeByUser]): ?>
 <section class="card">
-    <div class="card-head"><div><h2>Tiempo de resolución por usuario</h2><p class="muted">Tiempo medido con el cronómetro (Iniciar / Finalizar) — <?= esc($periods[$period]) ?></p></div></div>
+    <div class="card-head"><div><h2>Tiempo de resolución por usuario — <?= esc($typeLabel) ?></h2><p class="muted">Tiempo medido con el cronómetro (Iniciar / Finalizar) — <?= esc($periods[$period]) ?></p></div></div>
     <?php if ($timeByUser === []): ?>
-        <p class="empty">Aún no hay tiempo registrado en el periodo. Los responsables lo registran con «Iniciar tiempo» en cada ticket.</p>
+        <p class="empty">Aún no hay tiempo registrado en <?= esc(mb_strtolower($typeLabel)) ?> en el periodo. Los responsables lo registran con «Iniciar tiempo» en cada ticket.</p>
     <?php else: ?>
         <div class="table-wrap">
             <table class="table table-compact">
@@ -99,6 +100,7 @@ $prioMax  = max(1, ...array_values($byPriority));
         </div>
     <?php endif ?>
 </section>
+<?php endforeach ?>
 
 <section class="card">
     <div class="card-head"><div><h2>Por organización</h2><p class="muted">Clic en una organización para ver sus tickets</p></div></div>

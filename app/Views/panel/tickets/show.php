@@ -229,7 +229,7 @@ foreach ($attachments as $f) {
                     <?php if ($timer['running']): ?>
                         Corriendo desde <?= format_date($timer['running']['StartedAt']) ?> (<?= esc($timer['running']['UserName']) ?>).
                     <?php else: ?>
-                        Total acumulado en este ticket. Inícialo cuando empieces a trabajar en él.
+                        <?= $ticket['Status'] === 'cerrado' ? 'Tiempo total que se trabajó este ticket.' : 'Total acumulado en este ticket. Inícialo cuando empieces a trabajar en él.' ?>
                     <?php endif ?>
                 </p>
 
@@ -276,7 +276,9 @@ foreach ($attachments as $f) {
                 </label>
 
                 <div class="field close-evidence" data-close-evidence hidden>
-                    <span class="field-label">Evidencia del cierre <span class="muted">(opcional)</span></span>
+                    <span class="field-label">Comentario de cierre <span class="muted">(opcional)</span></span>
+                    <textarea name="CloseNote" class="input" rows="3" maxlength="2000" placeholder="Qué se hizo, solución aplicada… (el solicitante lo verá en la conversación)"></textarea>
+                    <span class="field-label close-gap">Evidencia <span class="muted">(opcional)</span></span>
                     <div class="dropzone" tabindex="0" data-dropzone>
                         <?= icon('paperclip') ?>
                         <span>Pega una imagen con <kbd>Ctrl</kbd> + <kbd>V</kbd>, arrástrala aquí o <button type="button" class="link-btn" data-pick>elige archivos</button></span>

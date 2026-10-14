@@ -344,12 +344,14 @@ class TicketStats
     /**
      * Tiempo de trabajo (cronómetro) por usuario en el periodo.
      * Una sesión cuenta en el periodo en que se inició.
+     * $formKey limita a un tipo de ticket (TicketFormAnswers.FormKey:
+     * 'incidente', 'requerimiento'...); null = todos.
      *
      * @return list<array{id: string, name: string, tickets: int, closed: int, sessions: int, seconds: int, average: int}>
      */
-    public function timeByUser(?string $sinceUtc = null): array
+    public function timeByUser(?string $sinceUtc = null, ?string $formKey = null): array
     {
-        if (! TicketTimeLogModel::available()) {
+        if (! TicketTimeLogModel::available() || ($formKey !== null && ! $this->db->tableExists('TicketFormAnswers'))) {
             return [];
         }
 
@@ -360,6 +362,10 @@ class TicketStats
 
         if ($sinceUtc !== null) {
             $builder->where('l.StartedAt >=', $sinceUtc);
+        }
+
+        if ($formKey !== null) {
+            $builder->where('(SELECT MIN(fa.FormKey) FROM TicketFormAnswers fa WHERE fa.IdTicket = l.IdTicket) = ' . $this->db->escape($formKey), null, false);
         }
 
         $users = [];

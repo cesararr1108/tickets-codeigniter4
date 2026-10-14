@@ -909,3 +909,4 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .evidence-list li { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .evidence-list img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border); }
 .evidence-list span { flex: 1; min-width: 0; word-break: break-all; }
+.close-gap { display: block; margin-top: 12px; }

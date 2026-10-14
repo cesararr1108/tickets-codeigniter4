@@ -34,7 +34,10 @@ class Reports extends BasePanelController
             'byCategoryMatrix'    => $stats->statusMatrix('t.IdCategory', 'cat.Category', 'Category cat', 'cat.IdCategory = t.IdCategory', $since),
             'bySubCategoryMatrix' => $stats->statusMatrix('t.IdSubCategory', 'sc.SubCategory', 'SubCategory sc', 'sc.IdSubCategory = t.IdSubCategory', $since),
             'byArea'     => $stats->areaMatrix($since),
-            'timeByUser' => $stats->timeByUser($since),
+            'timeByType' => [
+                'incidente'     => ['Incidentes', $stats->timeByUser($since, 'incidente')],
+                'requerimiento' => ['Requerimientos', $stats->timeByUser($since, 'requerimiento')],
+            ],
             'byAgent'    => $stats->statusMatrix('t.AssignedUserId', 'u.FullName', 'Users u', 'u.IdUser = t.AssignedUserId', $since),
             'trend'      => $stats->weeklyTrend(12),
         ]);

@@ -30,6 +30,12 @@ abstract class BasePanelController extends BaseController
 
         $this->config = config(Tickets::class);
         $this->user   = session('panelUser');
+
+        // Páginas dinámicas: sin esto el navegador (o la app instalada) puede mostrar
+        // una copia vieja al volver a entrar y el estado/cronómetro parece no haber cambiado.
+        $response->setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->setHeader('Pragma', 'no-cache')
+            ->setHeader('Expires', '0');
     }
 
     /**

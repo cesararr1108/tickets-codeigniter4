@@ -101,6 +101,9 @@ CI_ENVIRONMENT = production
 # pushapi.organizacion = ROMA
 # true = la API encola el envío (requiere php spark push:worker en la API)
 # pushapi.asincrono = false
+# Si el log dice "SSL certificate problem: unable to get local issuer certificate":
+# ruta absoluta a cacert.pem (https://curl.se/ca/cacert.pem) o configure curl.cainfo en php.ini
+# pushapi.caBundle = C:/php/extras/ssl/cacert.pem
 # Solo desarrollo: muestra el token en consola y registra cada envío en writable/logs
 # fcm.debug = true
 

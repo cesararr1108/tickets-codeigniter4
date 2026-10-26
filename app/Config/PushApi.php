@@ -53,4 +53,13 @@ class PushApi extends BaseConfig
 
     /** Timeout (segundos) de las llamadas a la API. */
     public int $timeout = 8;
+
+    /**
+     * Ruta ABSOLUTA a un archivo de certificados raíz (.pem) para validar el HTTPS
+     * de la API, p. ej. el cacert.pem de https://curl.se/ca/cacert.pem.
+     * Úselo si el log muestra "SSL certificate problem: unable to get local issuer
+     * certificate" y no puede configurar curl.cainfo en php.ini. Vacío = el del sistema.
+     * La verificación del certificado nunca se desactiva.
+     */
+    public string $caBundle = '';
 }

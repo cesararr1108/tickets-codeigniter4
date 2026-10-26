@@ -304,12 +304,22 @@ class PushApiClient
 
         try {
             // Instancia nueva por llamada: la compartida arrastra cabeceras y cuerpo de la anterior.
-            $response = \Config\Services::curlrequest(['timeout' => $this->config->timeout, 'http_errors' => false], null, null, false)
+            $curl = ['timeout' => $this->config->timeout, 'http_errors' => false];
+
+            if (trim($this->config->caBundle) !== '') {
+                $curl['verify'] = trim($this->config->caBundle);
+            }
+
+            $response = \Config\Services::curlrequest($curl, null, null, false)
                 ->request($method, rtrim($this->config->baseURL, '/') . '/' . $path, $options);
         } catch (\Throwable $e) {
             log_message('error', '[PushApi] ' . $method . ' ' . $path . ': ' . $e->getMessage());
 
-            return ['status' => 0, 'json' => null, 'raw' => 'No se pudo conectar con la API: ' . $e->getMessage()];
+            $hint = str_contains($e->getMessage(), 'SSL certificate problem')
+                ? ' (PHP no puede validar el certificado HTTPS de la API: configure curl.cainfo en php.ini o pushapi.caBundle en el .env con la ruta a cacert.pem; si ya está, el servidor de la API debe enviar la cadena completa, fullchain.pem)'
+                : '';
+
+            return ['status' => 0, 'json' => null, 'raw' => 'No se pudo conectar con la API: ' . $e->getMessage() . $hint];
         }
 
         $raw  = (string) $response->getBody();

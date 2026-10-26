@@ -6,6 +6,9 @@
  * @var list<array> $rows
  * @var list<array> $companies
  * @var list<array> $roles
+ * @var bool $keysAvailable
+ * @var array<string, array> $keys       Llaves por compañía (solo la parte pública)
+ * @var bool $defaultKey                 ¿Hay pushapi.apiKey en el .env?
  */
 ?>
 <div class="page-head">
@@ -131,4 +134,73 @@
         </form>
     </aside>
 </div>
+
+<h2 style="margin:28px 0 6px">API keys de notificaciones por compañía</h2>
+<p class="muted">La API de notificaciones entrega una llave por organización (<code>php spark apikey:create</code>). Cada usuario del panel registra su navegador y recibe los avisos con la llave de su compañía; el solicitante, con la de la compañía del ticket.
+    <?= $defaultKey ? 'Las compañías sin llave usan la del .env (<code>pushapi.apiKey</code>).' : 'Las compañías sin llave no reciben notificaciones.' ?></p>
+
+<?php if (! $keysAvailable): ?>
+    <div class="flash flash-error"><?= icon('alert') ?> Falta crear la tabla en SQL Server: ejecuta <code>app/Database/sql/PushApiKeys.sql</code>.</div>
+<?php else: ?>
+    <div class="admin-layout">
+        <section class="card table-card">
+            <div class="table-wrap">
+                <table class="table">
+                    <thead>
+                        <tr><th>Compañía</th><th>API key</th><th>Actualizada</th><th class="actions-col"></th></tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($companies as $c): $k = $keys[$c['CodCompanies']] ?? null; ?>
+                            <tr>
+                                <td class="cell-main"><span class="cell-title"><?= esc($c['Companies']) ?></span><span class="muted small"><?= esc($c['CodCompanies']) ?></span></td>
+                                <td>
+                                    <?php if ($k !== null): ?>
+                                        <span class="chip"><?= esc($k['Masked']) ?></span>
+                                    <?php elseif ($defaultKey): ?>
+                                        <span class="muted small">Usa la del .env</span>
+                                    <?php else: ?>
+                                        <span class="small" style="color:#b91c1c">Sin llave</span>
+                                    <?php endif ?>
+                                </td>
+                                <td class="muted small"><?= $k !== null ? esc($k['UpdatedAt']) . ' UTC' : '' ?></td>
+                                <td class="actions-col">
+                                    <?php if ($k !== null): ?>
+                                        <form method="post" action="<?= site_url('panel/admin/notificaciones/llaves/delete/' . rawurlencode($c['CodCompanies'])) ?>"
+                                              data-confirm="¿Eliminar la llave de esta compañía? Dejará de recibir notificaciones<?= $defaultKey ? ' propias (usará la del .env)' : '' ?>.">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                                        </form>
+                                    <?php endif ?>
+                                </td>
+                            </tr>
+                        <?php endforeach ?>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <aside class="card admin-form">
+            <h2>Guardar llave</h2>
+            <form method="post" action="<?= site_url('panel/admin/notificaciones/llaves') ?>" autocomplete="off">
+                <?= csrf_field() ?>
+                <label class="field">
+                    <span class="field-label">Compañía</span>
+                    <select name="CodCompanies" class="select" required>
+                        <option value="">Selecciona…</option>
+                        <?php foreach ($companies as $c): ?>
+                            <option value="<?= esc($c['CodCompanies'], 'attr') ?>"><?= esc($c['CodCompanies'] . ' · ' . $c['Companies']) ?></option>
+                        <?php endforeach ?>
+                    </select>
+                </label>
+                <label class="field">
+                    <span class="field-label">API key (reemplaza la anterior)</span>
+                    <input type="password" name="ApiKey" class="input" required placeholder="pk_xxxxxxxxxxxx.xxxx…" autocomplete="new-password" spellcheck="false">
+                </label>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary"><?= icon('check') ?> Guardar y verificar</button>
+                </div>
+            </form>
+        </aside>
+    </div>
+<?php endif ?>
 <?= $this->endSection() ?>

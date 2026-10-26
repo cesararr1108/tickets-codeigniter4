@@ -2,6 +2,7 @@
 
 namespace App\Libraries;
 
+use App\Models\CompanyPushKeyModel;
 use Config\PushApi as PushApiConfig;
 
 /**
@@ -11,15 +12,45 @@ use Config\PushApi as PushApiConfig;
  *   DELETE /tokens          dar de baja un token
  *   POST   /notificaciones  enviar a correos y/o roles
  *
+ * La API crea una llave por organización (compañía): use forCompany() para
+ * trabajar con la llave de una compañía (tabla CompanyPushKeys, se administra en
+ * Panel > Notificaciones). Si la compañía no tiene llave se usa pushapi.apiKey del .env.
+ *
  * Nunca lanza excepciones: un fallo de push no debe romper el flujo del ticket.
  */
 class PushApiClient
 {
     private PushApiConfig $config;
 
-    public function __construct(?PushApiConfig $config = null)
+    private string $apiKey;
+
+    /** Compañía dueña de la llave ('' = llave del .env). */
+    private string $company;
+
+    public function __construct(?PushApiConfig $config = null, ?string $apiKey = null, string $company = '')
     {
-        $this->config = $config ?? config(PushApiConfig::class);
+        $this->config  = $config ?? config(PushApiConfig::class);
+        $this->apiKey  = trim($apiKey ?? $this->config->apiKey);
+        $this->company = $apiKey === null ? '' : $company;
+    }
+
+    /**
+     * Cliente con la llave de la compañía (o la del .env si no tiene).
+     */
+    public static function forCompany(?string $company): self
+    {
+        $company = trim((string) $company);
+        $key     = CompanyPushKeyModel::keyFor($company);
+
+        return new self(null, $key, $key === null ? '' : $company);
+    }
+
+    /**
+     * De dónde sale la llave en uso (para diagnósticos).
+     */
+    public function keySource(): string
+    {
+        return $this->company !== '' ? 'compañía ' . $this->company : '.env (pushapi.apiKey)';
     }
 
     public function enabled(): bool
@@ -36,8 +67,8 @@ class PushApiClient
             return 'Falta pushapi.baseURL en el .env (URL de la API de notificaciones, terminada en /api/v1).';
         }
 
-        if (trim($this->config->apiKey) === '') {
-            return 'Falta pushapi.apiKey en el .env (llave creada con php spark apikey:create en la API de notificaciones).';
+        if ($this->apiKey === '') {
+            return 'No hay API key: regístrala para la compañía en Panel > Notificaciones (o pushapi.apiKey en el .env como llave por defecto).';
         }
 
         return null;
@@ -179,7 +210,7 @@ class PushApiClient
 
         $problem = $this->problem();
 
-        if (! $add('Configuración (.env)', $problem === null, $problem ?? rtrim($this->config->baseURL, '/') . ' · llave ' . (strstr(trim($this->config->apiKey), '.', true) ?: substr(trim($this->config->apiKey), 0, 6)) . '.…')) {
+        if (! $add('Configuración (URL y llave)', $problem === null, $problem ?? rtrim($this->config->baseURL, '/') . ' · llave ' . CompanyPushKeyModel::mask($this->apiKey) . ' (' . $this->keySource() . ')')) {
             return $steps;
         }
 
@@ -239,14 +270,15 @@ class PushApiClient
             return ['status' => 0, 'json' => null, 'raw' => (string) $this->problem()];
         }
 
-        if ($body !== null && $this->config->organizacion !== '' && $path !== 'health') {
+        // Las llaves por compañía ya traen su organización; solo la del .env puede ser global.
+        if ($body !== null && $this->company === '' && $this->config->organizacion !== '' && $path !== 'health') {
             $body['organizacion'] = strtoupper($this->config->organizacion);
         }
 
         $headers = ['Accept' => 'application/json'];
 
         if ($auth) {
-            $headers['Authorization'] = 'Bearer ' . trim($this->config->apiKey);
+            $headers['Authorization'] = 'Bearer ' . $this->apiKey;
         }
 
         $options = ['headers' => $headers];

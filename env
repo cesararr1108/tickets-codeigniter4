@@ -92,10 +92,12 @@ CI_ENVIRONMENT = production
 # NOTIFICACIONES PUSH (API notificaciones-push-roma)
 #--------------------------------------------------------------------
 # El registro de dispositivos y el envío los hace la API de notificaciones.
-# Llave con scopes tokens,notificaciones (php spark apikey:create en la API).
+# Las API keys son por compañía y se guardan en la BD (Panel > Notificaciones,
+# tabla CompanyPushKeys: app/Database/sql/PushApiKeys.sql).
 # pushapi.baseURL = https://push.tu-dominio.com/api/v1
+# Opcional: llave por defecto para compañías sin llave propia
 # pushapi.apiKey = pk_xxxxxxxxxxxx.yyyyyyyy
-# Solo con llaves globales (4 caracteres):
+# Solo si la llave por defecto es global (4 caracteres):
 # pushapi.organizacion = ROMA
 # true = la API encola el envío (requiere php spark push:worker en la API)
 # pushapi.asincrono = false

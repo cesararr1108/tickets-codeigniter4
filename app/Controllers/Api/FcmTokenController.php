@@ -9,11 +9,12 @@ use App\Libraries\PushApiClient;
  * Se reenvían a la API de notificaciones; la API key nunca llega al navegador.
  *
  * POST /api/fcm-tokens
- *   Body JSON o form: { Email, Token, Name?, Navigator?, branches?, Rol?, User? }
+ *   Body JSON o form: { Email, Token, Companies, Name?, Navigator?, branches?, Rol?, User? }
+ *   Se registra con la API key de la compañía (Companies); sin llave propia se usa la del .env.
  *   Crea el token o, si ya existe, lo actualiza (un token pertenece a un solo correo).
  *
  * POST /api/fcm-tokens/delete
- *   Body: { Token }   Da de baja el token (por ejemplo al cerrar sesión).
+ *   Body: { Token, Companies }   Da de baja el token (por ejemplo al cerrar sesión).
  */
 class FcmTokenController extends BaseApiController
 {
@@ -38,10 +39,11 @@ class FcmTokenController extends BaseApiController
             return $this->failValidationErrors($errors);
         }
 
-        $push = new PushApiClient();
+        $company = trim((string) ($payload['Companies'] ?? $payload['companies'] ?? ''));
+        $push    = PushApiClient::forCompany($company);
 
         if (! $push->enabled()) {
-            return $this->fail('Las notificaciones no están configuradas en el servidor.', 503);
+            return $this->fail('Las notificaciones no están configuradas para la compañía ' . $company . '.', 503);
         }
 
         $rol = PushApiClient::rol($payload['Rol'] ?? $payload['rol'] ?? null);
@@ -79,7 +81,7 @@ class FcmTokenController extends BaseApiController
             return $this->failValidationErrors(['Token' => 'Indica el token FCM.']);
         }
 
-        $result = (new PushApiClient())->eliminarToken($token);
+        $result = PushApiClient::forCompany((string) ($payload['Companies'] ?? $payload['companies'] ?? ''))->eliminarToken($token);
 
         if (! $result['ok']) {
             log_message('error', '[API fcm-tokens] ' . $result['error']);

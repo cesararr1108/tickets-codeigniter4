@@ -20,9 +20,16 @@ class Push extends BasePanelController
         }
 
         // La sucursal no va en la sesión: se lee del usuario.
-        $account = db_connect()->table('Users')->select('CodBranches')->where('IdUser', $this->user['id'])->get()->getRowArray();
+        $account = db_connect()->table('Users')->select('CodBranches, CodCompanies')->where('IdUser', $this->user['id'])->get()->getRowArray();
+        $company = (string) ($account['CodCompanies'] ?? $this->user['company'] ?? '');
+        $push    = PushApiClient::forCompany($company);
 
-        $result = (new PushApiClient())->registrarToken([
+        // Se registra con la llave de la compañía del usuario: es la que se usa para avisarle.
+        if (! $push->enabled()) {
+            return $this->response->setStatusCode(503)->setJSON(['message' => 'La compañía ' . $company . ' no tiene API key de notificaciones (Panel > Notificaciones).', 'csrf' => csrf_hash()]);
+        }
+
+        $result = $push->registrarToken([
             'token'     => $token,
             'email'     => (string) $this->user['email'],
             'nombre'    => (string) ($this->user['name'] ?? ''),
@@ -47,9 +54,10 @@ class Push extends BasePanelController
      */
     public function test()
     {
-        $push   = new PushApiClient();
-        $email  = (string) $this->user['email'];
-        $report = ['steps' => $push->diagnose(), 'email' => $email];
+        $account = db_connect()->table('Users')->select('CodCompanies')->where('IdUser', $this->user['id'])->get()->getRowArray();
+        $push    = PushApiClient::forCompany((string) ($account['CodCompanies'] ?? $this->user['company'] ?? ''));
+        $email   = (string) $this->user['email'];
+        $report  = ['steps' => $push->diagnose(), 'email' => $email];
 
         $configured = array_reduce($report['steps'], static fn ($ok, $step) => $ok && $step['ok'], true);
 

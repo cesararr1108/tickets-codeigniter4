@@ -97,7 +97,7 @@ async function enable() {
     const signature = `${userEmail}|${token}`;
 
     try {
-        if (localStorage.getItem('panel-fcm-token-v5') === signature) return true;
+        if (localStorage.getItem('panel-fcm-token-v6') === signature) return true;
     } catch (e) {}
 
     const body = new URLSearchParams({ token });
@@ -118,7 +118,7 @@ async function enable() {
     }
     if (!response.ok) return false;
 
-    try { localStorage.setItem('panel-fcm-token-v5', signature); } catch (e) {}
+    try { localStorage.setItem('panel-fcm-token-v6', signature); } catch (e) {}
 
     return true;
 }

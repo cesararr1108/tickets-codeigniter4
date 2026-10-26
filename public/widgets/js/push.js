@@ -208,7 +208,7 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
 
         // Evita llamar a la API en cada carga si nada cambió.
         // (v2: los tokens ahora se registran en la API de notificaciones; los guardados antes se reenvían).
-        const firma = `${perfil.email.toLowerCase()}|${perfil.name}|${perfil.branch}|${perfil.role}|${perfil.user}|${token}`;
+        const firma = `${perfil.email.toLowerCase()}|${perfil.company}|${perfil.name}|${perfil.branch}|${perfil.role}|${perfil.user}|${token}`;
         let guardado = false;
 
         try { guardado = localStorage.getItem("tw-fcm-v2") === firma; } catch (e) { /* sin localStorage */ }

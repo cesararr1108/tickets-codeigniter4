@@ -52,6 +52,9 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
         $routes->get('notificaciones', 'NotificationRoutes::index');
         $routes->post('notificaciones', 'NotificationRoutes::create');
         $routes->post('notificaciones/delete/(:num)', 'NotificationRoutes::delete/$1');
+        // API key de la API de notificaciones por compañía.
+        $routes->post('notificaciones/llaves', 'NotificationRoutes::saveKey');
+        $routes->post('notificaciones/llaves/delete/(:segment)', 'NotificationRoutes::deleteKey/$1');
         $routes->get('(:segment)', 'Admin::list/$1');
         $routes->post('(:segment)', 'Admin::create/$1');
         $routes->post('(:segment)/update/(:segment)', 'Admin::update/$1/$2');

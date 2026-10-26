@@ -12,7 +12,11 @@ use CodeIgniter\Config\BaseConfig;
  *
  * Valores en .env:
  *   pushapi.baseURL = https://push.tu-dominio.com/api/v1
- *   pushapi.apiKey  = pk_xxxxxxxxxxxx.yyyy...   (scopes: tokens,notificaciones)
+ *   pushapi.apiKey  = pk_xxxxxxxxxxxx.yyyy...   (opcional: llave por defecto)
+ *
+ * La API crea una llave por organización: cada compañía guarda la suya en la
+ * tabla CompanyPushKeys (Panel > Notificaciones, app/Database/sql/PushApiKeys.sql).
+ * pushapi.apiKey solo se usa para las compañías que no tienen llave propia.
  *
  * La API key es un secreto de servidor: el navegador (panel y widget) nunca la
  * recibe; registra su token en este backend y este lo reenvía a la API.
@@ -22,12 +26,12 @@ class PushApi extends BaseConfig
     /** URL base de la API, incluida la versión (…/api/v1). Vacío = no se envían push. */
     public string $baseURL = '';
 
-    /** API key de la organización (pk_<prefijo>.<secreto>). */
+    /** Llave por defecto (pk_<prefijo>.<secreto>) para compañías sin llave en CompanyPushKeys. Vacío = sin llave por defecto. */
     public string $apiKey = '';
 
     /**
-     * Organización (4 caracteres). Solo hace falta con llaves globales; con una
-     * llave atada a una organización se deja vacío (la API la toma de la llave).
+     * Organización (4 caracteres) para la llave por defecto, solo si es global; con
+     * una llave atada a una organización se deja vacío (la API la toma de la llave).
      */
     public string $organizacion = '';
 

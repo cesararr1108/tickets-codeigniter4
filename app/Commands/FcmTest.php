@@ -10,22 +10,27 @@ use CodeIgniter\CLI\CLI;
  * Revisa la conexión con la API de notificaciones y, opcionalmente, envía
  * una notificación de prueba a todos los dispositivos de un correo.
  *
- *   php spark fcm:test                  (solo revisa configuración, API y llave)
- *   php spark fcm:test ana@empresa.com  (además envía una notificación a ese correo)
+ *   php spark fcm:test                                 (revisa URL, API y la llave del .env)
+ *   php spark fcm:test --company 1000                  (revisa la llave de la compañía 1000)
+ *   php spark fcm:test ana@empresa.com --company 1000  (además envía una notificación a ese correo)
  */
 class FcmTest extends BaseCommand
 {
     protected $group       = 'Tickets';
     protected $name        = 'fcm:test';
     protected $description = 'Revisa la conexión con la API de notificaciones y envía una prueba a un correo.';
-    protected $usage       = 'fcm:test [email]';
+    protected $usage       = 'fcm:test [email] [--company <CodCompanies>]';
     protected $arguments   = [
         'email' => 'Correo con dispositivos registrados (opcional).',
+    ];
+    protected $options = [
+        '--company' => 'Compañía cuya API key se usa (por defecto la del .env).',
     ];
 
     public function run(array $params)
     {
-        $push = new PushApiClient();
+        $company = CLI::getOption('company');
+        $push    = is_string($company) && $company !== '' ? PushApiClient::forCompany($company) : new PushApiClient();
         $ok   = true;
 
         foreach ($push->diagnose() as $step) {

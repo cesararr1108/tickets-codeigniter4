@@ -43,7 +43,10 @@ class FcmTokenController extends BaseApiController
         $push    = PushApiClient::forCompany($company);
 
         if (! $push->enabled()) {
-            return $this->fail('Las notificaciones no están configuradas para la compañía ' . $company . '.', 503);
+            // El motivo no incluye secretos (solo qué falta configurar) y ayuda a diagnosticar desde la consola del navegador.
+            log_message('warning', '[API fcm-tokens] ' . $push->problem());
+
+            return $this->fail('Notificaciones no configuradas: ' . $push->problem(), 503);
         }
 
         $rol = PushApiClient::rol($payload['Rol'] ?? $payload['rol'] ?? null);

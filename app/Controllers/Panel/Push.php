@@ -26,7 +26,7 @@ class Push extends BasePanelController
 
         // Se registra con la llave de la compañía del usuario: es la que se usa para avisarle.
         if (! $push->enabled()) {
-            return $this->response->setStatusCode(503)->setJSON(['message' => 'La compañía ' . $company . ' no tiene API key de notificaciones (Panel > Notificaciones).', 'csrf' => csrf_hash()]);
+            return $this->response->setStatusCode(503)->setJSON(['message' => 'Notificaciones no configuradas: ' . $push->problem(), 'csrf' => csrf_hash()]);
         }
 
         $result = $push->registrarToken([

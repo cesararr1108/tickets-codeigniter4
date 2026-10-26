@@ -27,6 +27,9 @@ class PushApiClient
     /** Compañía dueña de la llave ('' = llave del .env). */
     private string $company;
 
+    /** Compañía pedida en forCompany() (para explicar por qué no hay llave). */
+    private string $requested = '';
+
     public function __construct(?PushApiConfig $config = null, ?string $apiKey = null, string $company = '')
     {
         $this->config  = $config ?? config(PushApiConfig::class);
@@ -41,8 +44,11 @@ class PushApiClient
     {
         $company = trim((string) $company);
         $key     = CompanyPushKeyModel::keyFor($company);
+        $client  = new self(null, $key, $key === null ? '' : $company);
 
-        return new self(null, $key, $key === null ? '' : $company);
+        $client->requested = $company;
+
+        return $client;
     }
 
     /**
@@ -68,6 +74,14 @@ class PushApiClient
         }
 
         if ($this->apiKey === '') {
+            if ($this->requested !== '' && ! CompanyPushKeyModel::available()) {
+                return 'Falta crear la tabla CompanyPushKeys en la base de datos (ejecuta app/Database/sql/PushApiKeys.sql) y registrar la API key de la compañía ' . $this->requested . '.';
+            }
+
+            if ($this->requested !== '') {
+                return 'La compañía ' . $this->requested . ' no tiene API key: regístrala en Panel > Notificaciones > API keys (o define pushapi.apiKey en el .env como llave por defecto).';
+            }
+
             return 'No hay API key: regístrala para la compañía en Panel > Notificaciones (o pushapi.apiKey en el .env como llave por defecto).';
         }
 

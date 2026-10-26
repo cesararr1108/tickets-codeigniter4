@@ -134,7 +134,7 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
             activar(false)
                 .then(() => setEstado("activas"))
                 .catch(error => {
-                    console.error("[Tickets Widget] Error FCM:", error);
+                    console.error("[Tickets Widget] Error FCM:", error?.message || error, error);
                     setEstado("error");
                 });
             return;
@@ -175,9 +175,10 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
             await activar(true);
             setEstado("activas");
         } catch (error) {
-            console.error("[Tickets Widget] Error FCM:", error);
+            const detalle = error?.message || String(error || "");
+            console.error("[Tickets Widget] Error FCM:", detalle, error);
             setEstado("error");
-            alert("No se pudieron activar las notificaciones. Intenta de nuevo en unos minutos.");
+            alert("No se pudieron activar las notificaciones." + (detalle ? "\n\n" + detalle : " Intenta de nuevo en unos minutos."));
         } finally {
             ocupado = false;
             if (button) button.disabled = false;

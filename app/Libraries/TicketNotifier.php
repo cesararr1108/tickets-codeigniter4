@@ -16,16 +16,17 @@ use App\Models\NotificationRouteModel;
  *  2. Si no hay reglas: el responsable asignado o, si no hay, todos los
  *     usuarios activos.
  *
- * Solo se envía a los navegadores donde el usuario activó las notificaciones
- * desde el panel. Un fallo nunca interrumpe la creación del ticket.
+ * El envío y el registro de dispositivos los hace la API de notificaciones
+ * (Config\PushApi): se envía a todos los navegadores donde esos correos
+ * activaron las notificaciones. Un fallo nunca interrumpe la creación del ticket.
  */
 class TicketNotifier
 {
-    private FcmPush $push;
+    private PushApiClient $push;
 
-    public function __construct(?FcmPush $push = null)
+    public function __construct(?PushApiClient $push = null)
     {
-        $this->push = $push ?? new FcmPush();
+        $this->push = $push ?? new PushApiClient();
     }
 
     /**
@@ -76,7 +77,7 @@ class TicketNotifier
 
             if ($assigned !== '') {
                 $emails = array_column($this->users([], null, $assigned), 'Email');
-                $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
+                $this->push->sendToEmails($emails, $title, $text, $data, $link);
 
                 return;
             }
@@ -112,7 +113,7 @@ class TicketNotifier
     {
         $fcm = config(\Config\Fcm::class);
 
-        // Sin reglas ni filtro por sede: a todos los dispositivos registrados desde el panel.
+        // Sin reglas ni filtro por sede: a todos los navegadores registrados desde el panel (rol pushapi.rolPanel).
         if (! $fcm->useRoutes && ! $fcm->filterByBranch) {
             $this->push->sendToPanel($title, $text, $data, $link);
 
@@ -125,12 +126,11 @@ class TicketNotifier
             log_message('error', '[FCM debug] Ticket ' . $ticket['IdTicket'] . ' (compañía ' . ($ticket['CodCompanies'] ?? '?') . ', sucursal ' . ($ticket['CodBranches'] ?? '?') . ') -> destinatarios: ' . json_encode($emails));
         }
 
-        $this->push->sendToEmails($emails, $title, $text, $data, $link, true);
+        $this->push->sendToEmails($emails, $title, $text, $data, $link);
     }
 
     /**
-     * Avisos al solicitante (llegan a los navegadores registrados desde el widget
-     * con el correo del ticket; no a los del panel).
+     * Avisos al solicitante (llegan a los navegadores registrados con el correo del ticket).
      */
     public function requesterAssigned(array $ticket): void
     {
@@ -183,17 +183,16 @@ class TicketNotifier
                 return;
             }
 
-            $results = $this->push->sendToEmails(
+            $result = $this->push->sendToEmails(
                 [$email],
                 $title,
                 $body,
                 ['type' => $type, 'ticketId' => (int) $ticket['IdTicket'], 'status' => (string) ($ticket['Status'] ?? '')],
                 config(\Config\Fcm::class)->widgetUrl ?: null,
-                false,
             );
 
             if (config(\Config\Fcm::class)->debug) {
-                log_message('error', '[FCM debug] ' . $type . ' ticket ' . $ticket['IdTicket'] . ' -> solicitante ' . $email . ': ' . count($results) . ' dispositivo(s)');
+                log_message('error', '[FCM debug] ' . $type . ' ticket ' . $ticket['IdTicket'] . ' -> solicitante ' . $email . ': ' . json_encode($result));
             }
         } catch (\Throwable $e) {
             log_message('error', '[Push] ' . $e->getMessage());

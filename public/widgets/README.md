@@ -120,4 +120,4 @@ incluso sin estar dentro del sistema anfitrión:
 - Quien entra sin esos datos ve un formulario de perfil una sola vez (nombre, correo, compañía, sede, área).
 - Archivos: `index.html`, `manifest.webmanifest`, `sw.js` (funciona sin conexión), `css/pwa.css`, `js/pwa.js`.
   Al cambiar archivos de la PWA, sube `VERSION` en `sw.js`.
-- Las notificaciones push usan `/firebase-messaging-sw.js` (en iPhone requieren instalar la app primero).
+- Las notificaciones push usan `/firebase-messaging-sw.js` (en iPhone requieren instalar la app primero). Si no están activas en el dispositivo, el inicio muestra un aviso rojo para activarlas; el token se registra en la API de notificaciones a través de `POST /api/fcm-tokens`.

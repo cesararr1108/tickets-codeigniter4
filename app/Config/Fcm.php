@@ -5,15 +5,14 @@ namespace Config;
 use CodeIgniter\Config\BaseConfig;
 
 /**
- * Notificaciones push con Firebase Cloud Messaging.
+ * Notificaciones push con Firebase Cloud Messaging: valores del navegador y
+ * reglas de destinatarios. El registro de tokens y el envío los hace la API de
+ * notificaciones (ver Config\PushApi).
  * Los valores web (webConfig y vapidKey) son públicos; pueden sobrescribirse en .env (fcm.vapidKey).
  */
 class Fcm extends BaseConfig
 {
-    /** Ruta absoluta al JSON de la cuenta de servicio (fuera del webroot). Vacío = no se envían push. */
-    public string $credentialsPath = '';
-
-    /** Modo diagnóstico (solo desarrollo): fcm.debug = true en .env. Muestra tokens y respuestas de FCM. */
+    /** Modo diagnóstico (solo desarrollo): fcm.debug = true en .env. Muestra el token en consola y registra cada envío en writable/logs. */
     public bool $debug = false;
 
     /**
@@ -31,9 +30,6 @@ class Fcm extends BaseConfig
      * (sede principal o adicional). fcm.filterByBranch = false para avisar sin filtrar por sede.
      */
     public bool $filterByBranch = true;
-
-    /** Timeout (segundos) de las llamadas a Google. */
-    public int $timeout = 5;
 
     /** Clave pública VAPID (la usa el panel para obtener su token). */
     public string $vapidKey = 'BOMCZUnVmsZv4nuhWXALeGC2m5AsebnR3tP15yDPIji51boQPr66bGEjZ_ZHfWbu68aPNJhOiqcNDeLXb6Olfvw';

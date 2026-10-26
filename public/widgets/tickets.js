@@ -96,6 +96,8 @@
                         root: widget.root,
                         swUrl: currentScript.dataset.sw || "../../service-worker.js"
                     }))
+                    // window.TicketsWidget.push = { estado, activar() } (lo usa la PWA /widgets/).
+                    .then(control => { if (window.TicketsWidget) window.TicketsWidget.push = control; })
                     .catch(error => console.warn("[Tickets Widget] Push no disponible:", error));
             }
         })

@@ -2,30 +2,30 @@
 
 namespace App\Commands;
 
-use App\Libraries\FcmPush;
+use App\Libraries\PushApiClient;
 use CodeIgniter\CLI\BaseCommand;
 use CodeIgniter\CLI\CLI;
 
 /**
- * Revisa la configuración de FCM y, opcionalmente, envía una notificación
- * de prueba a un token (el mismo que se usa en la consola de Firebase).
+ * Revisa la conexión con la API de notificaciones y, opcionalmente, envía
+ * una notificación de prueba a todos los dispositivos de un correo.
  *
- *   php spark fcm:test               (solo revisa credenciales y OAuth)
- *   php spark fcm:test <token>       (además envía una notificación a ese token)
+ *   php spark fcm:test                  (solo revisa configuración, API y llave)
+ *   php spark fcm:test ana@empresa.com  (además envía una notificación a ese correo)
  */
 class FcmTest extends BaseCommand
 {
     protected $group       = 'Tickets';
     protected $name        = 'fcm:test';
-    protected $description = 'Revisa las credenciales de FCM y envía una notificación de prueba a un token.';
-    protected $usage       = 'fcm:test [token]';
+    protected $description = 'Revisa la conexión con la API de notificaciones y envía una prueba a un correo.';
+    protected $usage       = 'fcm:test [email]';
     protected $arguments   = [
-        'token' => 'Token FCM del navegador (opcional).',
+        'email' => 'Correo con dispositivos registrados (opcional).',
     ];
 
     public function run(array $params)
     {
-        $push = new FcmPush();
+        $push = new PushApiClient();
         $ok   = true;
 
         foreach ($push->diagnose() as $step) {
@@ -38,19 +38,24 @@ class FcmTest extends BaseCommand
             return EXIT_ERROR;
         }
 
-        $token = $params[0] ?? null;
+        $email = $params[0] ?? null;
 
-        if ($token === null) {
-            CLI::write('Configuración correcta. Para enviar una prueba: php spark fcm:test <token>', 'yellow');
+        if ($email === null) {
+            CLI::write('Configuración correcta. Para enviar una prueba: php spark fcm:test <correo>', 'yellow');
 
             return EXIT_SUCCESS;
         }
 
-        $result = $push->sendToToken($token, 'Notificación de prueba', 'Enviada con php spark fcm:test', ['type' => 'test'], null);
+        $result = $push->sendToEmails([$email], 'Notificación de prueba', 'Enviada con php spark fcm:test', ['type' => 'test']);
 
-        CLI::write('HTTP ' . $result['status'] . ' · ' . ($result['ok'] ? 'ENVIADA' : 'FALLÓ'), $result['ok'] ? 'green' : 'red');
-        CLI::write($result['response']);
+        if ($result === null) {
+            CLI::error('La API rechazó el envío (detalle en writable/logs).');
 
-        return $result['ok'] ? EXIT_SUCCESS : EXIT_ERROR;
+            return EXIT_ERROR;
+        }
+
+        CLI::write(json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+
+        return EXIT_SUCCESS;
     }
 }

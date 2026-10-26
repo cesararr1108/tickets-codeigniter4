@@ -2,13 +2,14 @@
 
 namespace App\Controllers\Api;
 
-use App\Models\FcmTokenModel;
+use App\Libraries\PushApiClient;
 
 /**
  * Registro de tokens FCM desde el anfitrión del widget (o cualquier cliente).
+ * Se reenvían a la API de notificaciones; la API key nunca llega al navegador.
  *
  * POST /api/fcm-tokens
- *   Body JSON o form: { Email, Token, Navigator?, Companies?, Rol?, branches? }
+ *   Body JSON o form: { Email, Token, Name?, Navigator?, branches?, Rol?, User? }
  *   Crea el token o, si ya existe, lo actualiza (un token pertenece a un solo correo).
  *
  * POST /api/fcm-tokens/delete
@@ -16,8 +17,6 @@ use App\Models\FcmTokenModel;
  */
 class FcmTokenController extends BaseApiController
 {
-    protected string $modelName = FcmTokenModel::class;
-
     public function create()
     {
         $payload = $this->request->getPost() ?: $this->getPayload();
@@ -27,31 +26,45 @@ class FcmTokenController extends BaseApiController
 
         $errors = [];
 
-        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 120) {
-            $errors['Email'] = 'Indica un correo válido (máx. 120 caracteres).';
+        if ($email === '' || ! filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) {
+            $errors['Email'] = 'Indica un correo válido (máx. 190 caracteres).';
         }
 
-        if ($token === '' || strlen($token) > 255) {
-            $errors['Token'] = 'Indica el token FCM (máx. 255 caracteres).';
+        if ($token === '' || strlen($token) > 4096 || ! preg_match('/^[A-Za-z0-9_:\-]+$/', $token)) {
+            $errors['Token'] = 'Indica un token FCM válido.';
         }
 
         if ($errors !== []) {
             return $this->failValidationErrors($errors);
         }
 
-        try {
-            model(FcmTokenModel::class)->register([
-                'Email'     => $email,
-                'Token'     => $token,
-                'Navigator' => $payload['Navigator'] ?? $payload['navigator'] ?? $this->request->getUserAgent()->getBrowser(),
-                'Companies' => $payload['Companies'] ?? $payload['companies'] ?? null,
-                'Rol'       => $payload['Rol'] ?? $payload['rol'] ?? null,
-                'branches'  => $payload['branches'] ?? $payload['Branches'] ?? null,
-            ]);
-        } catch (\Throwable $e) {
-            log_message('error', '[API fcm-tokens] ' . $e->getMessage());
+        $push = new PushApiClient();
 
-            return $this->failServerError('No fue posible registrar el token.');
+        if (! $push->enabled()) {
+            return $this->fail('Las notificaciones no están configuradas en el servidor.', 503);
+        }
+
+        $rol = PushApiClient::rol($payload['Rol'] ?? $payload['rol'] ?? null);
+
+        // El rol del panel queda reservado para los navegadores del panel.
+        if ($rol === config(\Config\PushApi::class)->rolPanel) {
+            $rol = null;
+        }
+
+        $result = $push->registrarToken([
+            'token'     => $token,
+            'email'     => $email,
+            'nombre'    => $payload['Name'] ?? $payload['name'] ?? null,
+            'oficina'   => $payload['branches'] ?? $payload['Branches'] ?? null,
+            'rol'       => $rol,
+            'usuario'   => $payload['User'] ?? $payload['user'] ?? null,
+            'navegador' => $payload['Navigator'] ?? $payload['navigator'] ?? $this->request->getUserAgent()->getBrowser(),
+        ]);
+
+        if (! $result['ok']) {
+            log_message('error', '[API fcm-tokens] ' . $result['error']);
+
+            return $this->fail('No fue posible registrar el token.', 502);
         }
 
         return $this->respondCreated(['registered' => true]);
@@ -66,7 +79,13 @@ class FcmTokenController extends BaseApiController
             return $this->failValidationErrors(['Token' => 'Indica el token FCM.']);
         }
 
-        model(FcmTokenModel::class)->forget($token);
+        $result = (new PushApiClient())->eliminarToken($token);
+
+        if (! $result['ok']) {
+            log_message('error', '[API fcm-tokens] ' . $result['error']);
+
+            return $this->fail('No fue posible dar de baja el token.', 502);
+        }
 
         return $this->respond(['removed' => true]);
     }

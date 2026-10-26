@@ -98,3 +98,13 @@ button, input, select { font: inherit; color: inherit; }
 .row { display: flex; gap: 10px; }
 .row > * { flex: 1; }
 .btn-outline { padding: 14px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--surface); cursor: pointer; font-weight: 600; }
+
+/* Notificaciones desactivadas en este dispositivo: aviso rojo con botón. */
+.push-off {
+    display: flex; align-items: center; gap: 10px; width: 100%; margin: 0 0 14px; padding: 12px 14px;
+    border: 0; border-radius: var(--radius); background: var(--bad); color: #fff; font: inherit;
+    font-size: 14px; font-weight: 600; text-align: left; cursor: pointer;
+}
+.push-off svg { flex: none; width: 22px; height: 22px; }
+.push-off small { display: block; font-weight: 400; opacity: .9; }
+.push-off:active { filter: brightness(.92); }

@@ -2,10 +2,16 @@
  * Notificaciones push (FCM) del widget.
  *
  * - Si el usuario ya dio permiso: registra el token en silencio.
- * - Si aún no lo ha decidido: muestra el botón "Activar notificaciones" en la
- *   cabecera del widget; al pulsarlo se pide el permiso (los navegadores,
- *   sobre todo Safari/iOS, exigen que sea por un clic) y se guarda el token
- *   en la API (POST /fcm-tokens -> tabla t_fcm_tokens) con el correo del usuario.
+ * - Si las notificaciones NO están activas en este navegador (permiso pendiente,
+ *   bloqueado, iPhone sin instalar la app o el registro falló) se muestra en rojo
+ *   el botón de la cabecera del widget y un punto rojo en el botón flotante,
+ *   para que el anfitrión sepa que debe activarlas. Al pulsarlo se pide el permiso
+ *   (los navegadores, sobre todo Safari/iOS, exigen que sea por un clic) o se
+ *   explica cómo desbloquearlas.
+ * - El token se envía a este backend (POST /fcm-tokens), que lo registra en la
+ *   API de notificaciones con el correo del usuario (la API key no llega al navegador).
+ * - Cada cambio de estado se anuncia con el evento "tickets-widget:push" en window
+ *   ({ detail: { estado } }); estado = "activas" | "pendiente" | "bloqueadas" | "ios" | "error".
  *
  * Requisito: el anfitrión debe tener un service worker con FCM en segundo plano
  * (por defecto ../../service-worker.js, configurable con data-sw en tickets.js).
@@ -39,69 +45,144 @@ const IOS_HELP = "Para recibir notificaciones en iPhone/iPad:\n\n"
     + "3. Abre la app desde el icono nuevo y pulsa de nuevo \"Activar notificaciones\".\n\n"
     + "Requiere iOS 16.4 o superior.";
 
+const BLOCKED_HELP = "Las notificaciones están bloqueadas en este navegador.\n\n"
+    + "Para activarlas: toca el candado (o el icono de ajustes) junto a la dirección de la página, "
+    + "busca \"Notificaciones\", elige \"Permitir\" y recarga la página.";
+
+const TEXTOS = {
+    pendiente: ["Activar notificaciones", "No tienes activas las notificaciones: púlsalo para recibir avisos cuando tu ticket cambie o te respondan."],
+    bloqueadas: ["Notificaciones bloqueadas", "Bloqueaste las notificaciones de este sitio: púlsalo para ver cómo activarlas."],
+    ios: ["Activar notificaciones", "En iPhone/iPad primero hay que instalar la app: púlsalo para ver cómo."],
+    error: ["Reintentar notificaciones", "No se pudieron activar las notificaciones: púlsalo para intentarlo de nuevo."]
+};
+
 export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../../service-worker.js" }) {
 
     const button = root?.getElementById("ticketPush");
+    const badge = root?.getElementById("ticketFabPush");
     const soportado = "serviceWorker" in navigator && "Notification" in window && "PushManager" in window;
 
     const log = mensaje => console.info("[Tickets Widget] Push:", mensaje);
 
+    let estado = null;
+    let ocupado = false;
+    let escuchando = false;
+
+    // Botón rojo + punto rojo en el flotante mientras no estén activas.
+    function setEstado(nuevo) {
+        estado = nuevo;
+        const activas = nuevo === "activas";
+
+        if (button) {
+            const [texto, ayuda] = TEXTOS[nuevo] || TEXTOS.pendiente;
+            button.hidden = activas;
+            button.title = ayuda;
+            button.setAttribute("aria-label", texto);
+            const span = button.querySelector(".tw-push-text");
+            if (span) span.textContent = texto;
+        }
+
+        if (badge) badge.hidden = activas;
+
+        window.dispatchEvent(new CustomEvent("tickets-widget:push", { detail: { estado: nuevo } }));
+    }
+
+    const control = {
+        get estado() { return estado; },
+        activar: () => alClic()
+    };
+
     if (!EMAIL_RE.test(perfil.email || "")) {
         log(`no se activa: data-email no es un correo válido ("${perfil.email}").`);
-        return;
+        return control;
     }
 
     if (!soportado && !(IOS && !STANDALONE)) {
         console.warn("[Tickets Widget] Este navegador no soporta notificaciones push.");
-        return;
+        return control;
     }
 
-    if (soportado && Notification.permission === "denied") {
-        log("no se activa: el permiso de notificaciones está bloqueado en este navegador (candado de la barra de direcciones > Notificaciones > Permitir).");
-        return;
-    }
-
-    // Permiso ya concedido: registro silencioso.
-    if (soportado && Notification.permission === "granted") {
-        log("permiso ya concedido; registrando el token en silencio con el service worker " + swUrl);
-        activar(false).catch(error => console.error("[Tickets Widget] Error FCM:", error));
-        return;
-    }
-
-    // Permiso pendiente: botón en la cabecera.
     if (!button) {
         log("no se encontró el botón #ticketPush: el navegador tiene en caché una plantilla vieja del widget (Ctrl+F5).");
-        return;
     }
 
-    log("permiso pendiente: mostrando el botón Activar notificaciones.");
-    button.hidden = false;
-    button.addEventListener("click", async () => {
+    button?.addEventListener("click", () => alClic());
+
+    // Si el usuario cambia el permiso desde los ajustes del navegador, se actualiza el aviso.
+    navigator.permissions?.query({ name: "notifications" })
+        .then(status => { status.onchange = () => revisar(); })
+        .catch(() => { /* Safari antiguo */ });
+
+    revisar();
+
+    return control;
+
+    function revisar() {
+        if (!soportado) {
+            setEstado("ios");
+            return;
+        }
+
+        if (Notification.permission === "denied") {
+            log("el permiso de notificaciones está bloqueado en este navegador.");
+            setEstado("bloqueadas");
+            return;
+        }
+
+        if (Notification.permission === "granted") {
+            log("permiso ya concedido; registrando el token en silencio con el service worker " + swUrl);
+            activar(false)
+                .then(() => setEstado("activas"))
+                .catch(error => {
+                    console.error("[Tickets Widget] Error FCM:", error);
+                    setEstado("error");
+                });
+            return;
+        }
+
+        log("permiso pendiente: mostrando el botón rojo Activar notificaciones.");
+        setEstado("pendiente");
+    }
+
+    // Debe llamarse directo desde un clic: requestPermission exige un gesto del usuario.
+    async function alClic() {
+        if (ocupado) return;
 
         if (!soportado) {
             alert(IOS_HELP);
             return;
         }
 
-        // requestPermission debe llamarse directo desde el clic.
-        const permiso = await Notification.requestPermission();
-
-        if (permiso !== "granted") {
-            if (permiso === "denied") {
-                button.hidden = true;
-                alert("Bloqueaste las notificaciones. Puedes activarlas desde los ajustes del sitio en tu navegador.");
-            }
+        if (Notification.permission === "denied") {
+            alert(BLOCKED_HELP);
             return;
         }
 
+        ocupado = true;
+        if (button) button.disabled = true;
+
         try {
+            const permiso = Notification.permission === "granted"
+                ? "granted"
+                : await Notification.requestPermission();
+
+            if (permiso !== "granted") {
+                setEstado(permiso === "denied" ? "bloqueadas" : "pendiente");
+                if (permiso === "denied") alert(BLOCKED_HELP);
+                return;
+            }
+
             await activar(true);
-            button.hidden = true;
+            setEstado("activas");
         } catch (error) {
             console.error("[Tickets Widget] Error FCM:", error);
-            alert("No se pudieron activar las notificaciones.");
+            setEstado("error");
+            alert("No se pudieron activar las notificaciones. Intenta de nuevo en unos minutos.");
+        } finally {
+            ocupado = false;
+            if (button) button.disabled = false;
         }
-    });
+    }
 
     async function activar(mostrarAviso) {
         const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
@@ -126,29 +207,32 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
         }
 
         // Evita llamar a la API en cada carga si nada cambió.
-        const firma = `${perfil.email.toLowerCase()}|${perfil.company}|${perfil.branch}|${token}`;
+        // (v2: los tokens ahora se registran en la API de notificaciones; los guardados antes se reenvían).
+        const firma = `${perfil.email.toLowerCase()}|${perfil.name}|${perfil.branch}|${perfil.role}|${perfil.user}|${token}`;
         let guardado = false;
 
-        try { guardado = localStorage.getItem("tw-fcm") === firma; } catch (e) { /* sin localStorage */ }
+        try { guardado = localStorage.getItem("tw-fcm-v2") === firma; } catch (e) { /* sin localStorage */ }
 
         if (!guardado) {
             await apiPost(apiUrl, "/fcm-tokens", {
                 Email: perfil.email,
                 Token: token,
+                Name: perfil.name,
+                User: perfil.user,
                 Navigator: navigator.userAgent.slice(0, 100),
                 Companies: perfil.company,
                 branches: perfil.branch,
                 Rol: perfil.role
             });
 
-            try { localStorage.setItem("tw-fcm", firma); } catch (e) { /* ignorar */ }
+            try { localStorage.setItem("tw-fcm-v2", firma); } catch (e) { /* ignorar */ }
             log("token guardado en la API para " + perfil.email);
         } else {
             log("el token ya estaba guardado para " + perfil.email);
         }
 
-        // Con la pestaña abierta FCM no muestra nada: aviso local.
-        onMessage(messaging, payload => {
+        // Con la pestaña abierta FCM no muestra nada: aviso local (una sola vez aunque se reactive).
+        if (!escuchando) onMessage(messaging, payload => {
             // Sonido solo con la página abierta (los navegadores lo bloquean hasta que el usuario interactúa).
             new Audio(new URL("../../assets/sounds/notificacion.mp3", import.meta.url).href).play().catch(() => {});
 
@@ -160,6 +244,7 @@ export async function iniciarNotificaciones({ apiUrl, perfil, root, swUrl = "../
                 data: { url: d.url || d.link || payload.fcmOptions?.link || "/" }
             });
         });
+        escuchando = true;
 
         if (mostrarAviso) {
             alert("Notificaciones activadas.");

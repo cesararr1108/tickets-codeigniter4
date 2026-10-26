@@ -101,7 +101,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'apiaut
 
         return $response->setStatusCode(204);
     });
-    // Tokens de notificaciones push (FCM) -> tabla t_fcm_tokens
+    // Tokens de notificaciones push (FCM) -> API de notificaciones (Config\PushApi)
     $routes->post('fcm-tokens', 'FcmTokenController::create');
     $routes->post('fcm-tokens/delete', 'FcmTokenController::remove');
 

@@ -89,11 +89,17 @@ CI_ENVIRONMENT = production
 # api.key = CAMBIA_ESTA_CLAVE
 
 #--------------------------------------------------------------------
-# NOTIFICACIONES PUSH (Firebase Cloud Messaging)
+# NOTIFICACIONES PUSH (API notificaciones-push-roma)
 #--------------------------------------------------------------------
-# JSON de la cuenta de servicio, guardado FUERA del repo y del webroot.
-# fcm.credentialsPath = /var/www/secure/fcm-multiroma-firebase-adminsdk.json
-# Solo desarrollo: muestra tokens y respuestas de FCM (pantalla de prueba, consola y writable/logs)
+# El registro de dispositivos y el envío los hace la API de notificaciones.
+# Llave con scopes tokens,notificaciones (php spark apikey:create en la API).
+# pushapi.baseURL = https://push.tu-dominio.com/api/v1
+# pushapi.apiKey = pk_xxxxxxxxxxxx.yyyyyyyy
+# Solo con llaves globales (4 caracteres):
+# pushapi.organizacion = ROMA
+# true = la API encola el envío (requiere php spark push:worker en la API)
+# pushapi.asincrono = false
+# Solo desarrollo: muestra el token en consola y registra cada envío en writable/logs
 # fcm.debug = true
 
 #--------------------------------------------------------------------

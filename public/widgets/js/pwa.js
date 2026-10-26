@@ -197,6 +197,7 @@ function renderHome() {
             Montar ticket
         </button>
 
+        <div id="pushBox"></div>
         <div id="installBox"></div>
         <div id="offline" class="offline" hidden>Sin conexión: mostrando lo último guardado.</div>
 
@@ -228,6 +229,7 @@ function renderHome() {
     });
 
     renderInstall();
+    renderPush();
     mountWidget().catch(() => { /* se reintenta al pulsar el botón */ });
     load(true);
     timer = setInterval(() => { if (!document.hidden) load(true, true); }, REFRESH_MS);
@@ -251,6 +253,33 @@ function renderInstall() {
     } else if (ios) {
         box.innerHTML = `<div class="install"><span>Para instalarla: toca <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>.</span></div>`;
     }
+}
+
+// ---------------- Notificaciones ----------------
+
+// El widget (js/push.js) anuncia si las notificaciones están activas en este dispositivo.
+let pushState = null;
+const PUSH_TEXT = {
+    pendiente: ["Activa las notificaciones", "Toca aquí para enterarte cuando tu ticket cambie o te respondan."],
+    bloqueadas: ["Notificaciones bloqueadas", "Toca aquí para ver cómo activarlas en tu navegador."],
+    ios: ["Activa las notificaciones", "Toca aquí para ver cómo hacerlo en iPhone/iPad."],
+    error: ["No se pudieron activar las notificaciones", "Toca aquí para intentarlo de nuevo."]
+};
+
+window.addEventListener("tickets-widget:push", event => { pushState = event.detail?.estado ?? null; renderPush(); });
+
+function renderPush() {
+    const box = document.getElementById("pushBox");
+    if (!box) return;
+
+    if (!pushState || pushState === "activas") { box.innerHTML = ""; return; }
+
+    const [title, text] = PUSH_TEXT[pushState] || PUSH_TEXT.pendiente;
+    box.innerHTML = `<button class="push-off" id="pushOn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="M3 3l18 18"/></svg>
+        <span>${esc(title)}<small>${esc(text)}</small></span></button>`;
+    // Llamada directa desde el clic: el navegador solo pide permiso tras un gesto del usuario.
+    document.getElementById("pushOn").addEventListener("click", () => window.TicketsWidget?.push?.activar());
 }
 
 window.addEventListener("beforeinstallprompt", event => { event.preventDefault(); installEvent = event; renderInstall(); });

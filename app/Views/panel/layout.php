@@ -66,7 +66,7 @@ if (panel_is_admin()) {
         <button type="button" class="icon-btn only-mobile" data-toggle-sidebar aria-label="Menú"><?= icon('menu') ?></button>
 
         <a href="<?= site_url('panel') ?>" class="brand">
-            <span class="brand-mark"><?= icon('chat') ?></span>
+            <img class="brand-logo" src="<?= base_url('icons/icon-192.png') ?>" alt="" width="32" height="32">
             <span class="brand-name">Mesa de Ayuda <b>TI</b></span>
         </a>
 

@@ -18,7 +18,7 @@
         <?= csrf_field() ?>
 
         <div class="brand">
-            <span class="brand-mark"><?= icon('chat') ?></span>
+            <img class="brand-logo" src="<?= base_url('icons/icon-192.png') ?>" alt="" width="32" height="32">
             <span class="brand-name">Mesa de Ayuda <b>TI</b></span>
         </div>
 

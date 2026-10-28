@@ -1,7 +1,7 @@
 /* Service worker de la PWA "Mis tickets": deja la página abrir sin conexión.
  * Solo guarda el cascarón (HTML/CSS/JS propios); la API y los demás dominios
  * siempre van a la red. Sube VERSION al cambiar archivos de la PWA. */
-const VERSION = 'mis-tickets-v1';
+const VERSION = 'mis-tickets-v2';
 const SHELL = ['./', 'index.html', 'css/pwa.css', 'js/pwa.js', 'js/api.js', 'js/my-tickets.js',
     'js/companies.js', 'js/branches.js', 'manifest.webmanifest', '../icons/icon-192.png'];
 

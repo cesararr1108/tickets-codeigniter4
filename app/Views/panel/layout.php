@@ -42,6 +42,7 @@ if (panel_is_admin()) {
     <meta name="fcm-sound" content="<?= base_url('assets/sounds/notificacion.mp3') ?>">
     <meta name="fcm-register-url" content="<?= site_url('panel/push/token') ?>">
     <link rel="manifest" href="<?= base_url('manifest.json') ?>">
+    <link rel="icon" type="image/png" href="<?= base_url('icons/icon-192.png') ?>">
     <link rel="apple-touch-icon" href="<?= base_url('icons/apple-touch-icon.png') ?>">
     <meta name="theme-color" content="#00897b">
     <meta name="apple-mobile-web-app-capable" content="yes">

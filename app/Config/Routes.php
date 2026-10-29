@@ -39,6 +39,26 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('tickets/(:num)/datos', 'Tickets::editData/$1');
     $routes->post('tickets/(:num)/reabrir', 'Tickets::reopen/$1');
 
+    // Seguimiento de desarrollos (plan del mes, ficha y cierre de mes).
+    $routes->get('desarrollos', 'Developments::index');
+    $routes->get('desarrollos/todos', 'Developments::all');
+    $routes->get('desarrollos/cierre', 'Developments::closing');
+    $routes->post('desarrollos/cierre', 'Developments::closeMonth');
+    $routes->post('desarrollos/planear', 'Developments::plan');
+    $routes->get('desarrollos/(:num)', 'Developments::show/$1');
+    $routes->post('desarrollos/(:num)', 'Developments::update/$1');
+    $routes->post('desarrollos/(:num)/quitar-plan', 'Developments::unplan/$1');
+    $routes->post('desarrollos/(:num)/aprobar', 'Developments::approve/$1');
+    $routes->post('desarrollos/(:num)/tareas', 'Developments::addTask/$1');
+    $routes->post('desarrollos/(:num)/tareas/(:num)/marcar', 'Developments::toggleTask/$1/$2');
+    $routes->post('desarrollos/(:num)/tareas/(:num)/eliminar', 'Developments::deleteTask/$1/$2');
+    $routes->post('desarrollos/(:num)/recursos', 'Developments::addResource/$1');
+    $routes->post('desarrollos/(:num)/recursos/(:num)/disponible', 'Developments::resourceReady/$1/$2');
+    $routes->post('desarrollos/(:num)/inconvenientes', 'Developments::addIssue/$1');
+    $routes->post('desarrollos/(:num)/inconvenientes/(:num)/resolver', 'Developments::resolveIssue/$1/$2');
+    $routes->post('desarrollos/(:num)/evidencia', 'Developments::addEvidence/$1');
+    $routes->get('desarrollos/(:num)/evidencia/(:num)', 'Developments::evidence/$1/$2');
+
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');
 

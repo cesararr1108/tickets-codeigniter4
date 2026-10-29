@@ -240,6 +240,15 @@ foreach ($attachments as $f) {
             <?php endif ?>
         </div>
 
+        <?php if (! empty($development)): ?>
+            <a class="card dev-link" href="<?= site_url('panel/desarrollos/' . $development['IdDevelopment']) ?>">
+                <h2><?= icon('code') ?> Desarrollo <?= esc($development['Code']) ?></h2>
+                <span class="dev-state dev-<?= $development['State'] ?>"><?= esc(\App\Libraries\DevelopmentBoard::STATES[$development['State']]) ?></span>
+                <div class="dev-progress"><span style="width: <?= (int) $development['Progress'] ?>%"></span></div>
+                <span class="muted small"><?= (int) $development['Progress'] ?>% · <?= esc(\App\Libraries\DevelopmentBoard::monthName($development['PlanMonth'])) ?> · Ver seguimiento</span>
+            </a>
+        <?php endif ?>
+
         <?php if ($timer !== null && ($perm['isAssignee'] || $timer['running'] !== null || $timer['total'] > 0)): ?>
             <div class="card work-timer">
                 <h2>Tiempo de trabajo</h2>

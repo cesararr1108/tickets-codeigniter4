@@ -12,6 +12,7 @@ $navItems = [
     ['key' => 'tickets',    'url' => 'panel/tickets?status=pendientes', 'icon' => 'list',      'label' => 'Tickets',       'count' => $nav['pending']],
     ['key' => 'mine',       'url' => 'panel/tickets?assigned=me&status=pendientes', 'icon' => 'user', 'label' => 'Mis asignados', 'count' => $nav['mine']],
     ['key' => 'unassigned', 'url' => 'panel/tickets?assigned=none&status=pendientes', 'icon' => 'inbox', 'label' => 'Sin asignar', 'count' => $nav['unassigned'], 'alert' => true],
+    ['key' => 'developments', 'url' => 'panel/desarrollos',             'icon' => 'code',      'label' => 'Desarrollos',   'count' => $nav['developments'] ?? 0],
     ['key' => 'reports',    'url' => 'panel/reportes',                  'icon' => 'chart',     'label' => 'Reportes'],
     ['key' => 'catalog',    'url' => 'panel/catalogo',                  'icon' => 'grid',      'label' => 'Catálogo'],
 ];

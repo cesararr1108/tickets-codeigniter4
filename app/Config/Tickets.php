@@ -69,6 +69,15 @@ class Tickets extends BaseConfig
     public string $technicianRole = 'Técnico';
 
     /**
+     * Categorías cuyos tickets son desarrollos: aparecen en "Desarrollos >
+     * Por planear" para asignarlos a un programador y a un mes.
+     * Se comparan por nombre, sin distinguir mayúsculas.
+     *
+     * @var list<string>
+     */
+    public array $developmentCategories = ['Desarrollo'];
+
+    /**
      * Campos que llena el área de TI desde el panel (el solicitante no los
      * ve en el widget), por formulario (TicketFormAnswers.FormKey).
      * Se guardan en TicketFormAnswers junto a las respuestas del formulario.

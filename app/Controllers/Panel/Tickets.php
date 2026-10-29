@@ -4,6 +4,7 @@ namespace App\Controllers\Panel;
 
 use App\Libraries\AttachmentStore;
 use App\Libraries\CategoryCompanies;
+use App\Libraries\DevelopmentBoard;
 use App\Libraries\TicketRepository;
 use App\Models\TicketChangeModel;
 use App\Models\TicketEscalationModel;
@@ -101,6 +102,7 @@ class Tickets extends BasePanelController
                 'isAssignee'  => $isAssignee,
             ],
             'changes'     => model(TicketChangeModel::class)->forTicket($id),
+            'development' => (new DevelopmentBoard())->findByTicket($id),
             'timer'       => $timer === null ? null : [
                 'running' => $timer->runningFor($id),
                 'total'   => $timer->totalSeconds($id),

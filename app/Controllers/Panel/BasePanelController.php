@@ -59,6 +59,20 @@ abstract class BasePanelController extends BaseController
                 ->where('AssignedUserId', null)
                 ->countAllResults(),
             'escalated'  => model(\App\Models\TicketEscalationModel::class)->countActive(),
+            // Desarrollos del mes sin aprobar (los propios, para el programador).
+            'developments' => \App\Libraries\DevelopmentBoard::available() && $this->user !== null
+                ? (static function () use ($db) {
+                    $builder = $db->table('Developments')
+                        ->where('PlanMonth', \App\Libraries\DevelopmentBoard::currentMonth())
+                        ->where('ApprovedAt', null);
+
+                    if (! panel_is_admin()) {
+                        $builder->where('AssignedUserId', panel_user_id());
+                    }
+
+                    return $builder->countAllResults();
+                })()
+                : 0,
         ];
 
         $data['user']   = $this->user;

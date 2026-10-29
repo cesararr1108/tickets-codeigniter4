@@ -89,22 +89,26 @@
     });
 
     // ==========================================
-    // SELECTS DEPENDIENTES (compañía → sucursal, categoría → subcategoría)
+    // SELECTS DEPENDIENTES (compañía → sucursal y categoría, categoría → subcategoría)
     // ==========================================
     $$('select[data-dependent]').forEach(target => {
         const key = target.dataset.dependent;
-        const source = $(`select[data-dependent-source="${key}"]`);
+        const source = $(`select[data-dependent-source~="${key}"]`);
 
         if (!source) return;
 
         let selected = target.dataset.selected || '';
+
+        // Avisa a los selects que dependen de este (ej. categoría → subcategoría).
+        const changed = () => target.dispatchEvent(new Event('change'));
 
         const load = async () => {
             const placeholder = target.dataset.placeholder;
 
             if (!source.value) {
                 target.innerHTML = `<option value="">${placeholder}</option>`;
-                target.disabled = key === 'branches';
+                target.disabled = target.required;
+                changed();
                 return;
             }
 
@@ -118,8 +122,8 @@
                 const response = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
                 const rows = await response.json();
 
-                const first = key === 'branches'
-                    ? (rows.length ? 'Selecciona…' : 'Sin sucursales')
+                const first = target.required
+                    ? (rows.length ? 'Selecciona…' : (target.dataset.empty || 'Sin opciones'))
                     : placeholder;
 
                 target.innerHTML = `<option value="">${first}</option>`;
@@ -129,12 +133,13 @@
                     target.add(option);
                 });
 
-                if (key === 'branches' && rows.length === 1) target.value = rows[0].id;
+                if (target.required && rows.length === 1) target.value = rows[0].id;
             } catch (error) {
                 target.innerHTML = '<option value="">No se pudo cargar</option>';
             } finally {
                 target.disabled = false;
                 selected = '';
+                changed();
             }
         };
 

@@ -39,6 +39,23 @@ foreach ($attachments as $f) {
     </div>
 </div>
 
+<?php if (! $perm['isOpen']): ?>
+    <section class="card closed-card">
+        <?= icon('lock') ?>
+        <div>
+            <strong>Ticket cerrado</strong>
+            <span class="muted small">Está en solo lectura: no se pueden cambiar sus datos, estado, responsable ni la conversación.</span>
+        </div>
+        <?php if ($perm['canReopen']): ?>
+            <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/reabrir') ?>"
+                  data-confirm="¿Reabrir este ticket? Volverá a quedar pendiente.">
+                <?= csrf_field() ?>
+                <button type="submit" class="btn btn-outline btn-sm">Reabrir ticket</button>
+            </form>
+        <?php endif ?>
+    </section>
+<?php endif ?>
+
 <?php if (! empty($escalation)): ?>
     <section class="card escalation-card">
         <div class="escalation-head">
@@ -57,6 +74,7 @@ foreach ($attachments as $f) {
                     <span class="field-label">Nota para el técnico <span class="muted">(opcional)</span></span>
                     <textarea name="ResolutionNote" class="input" rows="2" maxlength="2000" placeholder="Indicaciones, decisión tomada…"></textarea>
                 </label>
+                <?php if ($perm['isOpen']): ?>
                 <label class="field">
                     <span class="field-label">Reasignar a</span>
                     <select name="AssignedUserId" class="select">
@@ -66,6 +84,7 @@ foreach ($attachments as $f) {
                         <?php endforeach ?>
                     </select>
                 </label>
+                <?php endif ?>
                 <button type="submit" class="btn btn-primary"><?= icon('check') ?> Atender escalamiento</button>
             </form>
         <?php else: ?>
@@ -130,7 +149,7 @@ foreach ($attachments as $f) {
              data-poll-seconds="<?= (int) $config->chatPollSeconds ?>"
              data-last-id="<?= $lastId ?>">
             <?php if ($messages === []): ?>
-                <p class="empty chat-empty">Aún no hay mensajes. Escribe el primero.</p>
+                <p class="empty chat-empty"><?= $perm['isOpen'] ? 'Aún no hay mensajes. Escribe el primero.' : 'Sin mensajes.' ?></p>
             <?php endif ?>
             <?php foreach ($messages as $m): ?>
                 <?= view('panel/partials/message', ['m' => $m]) ?>
@@ -145,9 +164,11 @@ foreach ($attachments as $f) {
             </form>
         <?php else: ?>
             <div class="chat-locked">
-                <?= icon('user') ?>
+                <?= icon($perm['isOpen'] ? 'user' : 'lock') ?>
                 <span>
-                    <?php if ($ticket['AssignedUserId'] === null): ?>
+                    <?php if (! $perm['isOpen']): ?>
+                        El ticket está cerrado: la conversación queda en solo lectura.
+                    <?php elseif ($ticket['AssignedUserId'] === null): ?>
                         Solo el responsable conversa con el solicitante. <strong>Toma el ticket</strong> para responder.
                     <?php else: ?>
                         Solo <strong><?= esc($ticket['AssignedName'] ?? $ticket['AssignedUserId']) ?></strong>, responsable del ticket, conversa con el solicitante.
@@ -174,7 +195,7 @@ foreach ($attachments as $f) {
                 <?php endif ?>
             </div>
 
-            <?php if ($perm['isAdmin']): ?>
+            <?php if ($perm['canAssign']): ?>
                 <form class="assign-form" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>">
                     <?= csrf_field() ?>
                     <label class="field">
@@ -195,7 +216,7 @@ foreach ($attachments as $f) {
                     <?= csrf_field() ?>
                     <button type="submit" class="btn btn-accent btn-block"><?= icon('user') ?> Tomar ticket</button>
                 </form>
-            <?php elseif ($perm['isAssignee']): ?>
+            <?php elseif ($perm['isAssignee'] && $perm['isOpen']): ?>
                 <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket']) ?>"
                       data-confirm="¿Dejar de atender este ticket? Quedará sin responsable.">
                     <?= csrf_field() ?>
@@ -293,6 +314,83 @@ foreach ($attachments as $f) {
             </form>
         <?php endif ?>
 
+        <?php if ($perm['canEditData']): ?>
+            <form class="card" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/datos') ?>">
+                <?= csrf_field() ?>
+                <details class="edit-data">
+                    <summary><h2><?= icon('edit') ?> Datos del ticket</h2></summary>
+                    <p class="muted small">Corrige la compañía, la categoría (ej. un incidente que en realidad es desarrollo) u otros datos. El cambio queda en el historial.</p>
+
+                    <label class="field">
+                        <span class="field-label">Asunto</span>
+                        <input class="input" type="text" name="Subject" maxlength="150" required value="<?= esc($ticket['Subject'], 'attr') ?>">
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Correo del solicitante</span>
+                        <input class="input" type="email" name="RequesterEmail" maxlength="180" required value="<?= esc($ticket['RequesterEmail'], 'attr') ?>">
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Compañía</span>
+                        <select name="CodCompanies" class="select" required data-dependent-source="branches categories">
+                            <?php foreach ($lookups['companies'] as $c): ?>
+                                <option value="<?= esc($c['CodCompanies'], 'attr') ?>" <?= (string) $ticket['CodCompanies'] === (string) $c['CodCompanies'] ? 'selected' : '' ?>><?= esc($c['Companies']) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Sucursal</span>
+                        <select name="CodBranches" class="select" required
+                                data-dependent="branches"
+                                data-empty="Sin sucursales"
+                                data-url="<?= site_url('panel/lookups/branches') ?>"
+                                data-param="company"
+                                data-selected="<?= esc((string) $ticket['CodBranches'], 'attr') ?>"
+                                data-placeholder="Selecciona primero una compañía">
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Categoría</span>
+                        <select name="IdCategory" class="select" required data-dependent-source="subcategories"
+                                data-dependent="categories"
+                                data-empty="Sin categorías para esta compañía"
+                                data-url="<?= site_url('panel/lookups/categories') ?>"
+                                data-param="company"
+                                data-selected="<?= esc((string) $ticket['IdCategory'], 'attr') ?>"
+                                data-placeholder="Selecciona primero una compañía">
+                        </select>
+                    </label>
+
+                    <label class="field">
+                        <span class="field-label">Subcategoría <span class="muted">(opcional)</span></span>
+                        <select name="IdSubCategory" class="select"
+                                data-dependent="subcategories"
+                                data-url="<?= site_url('panel/lookups/subcategories') ?>"
+                                data-param="category"
+                                data-selected="<?= esc((string) ($ticket['IdSubCategory'] ?? ''), 'attr') ?>"
+                                data-placeholder="Sin subcategoría">
+                        </select>
+                    </label>
+
+                    <button type="submit" class="btn btn-primary btn-block">Guardar datos</button>
+                </details>
+            </form>
+        <?php endif ?>
+
+        <?php if ($areaDefs !== [] && ! $perm['isOpen'] && ($perm['isAdmin'] || $perm['isAssignee']) && array_filter($areaValues) !== []): ?>
+            <div class="card">
+                <h2>Seguimiento del área</h2>
+                <dl class="answers">
+                    <?php foreach ($areaDefs as $key => $def): if (($areaValues[$key] ?? '') === '') continue; ?>
+                        <div class="answer-wide"><dt><?= esc($def['label']) ?></dt><dd><?= nl2br(esc($areaValues[$key])) ?></dd></div>
+                    <?php endforeach ?>
+                </dl>
+            </div>
+        <?php endif ?>
+
         <?php if (! empty($escalations) && (count($escalations) > 1 || empty($escalation))): ?>
             <div class="card">
                 <h2>Escalamientos</h2>
@@ -369,6 +467,23 @@ foreach ($attachments as $f) {
                 </ul>
             <?php endif ?>
         </div>
+
+        <?php if ($changes !== []): ?>
+            <div class="card">
+                <h2>Historial de cambios</h2>
+                <ul class="mini-list change-list">
+                    <?php foreach ($changes as $ch): ?>
+                        <li>
+                            <div>
+                                <strong><?= esc(\App\Models\TicketChangeModel::LABELS[$ch['Field']] ?? $ch['Field']) ?>:</strong>
+                                <span class="muted"><?= esc($ch['OldValue'] ?? '—') ?></span> → <?= esc($ch['NewValue'] ?? '—') ?>
+                                <p class="small muted"><?= esc($ch['UserName']) ?> · <?= format_date($ch['CreatedAt']) ?></p>
+                            </div>
+                        </li>
+                    <?php endforeach ?>
+                </ul>
+            </div>
+        <?php endif ?>
 
         <?php if ($history !== []): ?>
             <div class="card">

@@ -10,6 +10,9 @@
  * @var array|null $edit
  * @var array $options
  * @var array $errors
+ * @var bool $companyLinks Categorías: compañías donde se ofrece cada una
+ * @var array<string, list<string>> $rowCompanies
+ * @var list<string> $editCompanies
  */
 $pk       = $def['pk'];
 $parent   = $def['parent'] ?? null;
@@ -17,7 +20,8 @@ $isEdit   = $edit !== null;
 $baseUrl  = site_url('panel/admin/' . $def['key']);
 $action   = $isEdit ? $baseUrl . '/update/' . rawurlencode((string) $edit[$pk]) : $baseUrl;
 $value    = static fn (string $name) => old($name) ?? ($isEdit ? ($edit[$name] ?? '') : '');
-$keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue]);
+$keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue, 'company' => $companyFilter ?? '']);
+$companyNames = $options['companies'] ?? [];
 ?>
 <div class="page-head">
     <div>
@@ -49,6 +53,15 @@ $keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue]);
                 </select>
             <?php endif ?>
 
+            <?php if ($companyLinks): ?>
+                <select name="company" class="select">
+                    <option value="">Todas las compañías</option>
+                    <?php foreach ($companyNames as $id => $label): ?>
+                        <option value="<?= esc($id, 'attr') ?>" <?= $companyFilter === (string) $id ? 'selected' : '' ?>><?= esc($label) ?></option>
+                    <?php endforeach ?>
+                </select>
+            <?php endif ?>
+
             <span class="muted small admin-count"><?= $total ?> registro<?= $total === 1 ? '' : 's' ?></span>
         </form>
 
@@ -66,6 +79,7 @@ $keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue]);
                             <th><?= $def['autoPk'] ? 'Id' : 'Código' ?></th>
                             <th>Nombre</th>
                             <?php if ($parent !== null): ?><th><?= esc($parent['label']) ?></th><?php endif ?>
+                            <?php if ($companyLinks): ?><th>Compañías</th><?php endif ?>
                             <th>En uso</th>
                             <th class="actions-col"></th>
                         </tr>
@@ -84,6 +98,19 @@ $keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue]);
                                 </td>
                                 <?php if ($parent !== null): ?>
                                     <td><?= esc($row['ParentName'] ?? $row[$parent['field']]) ?></td>
+                                <?php endif ?>
+                                <?php if ($companyLinks): $codes = $rowCompanies[$id] ?? []; ?>
+                                    <td>
+                                        <?php if ($codes === []): ?>
+                                            <span class="muted small">Todas</span>
+                                        <?php else: ?>
+                                            <span class="usage">
+                                                <?php foreach ($codes as $code): ?>
+                                                    <span class="chip" title="<?= esc($companyNames[$code] ?? $code, 'attr') ?>"><?= esc($code) ?></span>
+                                                <?php endforeach ?>
+                                            </span>
+                                        <?php endif ?>
+                                    </td>
                                 <?php endif ?>
                                 <td>
                                     <?php if (! $used): ?>
@@ -172,6 +199,29 @@ $keepQuery = array_filter(['q' => $q, $parent['param'] ?? 'x' => $parentValue]);
                     <?php endif ?>
                 </label>
             <?php endforeach ?>
+
+            <?php if ($companyLinks):
+                $checked = old('Companies') !== null ? array_map('strval', (array) old('Companies')) : ($isEdit ? $editCompanies : []);
+            ?>
+                <fieldset class="field" style="border:0;padding:0;margin:0">
+                    <span class="field-label">Compañías</span>
+                    <div style="max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:8px;padding:8px 10px">
+                        <?php foreach ($companyNames as $code => $label): ?>
+                            <label style="display:flex;gap:8px;align-items:center;padding:3px 0;cursor:pointer">
+                                <input type="checkbox" name="Companies[]" value="<?= esc($code, 'attr') ?>" <?= in_array((string) $code, $checked, true) ? 'checked' : '' ?>>
+                                <span><?= esc($label) ?> <span class="muted small">· <?= esc($code) ?></span></span>
+                            </label>
+                        <?php endforeach ?>
+                    </div>
+                    <?php if (isset($errors['Companies'])): ?>
+                        <span class="field-error"><?= esc($errors['Companies']) ?></span>
+                    <?php else: ?>
+                        <span class="muted small">Solo se ofrece en los tickets de las compañías marcadas. Si no marcas ninguna, aparece en todas.</span>
+                    <?php endif ?>
+                </fieldset>
+            <?php elseif (! empty($def['companies'])): ?>
+                <p class="muted small">Para asignar categorías por compañía, ejecuta <code>app/Database/sql/CategoriasPorCompania.sql</code>.</p>
+            <?php endif ?>
 
             <div class="form-actions">
                 <?php if ($isEdit): ?>

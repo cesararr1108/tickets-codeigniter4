@@ -618,6 +618,14 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .badge-escalated { background: var(--warning-soft); color: var(--warning-text); display: inline-flex; align-items: center; gap: 4px; }
 .badge-escalated .icon { width: 12px; height: 12px; }
 
+.closed-card { margin-bottom: 16px; display: flex; align-items: center; gap: 12px; border-left: 4px solid var(--text-2); background: var(--surface-2); }
+.closed-card > .icon { width: 20px; height: 20px; flex-shrink: 0; color: var(--text-2); }
+.closed-card > div { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.edit-data > summary { list-style: none; cursor: pointer; }
+.edit-data > summary::-webkit-details-marker { display: none; }
+.edit-data > summary h2 { margin: 0; display: flex; align-items: center; gap: 8px; }
+.edit-data[open] > summary h2 { margin-bottom: 10px; }
+.change-list p { margin: 2px 0 0; }
 .escalation-card { margin-bottom: 16px; border-color: #f3c66b; background: linear-gradient(0deg, var(--surface), var(--surface)), var(--warning-soft); border-left: 4px solid var(--warning); }
 .escalation-head { display: flex; align-items: center; gap: 10px; }
 .escalation-head > .icon { width: 20px; height: 20px; color: var(--warning); }

@@ -2,6 +2,8 @@
 
 namespace App\Controllers\Panel;
 
+use App\Libraries\CategoryCompanies;
+
 /**
  * Listas dependientes para los formularios del panel (JSON).
  */
@@ -15,6 +17,19 @@ class Lookups extends BasePanelController
             ->orderBy('Branches')
             ->get()
             ->getResultArray();
+
+        return $this->response->setJSON($rows);
+    }
+
+    /**
+     * Categorías que se ofrecen en la compañía.
+     */
+    public function categories()
+    {
+        $rows = array_map(static fn ($c) => [
+            'id'   => (int) $c['IdCategory'],
+            'name' => $c['Category'],
+        ], CategoryCompanies::categoriesFor((string) $this->request->getGet('company')));
 
         return $this->response->setJSON($rows);
     }

@@ -169,6 +169,7 @@ $activeValue = old('IsActive') !== null ? (bool) old('IsActive') : ($isEdit ? (b
                 <span class="field-label">Sucursal</span>
                 <select name="CodBranches" class="select" required
                         data-dependent="branches"
+                        data-empty="Sin sucursales"
                         data-url="<?= site_url('panel/lookups/branches') ?>"
                         data-param="company"
                         data-selected="<?= esc((string) $value('CodBranches'), 'attr') ?>"

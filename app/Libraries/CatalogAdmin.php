@@ -6,6 +6,7 @@ use App\Models\BranchModel;
 use App\Models\CategoryModel;
 use App\Models\CompanyModel;
 use App\Models\SubCategoryModel;
+use App\Models\TicketFormModel;
 
 /**
  * Definición de los catálogos que se administran desde el panel.
@@ -79,6 +80,8 @@ class CatalogAdmin
                 'name'     => 'Category',
                 'order'    => 'Category',
                 'search'   => ['Category', 'Description'],
+                // Compañías donde se ofrece (tabla CategoryCompanies, ver App\Libraries\CategoryCompanies).
+                'companies' => true,
                 'fields'   => [
                     'Category'    => ['label' => 'Nombre', 'type' => 'text', 'max' => 40, 'required' => true],
                     'Description' => ['label' => 'Descripción', 'type' => 'textarea', 'max' => 155, 'required' => false],

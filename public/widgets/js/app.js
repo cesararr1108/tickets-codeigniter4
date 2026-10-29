@@ -152,6 +152,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         companies: null,
         branches: [],
         categories: null,
+        categoriesCompany: null,
         subcategoriesByCategory: null,
         subcategories: [],
 
@@ -384,14 +385,24 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
     async function loadCategories() {
 
-        if (state.categories) {
+        // Las categorías dependen de la compañía: se recargan si cambió.
+        const companyId = state.company?.id ?? null;
+
+        if (state.categories && state.categoriesCompany === companyId) {
             return;
         }
+
+        if (state.category) {
+            clearCategory();
+        }
+
+        state.categories = null;
+        state.categoriesCompany = companyId;
 
         await showState(el.categoryGrid, "loading", "Cargando categorías...");
 
         const [categoriesResult, subcategoriesResult, formsResult] = await Promise.allSettled([
-            obtenerCategorias(apiUrl),
+            obtenerCategorias(apiUrl, companyId),
             obtenerTodasSubcategorias(apiUrl),
             obtenerFormularios(apiUrl)
         ]);
@@ -428,7 +439,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         }
 
         if (!categories.length) {
-            await showState(el.categoryGrid, "empty", "No hay categorías disponibles.");
+            await showState(el.categoryGrid, "empty", "No hay categorías disponibles para esta compañía.");
             return;
         }
 
@@ -451,6 +462,27 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
         if (categories.length === 1) {
             selectCategory(categories[0].id);
         }
+    }
+
+    /*
+     * Quita la categoría elegida (al cambiar de compañía).
+     */
+    function clearCategory() {
+
+        subcategoryRequest++;
+
+        state.category = null;
+        state.subcategory = null;
+        state.subcategories = [];
+
+        state.extraForm?.unmount();
+        state.extraForm = null;
+        applyFormLayout();
+
+        markSelected(el.categoryGrid, null);
+
+        el.subcategoryBlock.hidden = true;
+        el.subcategoryList.replaceChildren();
     }
 
     function summarize(subs) {

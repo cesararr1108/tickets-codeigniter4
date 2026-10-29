@@ -3,6 +3,7 @@
 namespace App\Controllers\Panel;
 
 use App\Libraries\CatalogAdmin;
+use App\Libraries\CategoryCompanies;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 
@@ -48,6 +49,14 @@ class Admin extends BasePanelController
             }
         }
 
+        // Categorías: filtro por compañía (las asignadas a ella o a todas).
+        $companyLinks  = $this->companyLinks($def);
+        $companyFilter = $companyLinks ? trim((string) ($this->request->getGet('company') ?? '')) : '';
+
+        if ($companyFilter !== '') {
+            CategoryCompanies::scope($builder, $companyFilter, 'x');
+        }
+
         if ($q !== '') {
             $builder->groupStart();
             foreach ($def['search'] as $i => $column) {
@@ -72,6 +81,11 @@ class Admin extends BasePanelController
         }
 
         $options = [];
+
+        if ($companyLinks) {
+            $options['companies'] = CatalogAdmin::options('companies');
+        }
+
         foreach ($def['fields'] as $field) {
             if (($field['type'] ?? '') === 'select') {
                 $options[$field['options']] = CatalogAdmin::options($field['options']);
@@ -92,6 +106,10 @@ class Admin extends BasePanelController
             'usage'       => CatalogAdmin::usageCounts($def, array_column($rows, $def['pk'])),
             'edit'        => $edit,
             'options'     => $options,
+            'companyLinks'  => $companyLinks,
+            'companyFilter' => $companyFilter,
+            'rowCompanies'  => $companyLinks ? CategoryCompanies::forCategories(array_column($rows, $def['pk'])) : [],
+            'editCompanies' => $companyLinks && $edit !== null ? (CategoryCompanies::forCategories([$edit[$def['pk']]])[(string) $edit[$def['pk']]] ?? []) : [],
             'errors'      => session()->getFlashdata('errors') ?? [],
         ]);
     }
@@ -104,7 +122,7 @@ class Admin extends BasePanelController
         $def  = $this->definition($key);
         $data = $this->collect($def, true);
 
-        $errors = $this->validateFields($def, $data) + $this->checkReferences($def, $data);
+        $errors = $this->validateFields($def, $data) + $this->checkReferences($def, $data) + $this->checkCompanies($def);
 
         if (! $def['autoPk'] && ($data[$def['pk']] ?? '') !== '' && $this->exists($def['table'], $def['pk'], $data[$def['pk']])) {
             $errors[$def['pk']] = 'Ya existe un registro con ese código.';
@@ -119,6 +137,10 @@ class Admin extends BasePanelController
         try {
             if (! $model->insert($data)) {
                 return redirect()->back()->withInput()->with('errors', $model->errors());
+            }
+
+            if ($this->companyLinks($def)) {
+                CategoryCompanies::save((int) $model->getInsertID(), $this->postedCompanies());
             }
         } catch (DatabaseException $e) {
             log_message('error', '[Admin] ' . $e->getMessage());
@@ -144,7 +166,7 @@ class Admin extends BasePanelController
 
         // La clave primaria no se modifica (la usan otras tablas).
         $data   = $this->collect($def, false);
-        $errors = $this->validateFields($def, $data) + $this->checkReferences($def, $data);
+        $errors = $this->validateFields($def, $data) + $this->checkReferences($def, $data) + $this->checkCompanies($def);
 
         if ($errors !== []) {
             return redirect()->back()->withInput()->with('errors', $errors);
@@ -155,6 +177,10 @@ class Admin extends BasePanelController
         try {
             if (! $model->update($id, $data)) {
                 return redirect()->back()->withInput()->with('errors', $model->errors());
+            }
+
+            if ($this->companyLinks($def)) {
+                CategoryCompanies::save((int) $id, $this->postedCompanies());
             }
         } catch (DatabaseException $e) {
             log_message('error', '[Admin] ' . $e->getMessage());
@@ -288,6 +314,44 @@ class Admin extends BasePanelController
         }
 
         return $errors;
+    }
+
+    /**
+     * ¿El catálogo asigna compañías a sus registros (y existe la tabla)?
+     */
+    private function companyLinks(array $def): bool
+    {
+        return ! empty($def['companies']) && CategoryCompanies::available();
+    }
+
+    /**
+     * Compañías marcadas en el formulario.
+     *
+     * @return list<string>
+     */
+    private function postedCompanies(): array
+    {
+        $values = array_map(static fn ($v) => trim((string) $v), (array) ($this->request->getPost('Companies') ?? []));
+
+        return array_values(array_unique(array_filter($values, static fn ($v) => $v !== '')));
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function checkCompanies(array $def): array
+    {
+        if (! $this->companyLinks($def)) {
+            return [];
+        }
+
+        foreach ($this->postedCompanies() as $company) {
+            if (! $this->exists('Companies', 'CodCompanies', $company)) {
+                return ['Companies' => 'Selecciona compañías válidas.'];
+            }
+        }
+
+        return [];
     }
 
     private function exists(string $table, string $column, string $value): bool

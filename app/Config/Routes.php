@@ -36,6 +36,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('tickets/(:num)/tiempo/finalizar', 'Tickets::stopTimer/$1');
     $routes->post('tickets/(:num)/escalar', 'Tickets::escalate/$1');
     $routes->post('tickets/(:num)/escalamiento', 'Tickets::resolveEscalation/$1');
+    $routes->post('tickets/(:num)/datos', 'Tickets::editData/$1');
+    $routes->post('tickets/(:num)/reabrir', 'Tickets::reopen/$1');
 
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');
@@ -65,6 +67,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('push/token', 'Push::register');
     $routes->post('push/test', 'Push::test');
     $routes->get('lookups/branches', 'Lookups::branches');
+    $routes->get('lookups/categories', 'Lookups::categories');
     $routes->get('lookups/subcategories', 'Lookups::subcategories');
 });
 

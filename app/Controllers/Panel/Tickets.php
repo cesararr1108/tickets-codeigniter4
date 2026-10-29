@@ -3,7 +3,9 @@
 namespace App\Controllers\Panel;
 
 use App\Libraries\AttachmentStore;
+use App\Libraries\CategoryCompanies;
 use App\Libraries\TicketRepository;
+use App\Models\TicketChangeModel;
 use App\Models\TicketEscalationModel;
 use App\Models\TicketFormAnswerModel;
 use App\Libraries\TicketNotifier;
@@ -13,6 +15,9 @@ use App\Models\TicketTimeLogModel;
 
 class Tickets extends BasePanelController
 {
+    /** Mensaje cuando se intenta modificar un ticket cerrado. */
+    private const CLOSED_MESSAGE = 'El ticket está cerrado y no se puede modificar.';
+
     private const FILTER_KEYS = ['q', 'status', 'priority', 'company', 'branch', 'category', 'subcategory', 'assigned', 'escalated', 'sort'];
 
     /**
@@ -70,6 +75,7 @@ class Tickets extends BasePanelController
         $me         = panel_user_id();
         $isAdmin    = panel_is_admin();
         $isAssignee = $ticket['AssignedUserId'] !== null && (string) $ticket['AssignedUserId'] === $me;
+        $isOpen     = $ticket['Status'] !== 'cerrado';
         $escalation = model(TicketEscalationModel::class);
         $timer      = TicketTimeLogModel::available() ? model(TicketTimeLogModel::class) : null;
 
@@ -77,17 +83,24 @@ class Tickets extends BasePanelController
             'active'      => 'tickets',
             'title'       => ticket_code($id),
             'ticket'      => $ticket,
+            // Un ticket cerrado queda en solo lectura (el administrador puede reabrirlo).
             'perm'        => [
                 'isAdmin'  => $isAdmin,
+                'isOpen'   => $isOpen,
                 // Solo el responsable conversa con el solicitante.
-                'canChat'  => $isAssignee,
+                'canChat'  => $isOpen && $isAssignee,
                 // Estado/prioridad: el administrador o el responsable.
-                'canManage' => $isAdmin || $isAssignee,
+                'canManage' => $isOpen && ($isAdmin || $isAssignee),
+                // Compañía, sucursal, categoría, asunto…: el administrador o el responsable.
+                'canEditData' => $isOpen && ($isAdmin || $isAssignee),
                 // Un técnico solo puede tomar tickets sin responsable.
-                'canTake'  => ! $isAssignee && ($isAdmin || $ticket['AssignedUserId'] === null),
-                'canEscalate' => $isAssignee && TicketEscalationModel::available(),
+                'canTake'  => $isOpen && ! $isAssignee && ($isAdmin || $ticket['AssignedUserId'] === null),
+                'canAssign'   => $isOpen && $isAdmin,
+                'canEscalate' => $isOpen && $isAssignee && TicketEscalationModel::available(),
+                'canReopen'   => ! $isOpen && $isAdmin,
                 'isAssignee'  => $isAssignee,
             ],
+            'changes'     => model(TicketChangeModel::class)->forTicket($id),
             'timer'       => $timer === null ? null : [
                 'running' => $timer->runningFor($id),
                 'total'   => $timer->totalSeconds($id),
@@ -120,6 +133,10 @@ class Tickets extends BasePanelController
 
         if ($ticket === null) {
             return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', self::CLOSED_MESSAGE);
         }
 
         $me         = panel_user_id();
@@ -193,6 +210,7 @@ class Tickets extends BasePanelController
         // Solo se validan los campos que cambian.
         if ($data !== []) {
             $model->skipValidation(true)->update($id, $data);
+            model(TicketChangeModel::class)->record($id, $ticket, $data, $this->user);
         }
 
         // Comentario opcional de cierre: queda en la conversación con el solicitante.
@@ -256,6 +274,12 @@ class Tickets extends BasePanelController
         $message = trim((string) $this->request->getPost('Message'));
 
         $ticket = model(TicketModel::class)->find($id);
+
+        if ($ticket !== null && $ticket['Status'] === 'cerrado') {
+            return $isAjax
+                ? $this->response->setStatusCode(409)->setJSON(['message' => self::CLOSED_MESSAGE, 'csrf' => csrf_hash()])
+                : redirect()->back()->with('error', self::CLOSED_MESSAGE);
+        }
 
         if ($ticket !== null && (string) ($ticket['AssignedUserId'] ?? '') !== panel_user_id()) {
             $error = 'Solo el responsable del ticket puede conversar con el solicitante. Toma el ticket primero.';
@@ -350,6 +374,10 @@ class Tickets extends BasePanelController
             return redirect()->back()->withInput()->with('errors', ['CodBranches' => 'La sucursal no pertenece a la compañía seleccionada.']);
         }
 
+        if ($error = $this->categoryError($data['CodCompanies'], (int) $data['IdCategory'], $data['IdSubCategory'] ?? null)) {
+            return redirect()->back()->withInput()->with('errors', $error);
+        }
+
         if (! $model->insert($data)) {
             return redirect()->back()->withInput()->with('errors', $model->errors());
         }
@@ -386,6 +414,10 @@ class Tickets extends BasePanelController
             return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
         }
 
+        if ($ticket['Status'] === 'cerrado') {
+            return redirect()->back()->with('error', self::CLOSED_MESSAGE);
+        }
+
         if ($ticket['AssignedUserId'] !== null && ! panel_is_admin()) {
             return redirect()->back()->with('error', 'Este ticket ya tiene responsable. Solo el administrador puede reasignarlo.');
         }
@@ -397,6 +429,7 @@ class Tickets extends BasePanelController
         }
 
         $model->skipValidation(true)->update($id, $data);
+        model(TicketChangeModel::class)->record($id, $ticket, $data, $this->user);
 
         if ((string) $ticket['AssignedUserId'] !== panel_user_id() && TicketTimeLogModel::available()) {
             model(TicketTimeLogModel::class)->stop($id);
@@ -479,6 +512,10 @@ class Tickets extends BasePanelController
             return redirect()->back()->with('error', 'Solo el responsable del ticket puede escalarlo.');
         }
 
+        if ($ticket['Status'] === 'cerrado') {
+            return redirect()->back()->with('error', self::CLOSED_MESSAGE);
+        }
+
         if (! TicketEscalationModel::available()) {
             return redirect()->back()->with('error', 'Falta crear la tabla TicketEscalations (app/Database/sql/RolesYEscalamientos.sql).');
         }
@@ -527,6 +564,10 @@ class Tickets extends BasePanelController
         $assignTo = trim((string) $this->request->getPost('AssignedUserId'));
 
         if ($assignTo !== '') {
+            if ((model(TicketModel::class)->find($id)['Status'] ?? '') === 'cerrado') {
+                return redirect()->back()->with('error', self::CLOSED_MESSAGE . ' Atiende el escalamiento sin reasignar.');
+            }
+
             if (db_connect()->table('Users')->where('IdUser', $assignTo)->countAllResults() === 0) {
                 return redirect()->back()->with('error', 'El usuario seleccionado no existe.');
             }
@@ -534,6 +575,10 @@ class Tickets extends BasePanelController
             $before = model(TicketModel::class)->find($id);
 
             model(TicketModel::class)->skipValidation(true)->update($id, ['AssignedUserId' => $assignTo]);
+
+            if ($before !== null) {
+                model(TicketChangeModel::class)->record($id, $before, ['AssignedUserId' => $assignTo], $this->user);
+            }
 
             if ($before !== null && (string) $before['AssignedUserId'] !== $assignTo && TicketTimeLogModel::available()) {
                 model(TicketTimeLogModel::class)->stop($id);
@@ -574,6 +619,10 @@ class Tickets extends BasePanelController
             return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'Solo el administrador o el responsable pueden actualizar el seguimiento.');
         }
 
+        if ($ticket['Status'] === 'cerrado') {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', self::CLOSED_MESSAGE);
+        }
+
         try {
             model(TicketFormAnswerModel::class)->saveAreaFields($id, $formKey, $fields, (array) $this->request->getPost('Area'));
         } catch (\Throwable $e) {
@@ -583,6 +632,131 @@ class Tickets extends BasePanelController
         }
 
         return redirect()->to(site_url("panel/tickets/{$id}"))->with('success', 'Seguimiento actualizado.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/datos
+     * Corrige los datos del ticket: compañía, sucursal, categoría,
+     * subcategoría, asunto y correo del solicitante (ej. un "Incidente"
+     * que en realidad es "Desarrollo"). Queda en el historial de cambios.
+     */
+    public function editData(int $id)
+    {
+        $model  = model(TicketModel::class);
+        $ticket = $model->find($id);
+        $back   = redirect()->to(site_url("panel/tickets/{$id}"));
+
+        if ($ticket === null) {
+            return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return $back->with('error', self::CLOSED_MESSAGE);
+        }
+
+        if (! panel_is_admin() && (string) ($ticket['AssignedUserId'] ?? '') !== panel_user_id()) {
+            return $back->with('error', 'Solo el administrador o el responsable pueden cambiar los datos del ticket.');
+        }
+
+        $post = $this->request->getPost();
+        $data = [
+            'CodCompanies'   => trim((string) ($post['CodCompanies'] ?? '')),
+            'CodBranches'    => trim((string) ($post['CodBranches'] ?? '')),
+            'IdCategory'     => (int) ($post['IdCategory'] ?? 0),
+            'IdSubCategory'  => (int) ($post['IdSubCategory'] ?? 0) ?: null,
+            'Subject'        => trim((string) ($post['Subject'] ?? '')),
+            'RequesterEmail' => trim((string) ($post['RequesterEmail'] ?? '')),
+        ];
+
+        $errors = [];
+
+        if ($data['Subject'] === '' || mb_strlen($data['Subject']) > 150) {
+            $errors['Subject'] = 'El asunto es obligatorio (máximo 150 caracteres).';
+        }
+
+        if (! filter_var($data['RequesterEmail'], FILTER_VALIDATE_EMAIL) || mb_strlen($data['RequesterEmail']) > 180) {
+            $errors['RequesterEmail'] = 'Correo del solicitante no válido.';
+        }
+
+        $branchOk = db_connect()->table('Branches')
+            ->where('CodBranches', $data['CodBranches'])
+            ->where('CodCompanies', $data['CodCompanies'])
+            ->countAllResults() > 0;
+
+        if (! $branchOk) {
+            $errors['CodBranches'] = 'La sucursal no pertenece a la compañía seleccionada.';
+        }
+
+        $errors += $this->categoryError($data['CodCompanies'], $data['IdCategory'], $data['IdSubCategory']) ?? [];
+
+        if ($errors !== []) {
+            return $back->with('error', implode(' ', $errors));
+        }
+
+        $changed = array_filter($data, static fn ($value, $field) => (string) ($ticket[$field] ?? '') !== (string) ($value ?? ''), ARRAY_FILTER_USE_BOTH);
+
+        if ($changed === []) {
+            return $back->with('success', 'No hubo cambios en los datos.');
+        }
+
+        $model->skipValidation(true)->update($id, $changed);
+        model(TicketChangeModel::class)->record($id, $ticket, $changed, $this->user);
+
+        return $back->with('success', 'Datos del ticket actualizados.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/reabrir
+     * Solo el administrador puede reabrir un ticket cerrado.
+     */
+    public function reopen(int $id)
+    {
+        $model  = model(TicketModel::class);
+        $ticket = $model->find($id);
+        $back   = redirect()->to(site_url("panel/tickets/{$id}"));
+
+        if ($ticket === null) {
+            return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if (! panel_is_admin()) {
+            return $back->with('error', 'Solo el administrador puede reabrir un ticket cerrado.');
+        }
+
+        if ($ticket['Status'] !== 'cerrado') {
+            return $back->with('error', 'El ticket no está cerrado.');
+        }
+
+        $data = ['Status' => $ticket['AssignedUserId'] === null ? 'abierto' : 'en_progreso'];
+
+        $model->skipValidation(true)->update($id, $data);
+        model(TicketChangeModel::class)->record($id, $ticket, $data, $this->user);
+
+        $this->notifyRequester($ticket, $data);
+
+        return $back->with('success', 'Ticket reabierto.');
+    }
+
+    /**
+     * La categoría debe ofrecerse en la compañía y la subcategoría
+     * pertenecer a la categoría.
+     *
+     * @return array<string, string>|null
+     */
+    private function categoryError(string $company, int $category, ?int $subcategory): ?array
+    {
+        if ($category <= 0 || ! CategoryCompanies::allows($category, $company)) {
+            return ['IdCategory' => 'La categoría no está disponible para la compañía seleccionada.'];
+        }
+
+        if ($subcategory !== null && db_connect()->table('SubCategory')
+            ->where('IdSubCategory', $subcategory)
+            ->where('IdCategory', $category)
+            ->countAllResults() === 0) {
+            return ['IdSubCategory' => 'La subcategoría no pertenece a la categoría seleccionada.'];
+        }
+
+        return null;
     }
 
     /**

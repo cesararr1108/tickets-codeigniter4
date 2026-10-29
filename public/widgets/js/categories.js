@@ -1,12 +1,14 @@
 import { apiGet, toList } from "./api.js";
 
 /*
- * GET /categories
+ * GET /categories?company={companyId}
+ * Solo las categorías que se ofrecen en la compañía.
  * Devuelve: [{ id, name }]
  */
-export async function obtenerCategorias(apiUrl) {
+export async function obtenerCategorias(apiUrl, companyId) {
 
-    const result = await apiGet(apiUrl, "/categories");
+    const query = companyId ? "?company=" + encodeURIComponent(companyId) : "";
+    const result = await apiGet(apiUrl, "/categories" + query);
 
     return toList(result).map(category => ({
         id: category.IdCategory,

@@ -31,7 +31,7 @@ $oldPriority = old('Priority');
         <div class="form-grid">
             <label class="field">
                 <span class="field-label">Compañía</span>
-                <select name="CodCompanies" class="select" required data-dependent-source="branches">
+                <select name="CodCompanies" class="select" required data-dependent-source="branches categories">
                     <option value="">Selecciona…</option>
                     <?php foreach ($lookups['companies'] as $c): ?>
                         <option value="<?= esc($c['CodCompanies'], 'attr') ?>" <?= old('CodCompanies') === $c['CodCompanies'] ? 'selected' : '' ?>><?= esc($c['Companies']) ?></option>
@@ -44,6 +44,7 @@ $oldPriority = old('Priority');
                 <span class="field-label">Sucursal</span>
                 <select name="CodBranches" class="select" required
                         data-dependent="branches"
+                        data-empty="Sin sucursales"
                         data-url="<?= site_url('panel/lookups/branches') ?>"
                         data-param="company"
                         data-selected="<?= esc(old('CodBranches') ?? '', 'attr') ?>"
@@ -55,11 +56,14 @@ $oldPriority = old('Priority');
 
             <label class="field">
                 <span class="field-label">Categoría</span>
-                <select name="IdCategory" class="select" required data-dependent-source="subcategories">
-                    <option value="">Selecciona…</option>
-                    <?php foreach ($lookups['categories'] as $c): ?>
-                        <option value="<?= (int) $c['IdCategory'] ?>" <?= old('IdCategory') === (string) $c['IdCategory'] ? 'selected' : '' ?>><?= esc($c['Category']) ?></option>
-                    <?php endforeach ?>
+                <select name="IdCategory" class="select" required data-dependent-source="subcategories"
+                        data-dependent="categories"
+                        data-url="<?= site_url('panel/lookups/categories') ?>"
+                        data-param="company"
+                        data-selected="<?= esc(old('IdCategory') ?? '', 'attr') ?>"
+                        data-placeholder="Selecciona primero una compañía"
+                        data-empty="Sin categorías para esta compañía">
+                    <option value="">Selecciona primero una compañía</option>
                 </select>
                 <?= $err('IdCategory') ?>
             </label>

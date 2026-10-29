@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Api;
 
+use App\Libraries\CategoryCompanies;
 use App\Libraries\TicketNotifier;
 use App\Models\TicketAttachmentModel;
 use App\Models\TicketEscalationModel;
@@ -61,6 +62,12 @@ class TicketController extends BaseApiController
             'Subject', 'IdCategory', 'IdSubCategory', 'Priority', 'Status',
         ]));
 
+        $category = (int) ($ticketFields['IdCategory'] ?? 0);
+
+        if ($category > 0 && ! CategoryCompanies::allows($category, trim((string) ($ticketFields['CodCompanies'] ?? '')))) {
+            return $this->failValidationErrors(['IdCategory' => 'La categoría no está disponible para la compañía seleccionada.']);
+        }
+
         $db    = db_connect();
         $model = model(TicketModel::class);
 
@@ -109,6 +116,33 @@ class TicketController extends BaseApiController
         (new TicketNotifier())->ticketCreated($ticket);
 
         return $this->respondCreated($ticket);
+    }
+
+    /**
+     * PUT/PATCH /tickets/{id}
+     * Un ticket cerrado no se puede modificar.
+     */
+    public function update($id = null)
+    {
+        if ($error = $this->closedError($id)) {
+            return $error;
+        }
+
+        return parent::update($id);
+    }
+
+    /**
+     * Respuesta 409 si el ticket está cerrado (null si se puede modificar).
+     */
+    private function closedError($id)
+    {
+        $ticket = $this->model()->find($id);
+
+        if ($ticket !== null && $ticket['Status'] === 'cerrado') {
+            return $this->fail('El ticket está cerrado y no se puede modificar.', 409);
+        }
+
+        return null;
     }
 
     /** Estados que cuentan como pendientes / resueltos en "Mis tickets". */
@@ -436,6 +470,10 @@ class TicketController extends BaseApiController
             return $this->failNotFound('Ticket no encontrado.');
         }
 
+        if ($error = $this->closedError($id)) {
+            return $error;
+        }
+
         $model = model(TicketMessageModel::class);
         $data  = $this->getPayload();
         $data['IdTicket'] = (int) $id;
@@ -495,6 +533,10 @@ class TicketController extends BaseApiController
     {
         if ($this->model()->find($id) === null) {
             return $this->failNotFound('Ticket no encontrado.');
+        }
+
+        if ($error = $this->closedError($id)) {
+            return $error;
         }
 
         $model = model(TicketAttachmentModel::class);

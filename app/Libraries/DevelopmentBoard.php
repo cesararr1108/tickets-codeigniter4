@@ -13,8 +13,18 @@ use CodeIgniter\Database\BaseConnection;
  *  - Estado: Terminado (aprobado) > Por planear (sin mes) > Bloqueado (algún
  *    inconveniente bloqueante abierto) > En pruebas (100 %) > En desarrollo
  *    (algo de avance) > Planeado.
- *  - La fecha comprometida la fija el administrador; el programador mueve la
- *    estimada. La diferencia es el retraso.
+ *  - La fecha comprometida (entrega del proyecto) la fija el administrador;
+ *    el programador mueve la estimada. La diferencia es el retraso.
+ *  - El desarrollo está en los meses de su rango: desde PlanMonth (mes en que
+ *    se planeó o al que pasó en el último cierre) hasta que se aprueba. La
+ *    entrega comprometida no puede quedar antes del mes del plan.
+ *  - Cada tarea tiene su fecha de cumplimiento (hito). La meta del mes son
+ *    las tareas que vencen en el mes: si se cumplen todas, la meta queda al
+ *    100 % aunque el proyecto vaya, por ejemplo, al 50 %.
+ *  - Cumplimiento del mes: solo cuentan los desarrollos asignados que tienen
+ *    hitos en el mes, o que tienen requerimiento y su entrega vence en el mes
+ *    (ahí la meta es la entrega aprobada).
+ *  - Al cerrar el mes todos los abiertos pasan al mes siguiente.
  */
 class DevelopmentBoard
 {
@@ -25,6 +35,14 @@ class DevelopmentBoard
         'bloqueado'     => 'Bloqueado',
         'en_pruebas'    => 'En pruebas',
         'terminado'     => 'Terminado',
+    ];
+
+    /** Clasificación del cierre (excluyentes, en este orden). */
+    public const BUCKETS = [
+        'completo'    => 'Completos',
+        'sin_asignar' => 'Sin asignar',
+        'sin_empezar' => 'Sin empezar',
+        'en_curso'    => 'En curso',
     ];
 
     public const MONTHS = [
@@ -49,6 +67,26 @@ class DevelopmentBoard
         return $exists ??= db_connect()->tableExists('Developments');
     }
 
+    /**
+     * ¿Se ejecutó DesarrollosHitosYCierre.sql? (hitos y detalle del cierre).
+     */
+    public static function milestonesAvailable(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= self::available()
+            && db_connect()->fieldExists('DueDate', 'DevelopmentTasks')
+            && db_connect()->tableExists('DevelopmentMonthClosureItems');
+    }
+
+    private static function requirementsAvailable(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= db_connect()->tableExists('TicketFormAnswers')
+            && config('Tickets')->developmentRequirementForms !== [];
+    }
+
     // ------------------------------------------------------------------
     // Consultas
     // ------------------------------------------------------------------
@@ -60,7 +98,15 @@ class DevelopmentBoard
     {
         $sub = static fn (string $sql) => "({$sql})";
 
+        $requirement = '0';
+
+        if (self::requirementsAvailable()) {
+            $forms       = implode(', ', array_map([$this->db, 'escape'], config('Tickets')->developmentRequirementForms));
+            $requirement = "CASE WHEN EXISTS (SELECT 1 FROM TicketFormAnswers fa WHERE fa.IdTicket = d.IdTicket AND fa.FormKey IN ({$forms})) THEN 1 ELSE 0 END";
+        }
+
         return $this->db->table('Developments d')
+            ->select($requirement . ' AS HasRequirement', false)
             ->select('d.*, t.Subject, t.CodCompanies, t.RequesterEmail, t.Status AS TicketStatus, t.IdCategory,
                 c.Companies, cat.Category, u.FullName AS ProgrammerName')
             ->select($sub('SELECT COALESCE(SUM(k.Hours), 0) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment') . ' AS HoursTotal', false)
@@ -102,6 +148,11 @@ class DevelopmentBoard
      * Desarrollos de un mes (o todos si $month es null). $userId limita a
      * los de un programador.
      *
+     * Un desarrollo está en el mes M si se aprobó con PlanMonth = M, o si
+     * sigue abierto y M está en su rango (PlanMonth <= M): mientras no se
+     * entregue aparece en cada mes hasta su entrega y, si se atrasa, en los
+     * siguientes.
+     *
      * @return list<array<string, mixed>>
      */
     public function list(?string $month = null, ?string $userId = null): array
@@ -109,7 +160,14 @@ class DevelopmentBoard
         $builder = $this->builder();
 
         if ($month !== null) {
-            $builder->where('d.PlanMonth', $month);
+            $builder->groupStart()
+                ->where('d.PlanMonth', $month)
+                ->orGroupStart()
+                    ->where('d.ApprovedAt', null)
+                    ->where('d.PlanMonth IS NOT NULL', null, false)
+                    ->where('d.PlanMonth <', $month)
+                ->groupEnd()
+            ->groupEnd();
         }
 
         if ($userId !== null) {
@@ -174,29 +232,172 @@ class DevelopmentBoard
     }
 
     /**
-     * Totales de un mes para los indicadores y el cierre.
+     * Agrega a los desarrollos de un mes la meta del mes (hitos que vencen en
+     * el mes y cuántos están terminados), si cuenta para el cumplimiento y si
+     * lo cumplió, y su clasificación para el cierre.
      *
-     * @param list<array<string, mixed>> $rows Desarrollos del mes
+     * @param list<array<string, mixed>> $rows Desarrollos del mes (list())
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function withMonthGoal(array $rows, string $month): array
+    {
+        $counts = [];
+        $ids    = array_column($rows, 'IdDevelopment');
+
+        if ($ids !== [] && self::milestonesAvailable()) {
+            $result = $this->db->table('DevelopmentTasks')
+                ->select('IdDevelopment, COUNT(*) AS Due, SUM(CASE WHEN DoneAt IS NOT NULL THEN 1 ELSE 0 END) AS Done', false)
+                ->whereIn('IdDevelopment', $ids)
+                ->where('DueDate >=', $month . '-01')
+                ->where('DueDate <=', self::lastDay($month))
+                ->groupBy('IdDevelopment')
+                ->get()
+                ->getResultArray();
+
+            $counts = array_column($result, null, 'IdDevelopment');
+        }
+
+        $last = self::lastDay($month);
+
+        foreach ($rows as &$d) {
+            $c        = $counts[$d['IdDevelopment']] ?? ['Due' => 0, 'Done' => 0];
+            $due      = (int) $c['Due'];
+            $done     = (int) $c['Done'];
+            $assigned = (string) ($d['AssignedUserId'] ?? '') !== '';
+            $finished = $d['State'] === 'terminado';
+            $delivery = $d['CommittedDate'] !== null && $d['CommittedDate'] <= $last;
+
+            $d['MonthDue']  = $due;
+            $d['MonthDone'] = $done;
+            $d['GoalPct']   = null;
+            $d['Eligible']  = false;
+            $d['Met']       = false;
+
+            if ($due > 0) {
+                // Meta del mes = sus hitos del mes.
+                $d['Eligible'] = $assigned;
+                $d['Met']      = $done >= $due;
+                $d['GoalPct']  = (int) floor($done / $due * 100);
+            } elseif ((int) ($d['HasRequirement'] ?? 0) === 1 && ($delivery || $finished)) {
+                // Requerimiento sin hitos: la meta es la entrega aprobada.
+                $d['Eligible'] = $assigned;
+                $d['Met']      = $finished;
+                $d['GoalPct']  = $finished ? 100 : 0;
+            }
+
+            $d['Bucket'] = match (true) {
+                $finished                      => 'completo',
+                ! $assigned                    => 'sin_asignar',
+                (float) $d['HoursDone'] <= 0   => 'sin_empezar',
+                default                        => 'en_curso',
+            };
+        }
+        unset($d);
+
+        return $rows;
+    }
+
+    /**
+     * Estadística de un mes (filas de withMonthGoal()).
+     *
+     * @param list<array<string, mixed>> $rows
      *
      * @return array<string, int>
      */
     public static function summary(array $rows, string $month): array
     {
-        $done    = count(array_filter($rows, static fn ($d) => $d['State'] === 'terminado'));
-        $blocked = count(array_filter($rows, static fn ($d) => $d['State'] === 'bloqueado'));
-        $last    = self::lastDay($month);
-        $late    = count(array_filter($rows, static fn ($d) => $d['State'] !== 'terminado'
-            && (string) ($d['EstimatedDate'] ?: $d['CommittedDate']) > $last));
-        $total   = count($rows);
+        $count = static fn (callable $fn) => count(array_filter($rows, $fn));
+        $last  = self::lastDay($month);
+
+        $total    = count($rows);
+        $eligible = $count(static fn ($d) => $d['Eligible']);
+        $met      = $count(static fn ($d) => $d['Eligible'] && $d['Met']);
+        $due      = array_sum(array_map(static fn ($d) => $d['Eligible'] ? $d['MonthDue'] : 0, $rows));
+        $doneMs   = array_sum(array_map(static fn ($d) => $d['Eligible'] ? $d['MonthDone'] : 0, $rows));
 
         return [
-            'total'   => $total,
-            'done'    => $done,
-            'open'    => $total - $done,
-            'blocked' => $blocked,
-            'late'    => $late,
-            'pct'     => $total > 0 ? (int) round($done / $total * 100) : 0,
+            'total'          => $total,
+            'done'           => $count(static fn ($d) => $d['Bucket'] === 'completo'),
+            'unassigned'     => $count(static fn ($d) => $d['Bucket'] === 'sin_asignar'),
+            'notStarted'     => $count(static fn ($d) => $d['Bucket'] === 'sin_empezar'),
+            'inProgress'     => $count(static fn ($d) => $d['Bucket'] === 'en_curso'),
+            'open'           => $count(static fn ($d) => $d['State'] !== 'terminado'),
+            'blocked'        => $count(static fn ($d) => $d['State'] === 'bloqueado'),
+            'late'           => $count(static fn ($d) => $d['State'] !== 'terminado'
+                && (string) ($d['EstimatedDate'] ?: $d['CommittedDate']) > $last),
+            'eligible'       => $eligible,
+            'met'            => $met,
+            'notMet'         => $eligible - $met,
+            'pct'            => $eligible > 0 ? (int) round($met / $eligible * 100) : 0,
+            'milestonesDue'  => $due,
+            'milestonesDone' => $doneMs,
+            'milestonePct'   => $due > 0 ? (int) round($doneMs / $due * 100) : 0,
         ];
+    }
+
+    /**
+     * Estadística guardada al cerrar un mes, con las mismas llaves de summary().
+     *
+     * @param array<string, mixed> $closure
+     *
+     * @return array<string, int>
+     */
+    public static function closureSummary(array $closure): array
+    {
+        $eligible = (int) ($closure['Eligible'] ?? 0);
+        $met      = (int) ($closure['Met'] ?? 0);
+        $due      = (int) ($closure['MilestonesDue'] ?? 0);
+        $doneMs   = (int) ($closure['MilestonesDone'] ?? 0);
+
+        return [
+            'total'          => (int) $closure['Committed'],
+            'done'           => (int) $closure['Delivered'],
+            'unassigned'     => (int) ($closure['Unassigned'] ?? 0),
+            'notStarted'     => (int) ($closure['NotStarted'] ?? 0),
+            'inProgress'     => (int) ($closure['InProgress'] ?? 0),
+            'open'           => (int) $closure['CarriedOver'],
+            'blocked'        => 0,
+            'late'           => 0,
+            'eligible'       => $eligible,
+            'met'            => $met,
+            'notMet'         => $eligible - $met,
+            'pct'            => $eligible > 0 ? (int) round($met / $eligible * 100) : 0,
+            'milestonesDue'  => $due,
+            'milestonesDone' => $doneMs,
+            'milestonePct'   => $due > 0 ? (int) round($doneMs / $due * 100) : 0,
+        ];
+    }
+
+    /**
+     * Detalle por desarrollo guardado en el cierre de un mes.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function closureItems(string $month): array
+    {
+        if (! self::milestonesAvailable()) {
+            return [];
+        }
+
+        $rows = $this->db->table('DevelopmentMonthClosureItems')
+            ->where('PlanMonth', $month)
+            ->orderBy('IdDevelopment')
+            ->get()
+            ->getResultArray();
+
+        return array_map(static function (array $r): array {
+            $r['Code']          = self::code((int) $r['IdDevelopment']);
+            $r['Progress']      = (int) $r['ProjectPct'];
+            $r['MonthDue']      = (int) $r['MilestonesDue'];
+            $r['MonthDone']     = (int) $r['MilestonesDone'];
+            $r['Eligible']      = (bool) $r['Eligible'];
+            $r['Met']           = (bool) $r['Met'];
+            $r['GoalPct']       = $r['GoalPct'] === null ? null : (int) $r['GoalPct'];
+            $r['CommittedDate'] = self::dateOnly($r['CommittedDate']);
+
+            return $r;
+        }, $rows);
     }
 
     /**
@@ -225,6 +426,7 @@ class DevelopmentBoard
 
         $row['Progress'] = $total > 0 ? (int) round($done / $total * 100) : 0;
         $row['Code']     = self::code((int) $row['IdDevelopment']);
+        $row['HasRequirement'] = (int) ($row['HasRequirement'] ?? 0);
         $row['DelayDays'] = 0;
 
         $committed = self::dateOnly($row['CommittedDate'] ?? null);
@@ -324,7 +526,7 @@ class DevelopmentBoard
         return (int) (new \DateTimeImmutable($from))->diff(new \DateTimeImmutable($to))->format('%r%a');
     }
 
-    private static function dateOnly(mixed $value): ?string
+    public static function dateOnly(mixed $value): ?string
     {
         return $value === null || $value === '' ? null : substr((string) $value, 0, 10);
     }

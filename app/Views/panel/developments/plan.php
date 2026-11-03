@@ -32,38 +32,13 @@ $next    = Board::shiftMonth($month, 1);
     </div>
 </div>
 
-<section class="dev-kpis">
-    <div class="card kpi">
-        <div class="kpi-head"><span>Comprometidos</span></div>
-        <div class="kpi-value"><?= $summary['total'] ?></div>
-        <div class="kpi-foot">en el plan del mes</div>
-    </div>
-    <div class="card kpi">
-        <div class="kpi-head"><span>Terminados</span></div>
-        <div class="kpi-value dev-good"><?= $summary['done'] ?></div>
-        <div class="kpi-foot">aprobados por el administrador</div>
-    </div>
-    <div class="card kpi">
-        <div class="kpi-head"><span>En curso</span></div>
-        <div class="kpi-value"><?= $summary['open'] ?></div>
-        <div class="kpi-foot"><?= $summary['blocked'] ?> bloqueado<?= $summary['blocked'] === 1 ? '' : 's' ?></div>
-    </div>
-    <div class="card kpi">
-        <div class="kpi-head"><span>Pasarían al próximo mes</span></div>
-        <div class="kpi-value dev-warn"><?= $summary['late'] ?></div>
-        <div class="kpi-foot">entrega después del <?= Board::formatDate(Board::lastDay($month)) ?></div>
-    </div>
-    <div class="card kpi">
-        <div class="kpi-head"><span>Cumplimiento</span></div>
-        <div class="kpi-value"><?= $summary['pct'] ?>%</div>
-        <div class="dev-progress <?= $summary['pct'] === 100 ? 'is-done' : '' ?>"><span style="width: <?= $summary['pct'] ?>%"></span></div>
-    </div>
-</section>
+<?= view('panel/developments/_kpis', ['summary' => $summary, 'month' => $month, 'closed' => false]) ?>
 
 <?php if ($closure !== null): ?>
     <div class="dev-note" style="margin-top:16px">
         <?= esc(Board::monthName($closure['PlanMonth'])) ?> se cerró el <?= format_date($closure['ClosedAt'], 'd/m/Y') ?>:
-        <?= (int) $closure['Delivered'] ?> de <?= (int) $closure['Committed'] ?> realizados y
+        <?= (int) $closure['Delivered'] ?> de <?= (int) $closure['Committed'] ?> completos,
+        cumplimiento <?= Board::closureSummary($closure)['pct'] ?>% y
         <?= (int) $closure['CarriedOver'] ?> pendiente<?= (int) $closure['CarriedOver'] === 1 ? '' : 's' ?> pasaron a <?= esc(Board::monthName(Board::shiftMonth($closure['PlanMonth'], 1))) ?>.
     </div>
 <?php endif ?>
@@ -74,7 +49,7 @@ $next    = Board::shiftMonth($month, 1);
             <div class="card-head" style="padding:20px 20px 0">
                 <div>
                     <h2>Desarrollos del mes</h2>
-                    <p class="muted">Avance calculado con las horas de las tareas terminadas.</p>
+                    <p class="muted">Meta del mes: tareas con fecha de cumplimiento en el mes. Proyecto: horas de todas las tareas terminadas.</p>
                 </div>
             </div>
 
@@ -92,7 +67,8 @@ $next    = Board::shiftMonth($month, 1);
                                 <th>Desarrollo</th>
                                 <th>Programador</th>
                                 <th>Estado</th>
-                                <th>Avance</th>
+                                <th>Meta del mes</th>
+                                <th>Proyecto</th>
                                 <th>Entrega</th>
                                 <?php if ($isAdmin): ?><th></th><?php endif ?>
                             </tr>
@@ -107,6 +83,7 @@ $next    = Board::shiftMonth($month, 1);
                                     </td>
                                     <td><?= esc($d['ProgrammerName'] ?? 'Sin asignar') ?></td>
                                     <td><div><?= dev_state_badge($d) ?></div></td>
+                                    <td><?= dev_goal($d) ?></td>
                                     <td><?= dev_progress($d) ?></td>
                                     <td class="mono">
                                         <?= Board::formatDate($d['CommittedDate']) ?>
@@ -135,7 +112,7 @@ $next    = Board::shiftMonth($month, 1);
     <?php if ($isAdmin): ?>
         <aside class="card">
             <h2>Por planear</h2>
-            <p class="dev-sub">Tickets de desarrollo sin mes. Al agregarlo, el programador queda como responsable del ticket.</p>
+            <p class="dev-sub">Tickets de desarrollo sin mes. Al agregarlo, el programador queda como responsable del ticket. La entrega puede quedar en este mes o en uno posterior: el desarrollo aparece en cada mes hasta su entrega.</p>
 
             <?php if ($closedMonth): ?>
                 <p class="muted small">Este mes ya está cerrado. Planea en <a href="<?= site_url('panel/desarrollos?mes=' . $next) ?>"><?= esc(Board::monthName($next)) ?></a>.</p>
@@ -162,8 +139,8 @@ $next    = Board::shiftMonth($month, 1);
                                             <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= (string) ($b['AssignedUserId'] ?? '') === (string) $a['IdUser'] ? 'selected' : '' ?>><?= esc($a['FullName']) ?></option>
                                         <?php endforeach ?>
                                     </select>
-                                    <input type="date" name="CommittedDate" class="input" id="due-<?= $key ?>" required aria-label="Fecha comprometida"
-                                           value="<?= Board::lastDay($month) ?>">
+                                    <input type="date" name="CommittedDate" class="input" id="due-<?= $key ?>" required aria-label="Entrega del proyecto"
+                                           min="<?= $month ?>-01" value="<?= Board::lastDay($month) ?>" title="Entrega del proyecto: en este mes o en uno posterior">
                                 </div>
                                 <button type="submit" class="btn btn-primary btn-sm">Agregar a <?= esc(Board::monthName($month)) ?></button>
                             </form>

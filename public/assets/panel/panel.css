@@ -936,10 +936,12 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .dev-progress-row .dev-progress { flex: 1; }
 .dev-progress-row b { font-variant-numeric: tabular-nums; min-width: 38px; text-align: right; font-size: 13px; }
 
-.dev-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.dev-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; }
 .dev-kpis .kpi-value { font-size: 28px; }
 .dev-kpis .dev-good { color: var(--good-text); }
 .dev-kpis .dev-warn { color: var(--warning-text); }
+.dev-good { color: var(--good-text); font-weight: 600; }
+.dev-warn { color: var(--warning-text); font-weight: 600; }
 .month-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .month-nav strong { min-width: 130px; text-align: center; }
 .dev-note { background: var(--info-soft); color: var(--info-text); border-radius: 12px; padding: 10px 14px; font-size: 13px; }
@@ -966,6 +968,14 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .dev-check[disabled] { cursor: default; opacity: .7; }
 .dev-inline { display: grid; grid-template-columns: minmax(0, 1fr) 96px auto; gap: 8px; margin-top: 14px; }
 .dev-inline .input { min-width: 0; }
+.dev-inline-task { grid-template-columns: minmax(0, 1fr) 150px 96px auto; }
+.dev-goal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.dev-tasks .task-main { min-width: 0; display: grid; gap: 4px; }
+.dev-tasks .task-due { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12px; }
+.task-date-edit summary { list-style: none; cursor: pointer; }
+.task-date-edit summary::-webkit-details-marker { display: none; }
+.task-date-edit form { display: flex; gap: 6px; margin-top: 6px; }
+.task-date-edit .input { width: auto; }
 
 .dev-issues { display: flex; flex-direction: column; gap: 10px; }
 .dev-issue { border: 1px solid var(--border); border-left: 4px solid var(--warning); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 4px; }
@@ -1014,7 +1024,8 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 @media (max-width: 640px) {
     .dev-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dev-dates { grid-template-columns: minmax(0, 1fr); }
-    .dev-inline { grid-template-columns: minmax(0, 1fr) 80px; }
+    .dev-inline, .dev-inline-task { grid-template-columns: minmax(0, 1fr) 80px; }
+    .dev-inline-task .input[type=date] { grid-column: 1 / -1; }
     .dev-inline .btn { grid-column: 1 / -1; }
     .dev-backlog .row2 { grid-template-columns: minmax(0, 1fr); }
     .dev-bar-row { grid-template-columns: 100px minmax(0, 1fr) 56px; }

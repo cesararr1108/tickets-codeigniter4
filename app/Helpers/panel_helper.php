@@ -206,6 +206,7 @@ if (! function_exists('icon')) {
             'arrow-left'=> '<path d="M19 12H5M11 18l-6-6 6-6"/>',
             'chat'      => '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>',
             'building'  => '<rect x="4" y="3" width="16" height="18" rx="1.5"/><path d="M9 7h1M14 7h1M9 11h1M14 11h1M9 15h1M14 15h1M10 21v-3h4v3"/>',
+            'download'  => '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 21h16"/>',
             'code'      => '<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>',
             'lock'      => '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
             'edit'      => '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
@@ -323,5 +324,29 @@ if (! function_exists('dev_progress')) {
         $class = $dev['State'] === 'terminado' ? 'is-done' : ($dev['State'] === 'bloqueado' ? 'is-blocked' : '');
 
         return '<div class="dev-progress-row"><div class="dev-progress ' . $class . '"><span style="width: ' . $pct . '%"></span></div><b>' . $pct . '%</b></div>';
+    }
+}
+
+if (! function_exists('dev_goal')) {
+    /**
+     * Meta del mes de un desarrollo (DevelopmentBoard::withMonthGoal()):
+     * hitos cumplidos del mes y si cuenta para el cumplimiento.
+     */
+    function dev_goal(array $dev): string
+    {
+        if ($dev['GoalPct'] === null) {
+            return '<span class="muted small">Sin hitos en el mes</span>';
+        }
+
+        $pct    = (int) $dev['GoalPct'];
+        $detail = (int) $dev['MonthDue'] > 0
+            ? (int) $dev['MonthDone'] . ' de ' . (int) $dev['MonthDue'] . ' hitos'
+            : 'entrega (requerimiento)';
+        $tag    = ! $dev['Eligible']
+            ? '<span class="muted">sin asignar · no cuenta</span>'
+            : ($dev['Met'] ? '<span class="dev-good">cumplido</span>' : '<span class="dev-warn">no cumplido</span>');
+
+        return '<div class="dev-progress-row"><div class="dev-progress ' . ($dev['Met'] ? 'is-done' : '') . '"><span style="width: ' . $pct . '%"></span></div><b>' . $pct . '%</b></div>'
+            . '<div class="small muted">' . esc($detail) . ' · ' . $tag . '</div>';
     }
 }

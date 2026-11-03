@@ -78,6 +78,15 @@ class Tickets extends BaseConfig
     public array $developmentCategories = ['Desarrollo'];
 
     /**
+     * Formularios del widget (TicketFormAnswers.FormKey) que hacen que un
+     * desarrollo "tenga requerimiento": aunque no tenga hitos en el mes,
+     * cuenta para el cumplimiento del mes en que vence su entrega.
+     *
+     * @var list<string>
+     */
+    public array $developmentRequirementForms = ['requerimiento'];
+
+    /**
      * Campos que llena el área de TI desde el panel (el solicitante no los
      * ve en el widget), por formulario (TicketFormAnswers.FormKey).
      * Se guardan en TicketFormAnswers junto a las respuestas del formulario.

@@ -10,3 +10,6 @@ writable/uploads/*
 # Credenciales de Firebase (nunca versionar la llave privada)
 writable/credentials/
 *firebase-adminsdk*.json
+
+# Configuración local con credenciales (copiar desde el archivo "env")
+.env

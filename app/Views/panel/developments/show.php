@@ -12,6 +12,7 @@
  * @var list<array> $issues
  * @var list<array> $evidence
  * @var list<array> $agents
+ * @var array $goal Desarrollo con la meta del mes del plan (withMonthGoal)
  */
 use App\Libraries\DevelopmentBoard as Board;
 
@@ -22,6 +23,9 @@ $hoursAll  = array_sum(array_map(static fn ($t) => (float) $t['Hours'], $tasks))
 $hoursDone = array_sum(array_map(static fn ($t) => $t['DoneAt'] !== null ? (float) $t['Hours'] : 0, $tasks));
 $hours     = static fn ($h) => rtrim(rtrim(number_format((float) $h, 1, ',', ''), '0'), ',');
 $pendingRes = count(array_filter($resources, static fn ($r) => $r['ReadyAt'] === null));
+$today     = Board::today();
+$minDue    = $dev['PlanMonth'] !== null ? $dev['PlanMonth'] . '-01' : '';
+$maxDue    = $dev['CommittedDate'] ?? '';
 $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysBetween(Board::today(), $dev['EstimatedDate'])) : null;
 ?>
 <a class="back-link" href="<?= site_url('panel/desarrollos' . ($dev['PlanMonth'] ? '?mes=' . $dev['PlanMonth'] : '')) ?>"><?= icon('arrow-left') ?> Plan del mes</a>
@@ -60,12 +64,23 @@ $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysB
             <div class="card-head">
                 <div>
                     <h2>Qué se va a hacer</h2>
-                    <p class="muted">El programador divide el desarrollo en tareas con horas estimadas.</p>
+                    <p class="muted">Tareas con horas y fecha de cumplimiento (hito). La meta de cada mes son las tareas que vencen en él.</p>
                 </div>
                 <span class="muted small"><?= $hours($hoursDone) ?> de <?= $hours($hoursAll) ?> h</span>
             </div>
 
-            <?= dev_progress($dev) ?>
+            <div class="dev-goal-grid">
+                <div>
+                    <span class="muted small">Avance del proyecto</span>
+                    <?= dev_progress($dev) ?>
+                </div>
+                <?php if ($dev['PlanMonth'] !== null && ! $approved): ?>
+                    <div>
+                        <span class="muted small">Meta de <?= esc(Board::monthName($dev['PlanMonth'])) ?></span>
+                        <?= dev_goal($goal) ?>
+                    </div>
+                <?php endif ?>
+            </div>
 
             <?php if ($tasks === []): ?>
                 <p class="empty" style="margin-top:12px">Aún no hay tareas. El programador debe registrar el plan de trabajo.</p>
@@ -78,7 +93,30 @@ $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysB
                                 <button type="submit" class="dev-check <?= $done ? 'is-on' : '' ?>" <?= $canWork ? '' : 'disabled' ?>
                                         aria-label="<?= $done ? 'Marcar como pendiente' : 'Marcar como terminada' ?>"><?= $done ? icon('check') : '' ?></button>
                             </form>
-                            <span class="task-text"><?= esc($t['Description']) ?></span>
+                            <div class="task-main">
+                                <span class="task-text"><?= esc($t['Description']) ?></span>
+                                <div class="task-due">
+                                    <?php if ($t['DueDate'] === null): ?>
+                                        <span class="chip chip-late">Sin fecha de cumplimiento</span>
+                                    <?php else: $late = $done === false && Board::dateOnly($t['DueDate']) < $today; ?>
+                                        <span class="<?= $late ? 'dev-warn' : 'muted' ?>">Cumple <?= Board::formatDate($t['DueDate']) ?></span>
+                                    <?php endif ?>
+                                    <?php if (! empty($t['CarriedFromMonth'])): ?>
+                                        <span class="chip chip-carry" title="Fecha original <?= Board::formatDate($t['OriginalDueDate']) ?>">Pasó de <?= esc(Board::monthName($t['CarriedFromMonth'])) ?></span>
+                                    <?php endif ?>
+                                    <?php if ($canWork && ! $done): ?>
+                                        <details class="task-date-edit">
+                                            <summary class="link-btn small">Cambiar fecha</summary>
+                                            <form method="post" action="<?= $base . '/tareas/' . $t['IdTask'] . '/fecha' ?>">
+                                                <?= csrf_field() ?>
+                                                <input type="date" class="input" name="DueDate" required min="<?= $minDue ?>" max="<?= $maxDue ?>"
+                                                       value="<?= esc(Board::dateOnly($t['DueDate']) ?? '', 'attr') ?>" aria-label="Fecha de cumplimiento">
+                                                <button type="submit" class="btn btn-outline btn-sm">Guardar</button>
+                                            </form>
+                                        </details>
+                                    <?php endif ?>
+                                </div>
+                            </div>
                             <span class="task-hours"><?= $hours($t['Hours']) ?> h</span>
                             <?php if ($canWork): ?>
                                 <form method="post" action="<?= $base . '/tareas/' . $t['IdTask'] . '/eliminar' ?>" data-confirm="¿Quitar la tarea &quot;<?= esc($t['Description'], 'attr') ?>&quot;?">
@@ -94,9 +132,10 @@ $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysB
             <?php endif ?>
 
             <?php if ($canWork): ?>
-                <form class="dev-inline" method="post" action="<?= $base . '/tareas' ?>">
+                <form class="dev-inline dev-inline-task" method="post" action="<?= $base . '/tareas' ?>">
                     <?= csrf_field() ?>
                     <input class="input" name="Description" id="task-text" maxlength="255" required placeholder="Nueva tarea (ej. Pruebas con el usuario)" aria-label="Tarea">
+                    <input class="input" name="DueDate" id="task-due" type="date" required min="<?= $minDue ?>" max="<?= $maxDue ?>" aria-label="Fecha de cumplimiento" title="Fecha de cumplimiento (hito)">
                     <input class="input" name="Hours" id="task-hours" type="number" min="0.5" max="999" step="0.5" required placeholder="Horas" aria-label="Horas">
                     <button type="submit" class="btn btn-outline">Agregar</button>
                 </form>
@@ -181,7 +220,7 @@ $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysB
             <h2>Responsable y entrega</h2>
 
             <div class="dev-dates">
-                <div><span class="k">Comprometida</span><span class="v"><?= Board::formatDate($dev['CommittedDate']) ?></span></div>
+                <div><span class="k">Entrega del proyecto</span><span class="v"><?= Board::formatDate($dev['CommittedDate']) ?></span></div>
                 <div><span class="k">Estimada</span><span class="v <?= $dev['DelayDays'] > 0 ? 'late' : '' ?>"><?= Board::formatDate($dev['EstimatedDate']) ?></span></div>
                 <div><span class="k">Faltan</span><span class="v"><?= $daysLeft === null ? '—' : $daysLeft . ' días' ?></span></div>
             </div>
@@ -200,8 +239,8 @@ $daysLeft  = $dev['EstimatedDate'] !== null && ! $approved ? max(0, Board::daysB
                             </select>
                         </label>
                         <label class="field">
-                            <span class="field-label">Fecha comprometida</span>
-                            <input type="date" name="CommittedDate" id="dev-committed" class="input" value="<?= esc($dev['CommittedDate'] ?? '', 'attr') ?>">
+                            <span class="field-label">Entrega del proyecto (comprometida)</span>
+                            <input type="date" name="CommittedDate" id="dev-committed" class="input" min="<?= $minDue ?>" value="<?= esc($dev['CommittedDate'] ?? '', 'attr') ?>">
                         </label>
                     <?php else: ?>
                         <p class="small" style="margin:0 0 12px">Programador: <strong><?= esc($dev['ProgrammerName'] ?? 'Sin asignar') ?></strong></p>

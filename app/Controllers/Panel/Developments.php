@@ -42,7 +42,7 @@ class Developments extends BasePanelController
 
         $month   = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
         $isAdmin = panel_is_admin();
-        $all     = $this->board()->list($month);
+        $all     = $this->board()->withMonthGoal($this->board()->list($month), $month);
 
         return $this->render('developments/plan', [
             'active'   => 'developments',
@@ -96,11 +96,12 @@ class Developments extends BasePanelController
             'dev'       => $dev,
             'canWork'   => DevelopmentBoard::canWork($dev),
             'isAdmin'   => panel_is_admin(),
-            'tasks'     => $db->table('DevelopmentTasks')->where('IdDevelopment', $id)->orderBy('IdTask')->get()->getResultArray(),
+            'tasks'     => $db->table('DevelopmentTasks')->where('IdDevelopment', $id)->orderBy('DueDate')->orderBy('IdTask')->get()->getResultArray(),
             'resources' => $db->table('DevelopmentResources')->where('IdDevelopment', $id)->orderBy('IdResource')->get()->getResultArray(),
             'issues'    => $db->table('DevelopmentIssues')->where('IdDevelopment', $id)->orderBy('IdIssue', 'DESC')->get()->getResultArray(),
             'evidence'  => $db->table('DevelopmentEvidence')->where('IdDevelopment', $id)->orderBy('IdEvidence')->get()->getResultArray(),
             'agents'    => $this->lookups()['agents'],
+            'goal'      => $this->board()->withMonthGoal([$dev], $dev['PlanMonth'] ?? DevelopmentBoard::currentMonth())[0],
         ]);
     }
 
@@ -124,6 +125,12 @@ class Developments extends BasePanelController
 
         if ($month === null || $committed === null) {
             return redirect()->back()->with('error', 'Indica el mes y la fecha de entrega comprometida.');
+        }
+
+        // El desarrollo va en un mes dentro de su rango de entrega.
+        if ($committed < $month . '-01') {
+            return redirect()->back()->with('error', 'La entrega comprometida (' . DevelopmentBoard::formatDate($committed)
+                . ') no puede ser antes de ' . DevelopmentBoard::monthName($month) . '. Planea el desarrollo en el mes de su entrega o antes.');
         }
 
         if ($userId === '' || $db->table('Users')->where('IdUser', $userId)->countAllResults() === 0) {
@@ -210,6 +217,10 @@ class Developments extends BasePanelController
         if (panel_is_admin()) {
             $committed = $this->request->getPost('CommittedDate');
             if ($committed !== null && ($committed = DevelopmentBoard::validDate($committed)) !== null) {
+                if ($dev['PlanMonth'] !== null && $committed < $dev['PlanMonth'] . '-01') {
+                    return $this->back($id, 'La entrega comprometida no puede ser antes de ' . DevelopmentBoard::monthName($dev['PlanMonth']) . ', el mes del plan.', false);
+                }
+
                 $data['CommittedDate'] = $committed;
             }
 
@@ -250,7 +261,7 @@ class Developments extends BasePanelController
      */
     public function addTask(int $id)
     {
-        [, $error] = $this->workable($id);
+        [$dev, $error] = $this->workable($id);
 
         if ($error) {
             return $error;
@@ -263,13 +274,81 @@ class Developments extends BasePanelController
             return $this->back($id, 'Escribe la tarea y sus horas estimadas (mayor que 0).', false);
         }
 
-        db_connect()->table('DevelopmentTasks')->insert([
+        $data = [
             'IdDevelopment' => $id,
             'Description'   => $text,
             'Hours'         => $hours,
-        ]);
+        ];
+
+        if (DevelopmentBoard::milestonesAvailable()) {
+            [$due, $dueError] = $this->dueDate($dev);
+
+            if ($dueError !== null) {
+                return $this->back($id, $dueError, false, 'tareas');
+            }
+
+            $data['DueDate'] = $due;
+        }
+
+        db_connect()->table('DevelopmentTasks')->insert($data);
 
         return $this->back($id, 'Tarea agregada.', true, 'tareas');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/tareas/{task}/fecha
+     * Cambia la fecha de cumplimiento (hito) de una tarea.
+     */
+    public function taskDate(int $id, int $taskId)
+    {
+        [$dev, $error] = $this->workable($id);
+
+        if ($error) {
+            return $error;
+        }
+
+        if (! DevelopmentBoard::milestonesAvailable()) {
+            return $this->back($id, 'Falta ejecutar app/Database/sql/DesarrollosHitosYCierre.sql.', false);
+        }
+
+        [$due, $dueError] = $this->dueDate($dev);
+
+        if ($dueError !== null) {
+            return $this->back($id, $dueError, false, 'tareas');
+        }
+
+        db_connect()->table('DevelopmentTasks')
+            ->where('IdTask', $taskId)->where('IdDevelopment', $id)
+            ->update(['DueDate' => $due]);
+
+        return $this->back($id, 'Fecha de cumplimiento actualizada.', true, 'tareas');
+    }
+
+    /**
+     * Fecha de cumplimiento de una tarea (POST DueDate): obligatoria, desde
+     * el mes del plan y no después de la entrega del proyecto.
+     *
+     * @param array<string, mixed> $dev
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function dueDate(array $dev): array
+    {
+        $due = DevelopmentBoard::validDate($this->request->getPost('DueDate'));
+
+        if ($due === null) {
+            return [null, 'Indica la fecha de cumplimiento de la tarea.'];
+        }
+
+        if ($dev['PlanMonth'] !== null && $due < $dev['PlanMonth'] . '-01') {
+            return [null, 'La fecha de cumplimiento no puede ser antes de ' . DevelopmentBoard::monthName($dev['PlanMonth']) . ', el mes del plan.'];
+        }
+
+        if ($dev['CommittedDate'] !== null && $due > $dev['CommittedDate']) {
+            return [null, 'La fecha de cumplimiento no puede pasar la entrega del proyecto (' . DevelopmentBoard::formatDate($dev['CommittedDate']) . ').'];
+        }
+
+        return [$due, null];
     }
 
     /**
@@ -551,6 +630,7 @@ class Developments extends BasePanelController
 
     /**
      * GET /panel/desarrollos/cierre?mes=AAAA-MM
+     * Antes del cierre muestra la estadística en vivo; después, la guardada.
      */
     public function closing()
     {
@@ -558,32 +638,14 @@ class Developments extends BasePanelController
             return $missing;
         }
 
-        $month   = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
-        $closure = $this->board()->closure($month);
+        $month = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
+        [$closure, $rows, $summary] = $this->monthData($month);
 
-        // Si el mes ya se cerró, sus pendientes están en el mes siguiente.
-        $rows    = $this->board()->list($month);
-        $carried = $closure !== null ? $this->board()->carriedFrom($month) : [];
-        $all     = array_merge($rows, $carried);
         $done    = array_values(array_filter($rows, static fn ($d) => $d['State'] === 'terminado'));
-        $pending = $closure !== null ? $carried : array_values(array_filter($rows, static fn ($d) => $d['State'] !== 'terminado'));
-        $summary = DevelopmentBoard::summary($rows, $month);
+        $pending = array_values(array_filter($rows, static fn ($d) => $d['State'] !== 'terminado'));
 
-        if ($closure !== null) {
-            $total   = (int) $closure['Committed'];
-            $summary = [
-                'total' => $total,
-                'done'  => (int) $closure['Delivered'],
-                'open'  => (int) $closure['CarriedOver'],
-                'pct'   => $total > 0 ? (int) round((int) $closure['Delivered'] / $total * 100) : 0,
-            ] + $summary;
-        }
-
-        $db     = db_connect();
-        $ids    = array_column($all, 'IdDevelopment');
-        $issues = $ids === [] ? [] : $db->table('DevelopmentIssues i')
-            ->select('i.*, d.IdDevelopment')
-            ->join('Developments d', 'd.IdDevelopment = i.IdDevelopment')
+        $ids    = array_column($rows, 'IdDevelopment');
+        $issues = $ids === [] ? [] : db_connect()->table('DevelopmentIssues i')
             ->whereIn('i.IdDevelopment', $ids)
             ->orderBy('i.CreatedAt', 'DESC')
             ->get()
@@ -597,14 +659,89 @@ class Developments extends BasePanelController
             'summary'  => $summary,
             'done'     => $done,
             'pending'  => $pending,
-            'all'      => $all,
+            'all'      => $rows,
             'issues'   => $issues,
         ]);
     }
 
     /**
+     * GET /panel/desarrollos/cierre/reporte?mes=AAAA-MM
+     * Reporte del mes en CSV (se abre en Excel): estadística y detalle.
+     */
+    public function report()
+    {
+        if ($missing = $this->missingTables()) {
+            return $missing;
+        }
+
+        $month = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
+        [$closure, $rows, $s] = $this->monthData($month);
+
+        if (! panel_is_admin()) {
+            $rows = array_values(array_filter($rows, static fn ($d) => (string) ($d['AssignedUserId'] ?? '') === panel_user_id()));
+        }
+
+        $out = fopen('php://temp', 'w+b');
+        $put = static fn (array $line) => fputcsv($out, $line, ';', '"', '');
+
+        $put(['Reporte de desarrollos', DevelopmentBoard::monthName($month)]);
+        $put(['Estado del mes', $closure !== null
+            ? 'Cerrado el ' . format_date($closure['ClosedAt'], 'd/m/Y') . ' por ' . $closure['ClosedByName']
+            : 'Abierto (cifras al ' . DevelopmentBoard::formatDate(DevelopmentBoard::today()) . ')']);
+        $put([]);
+        $put(['Desarrollos del mes', $s['total']]);
+        $put(['Completos', $s['done']]);
+        $put(['Sin asignar', $s['unassigned']]);
+        $put(['Sin empezar', $s['notStarted']]);
+        $put(['En curso', $s['inProgress']]);
+        $put([$closure !== null ? 'Pasaron al mes siguiente' : 'Pasan al mes siguiente', $s['open']]);
+        $put([]);
+        $put(['Cuentan para el cumplimiento (asignados con hitos en el mes o con requerimiento)', $s['eligible']]);
+        $put(['Cumplieron la meta del mes', $s['met']]);
+        $put(['No cumplieron', $s['notMet']]);
+        $put(['Cumplimiento del mes (%)', $s['pct']]);
+        $put(['Hitos del mes cumplidos', $s['milestonesDone'] . ' de ' . $s['milestonesDue']]);
+        $put([]);
+        $put(['Desarrollo', 'Ticket', 'Compañía', 'Asunto', 'Programador', 'Clasificación', 'Estado', 'Entrega comprometida',
+            'Hitos del mes', 'Hitos cumplidos', 'Meta del mes (%)', 'Avance del proyecto (%)', 'Requerimiento',
+            'Cuenta para cumplimiento', 'Cumplió', 'Pasa al mes siguiente']);
+
+        foreach ($rows as $d) {
+            $put([
+                $d['Code'],
+                ticket_code((int) $d['IdTicket']),
+                $d['CodCompanies'] ?? '',
+                $d['Subject'] ?? '',
+                $d['ProgrammerName'] ?? 'Sin asignar',
+                DevelopmentBoard::BUCKETS[$d['Bucket']] ?? $d['Bucket'],
+                DevelopmentBoard::STATES[$d['State']] ?? $d['State'],
+                DevelopmentBoard::formatDate($d['CommittedDate']),
+                $d['MonthDue'],
+                $d['MonthDone'],
+                $d['GoalPct'] ?? '',
+                $d['Progress'],
+                (int) $d['HasRequirement'] === 1 ? 'Sí' : 'No',
+                $d['Eligible'] ? 'Sí' : 'No',
+                $d['Eligible'] ? ($d['Met'] ? 'Sí' : 'No') : '',
+                $d['State'] !== 'terminado' ? 'Sí' : 'No',
+            ]);
+        }
+
+        rewind($out);
+        $csv = "\xEF\xBB\xBF" . stream_get_contents($out);
+        fclose($out);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="desarrollos-' . $month . '.csv"')
+            ->setBody($csv);
+    }
+
+    /**
      * POST /panel/desarrollos/cierre
-     * Registra el cierre del mes y pasa los pendientes al mes siguiente.
+     * Guarda la estadística y el detalle del mes y pasa TODOS los abiertos al
+     * mes siguiente. Las tareas vencidas sin terminar pasan con fecha al fin
+     * del mes siguiente (se guarda la original).
      */
     public function closeMonth()
     {
@@ -614,43 +751,111 @@ class Developments extends BasePanelController
             return redirect()->back()->with('error', 'Solo el administrador cierra el mes.');
         }
 
+        if ($missing = $this->missingTables()) {
+            return $missing;
+        }
+
         if ($this->board()->closure($month) !== null) {
             return redirect()->back()->with('error', DevelopmentBoard::monthName($month) . ' ya está cerrado.');
         }
 
-        $rows    = $this->board()->list($month);
+        // Los meses se cierran en orden: si quedan abiertos de un mes anterior
+        // sin cerrar, ese mes va primero.
+        $older = db_connect()->table('Developments')
+            ->select('MIN(PlanMonth) AS M', false)
+            ->where('ApprovedAt', null)
+            ->where('PlanMonth <', $month)
+            ->get()->getRowArray()['M'] ?? null;
+
+        if ($older !== null) {
+            return redirect()->back()->with('error', 'Primero cierra ' . DevelopmentBoard::monthName($older) . ': tiene desarrollos abiertos sin cerrar.');
+        }
+
+        $rows    = $this->board()->withMonthGoal($this->board()->list($month), $month);
         $summary = DevelopmentBoard::summary($rows, $month);
+        $last    = DevelopmentBoard::lastDay($month);
         $next    = DevelopmentBoard::shiftMonth($month, 1);
         $nextEnd = DevelopmentBoard::lastDay($next);
         $db      = db_connect();
 
         $db->transStart();
 
+        // 1. Estadística del mes.
+        $db->table('DevelopmentMonthClosures')->insert([
+            'PlanMonth'      => $month,
+            'Committed'      => $summary['total'],
+            'Delivered'      => $summary['done'],
+            'CarriedOver'    => $summary['open'],
+            'Unassigned'     => $summary['unassigned'],
+            'NotStarted'     => $summary['notStarted'],
+            'InProgress'     => $summary['inProgress'],
+            'Eligible'       => $summary['eligible'],
+            'Met'            => $summary['met'],
+            'MilestonesDue'  => $summary['milestonesDue'],
+            'MilestonesDone' => $summary['milestonesDone'],
+            'ClosedBy'       => panel_user_id(),
+            'ClosedByName'   => mb_substr((string) ($this->user['name'] ?? panel_user_id()), 0, 150),
+        ]);
+
         foreach ($rows as $dev) {
-            if ($dev['State'] === 'terminado') {
+            $open = $dev['State'] !== 'terminado';
+
+            // 2. Detalle para el reporte.
+            $db->table('DevelopmentMonthClosureItems')->insert([
+                'PlanMonth'      => $month,
+                'IdDevelopment'  => $dev['IdDevelopment'],
+                'IdTicket'       => $dev['IdTicket'],
+                'Subject'        => mb_substr((string) $dev['Subject'], 0, 255),
+                'CodCompanies'   => $dev['CodCompanies'],
+                'AssignedUserId' => $dev['AssignedUserId'],
+                'ProgrammerName' => $dev['ProgrammerName'] !== null ? mb_substr((string) $dev['ProgrammerName'], 0, 150) : null,
+                'State'          => $dev['State'],
+                'Bucket'         => $dev['Bucket'],
+                'CommittedDate'  => $dev['CommittedDate'],
+                'MilestonesDue'  => $dev['MonthDue'],
+                'MilestonesDone' => $dev['MonthDone'],
+                'HasRequirement' => (int) $dev['HasRequirement'],
+                'Eligible'       => $dev['Eligible'] ? 1 : 0,
+                'Met'            => $dev['Met'] ? 1 : 0,
+                'GoalPct'        => $dev['GoalPct'],
+                'ProjectPct'     => $dev['Progress'],
+                'CarriedOver'    => $open ? 1 : 0,
+                'ApprovedAt'     => $dev['ApprovedAt'],
+            ]);
+
+            if (! $open) {
                 continue;
             }
 
-            // La nueva fecha comprometida es la estimada si cae después del mes cerrado.
-            $estimate  = $dev['EstimatedDate'];
-            $committed = $estimate !== null && $estimate > DevelopmentBoard::lastDay($month) ? $estimate : $nextEnd;
+            // 3. Todos los abiertos pasan al mes siguiente. Si la entrega ya
+            //    venció, la nueva fecha es la estimada o el fin del mes siguiente.
+            $data = ['PlanMonth' => $next];
 
-            $db->table('Developments')->where('IdDevelopment', $dev['IdDevelopment'])->update([
-                'PlanMonth'        => $next,
-                'CarriedFromMonth' => $month,
-                'CommittedDate'    => $committed,
-                'EstimatedDate'    => $estimate !== null && $estimate > $committed ? $estimate : $committed,
-            ]);
+            if ($dev['CommittedDate'] === null || $dev['CommittedDate'] <= $last) {
+                $estimate  = $dev['EstimatedDate'];
+                $committed = $estimate !== null && $estimate > $last ? $estimate : $nextEnd;
+
+                $data += [
+                    'CarriedFromMonth' => $month,
+                    'CommittedDate'    => $committed,
+                    'EstimatedDate'    => $estimate !== null && $estimate > $committed ? $estimate : $committed,
+                ];
+            }
+
+            $db->table('Developments')->where('IdDevelopment', $dev['IdDevelopment'])->update($data);
+
+            // 4. Hitos vencidos sin terminar pasan al mes siguiente.
+            $taskDue = min($nextEnd, $data['CommittedDate'] ?? $dev['CommittedDate'] ?? $nextEnd);
+
+            $db->table('DevelopmentTasks')
+                ->set('OriginalDueDate', 'COALESCE(OriginalDueDate, DueDate)', false)
+                ->set('DueDate', $taskDue)
+                ->set('CarriedFromMonth', $month)
+                ->where('IdDevelopment', $dev['IdDevelopment'])
+                ->where('DoneAt', null)
+                ->where('DueDate <=', $last)
+                ->update();
         }
-
-        $db->table('DevelopmentMonthClosures')->insert([
-            'PlanMonth'    => $month,
-            'Committed'    => $summary['total'],
-            'Delivered'    => $summary['done'],
-            'CarriedOver'  => $summary['open'],
-            'ClosedBy'     => panel_user_id(),
-            'ClosedByName' => mb_substr((string) ($this->user['name'] ?? panel_user_id()), 0, 150),
-        ]);
 
         $db->transComplete();
 
@@ -659,7 +864,34 @@ class Developments extends BasePanelController
         }
 
         return redirect()->to(site_url('panel/desarrollos/cierre?mes=' . $month))
-            ->with('success', DevelopmentBoard::monthName($month) . ' cerrado: ' . $summary['open'] . ' pendiente(s) pasaron a ' . DevelopmentBoard::monthName($next) . '.');
+            ->with('success', DevelopmentBoard::monthName($month) . ' cerrado: cumplimiento ' . $summary['pct'] . ' % ('
+                . $summary['met'] . ' de ' . $summary['eligible'] . '). ' . $summary['open'] . ' pendiente(s) pasaron a '
+                . DevelopmentBoard::monthName($next) . '.');
+    }
+
+    /**
+     * Cierre guardado (o null), desarrollos y estadística de un mes.
+     *
+     * @return array{0: array<string, mixed>|null, 1: list<array<string, mixed>>, 2: array<string, int>}
+     */
+    private function monthData(string $month): array
+    {
+        $closure = $this->board()->closure($month);
+
+        if ($closure !== null) {
+            $items = $this->board()->closureItems($month);
+
+            // Cierres hechos antes del detalle: se reconstruye con lo que hay.
+            if ($items === [] && (int) $closure['Committed'] > 0) {
+                $items = $this->board()->withMonthGoal($this->board()->list($month), $month);
+            }
+
+            return [$closure, $items, DevelopmentBoard::closureSummary($closure)];
+        }
+
+        $rows = $this->board()->withMonthGoal($this->board()->list($month), $month);
+
+        return [null, $rows, DevelopmentBoard::summary($rows, $month)];
     }
 
     /**
@@ -696,10 +928,14 @@ class Developments extends BasePanelController
 
     private function missingTables(): ?RedirectResponse
     {
-        if (DevelopmentBoard::available()) {
-            return null;
+        if (! DevelopmentBoard::available()) {
+            return redirect()->to(site_url('panel'))->with('error', 'Falta crear las tablas de desarrollos (app/Database/sql/Desarrollos.sql).');
         }
 
-        return redirect()->to(site_url('panel'))->with('error', 'Falta crear las tablas de desarrollos (app/Database/sql/Desarrollos.sql).');
+        if (! DevelopmentBoard::milestonesAvailable()) {
+            return redirect()->to(site_url('panel'))->with('error', 'Falta ejecutar app/Database/sql/DesarrollosHitosYCierre.sql (hitos por tarea y cierre de mes).');
+        }
+
+        return null;
     }
 }

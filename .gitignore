@@ -13,3 +13,4 @@ writable/credentials/
 
 # Configuración local con credenciales (copiar desde el archivo "env")
 .env
+/build/

@@ -28,6 +28,10 @@ $next    = Board::shiftMonth($month, 1);
         <strong><?= esc(Board::monthName($month)) ?></strong>
         <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos?mes=' . $next) ?>" aria-label="Mes siguiente">›</a>
         <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/todos') ?>">Todos</a>
+        <?php if (Board::projectsAvailable()): ?>
+            <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/proyectos') ?>">Proyectos</a>
+        <?php endif ?>
+        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/cierre/informe?mes=' . $month) ?>">Informe del mes</a>
         <a class="btn btn-primary btn-sm" href="<?= site_url('panel/desarrollos/cierre?mes=' . $month) ?>">Cierre de mes</a>
     </div>
 </div>
@@ -79,7 +83,12 @@ $next    = Board::shiftMonth($month, 1);
                                     <td class="cell-main">
                                         <span class="mono muted small"><?= esc($d['Code']) ?> · <?= ticket_code($d['IdTicket']) ?> · Cía <?= esc($d['CodCompanies']) ?></span>
                                         <span class="cell-title"><?= esc($d['Subject']) ?></span>
-                                        <?php if ($d['CarriedFromMonth']): ?><div><span class="chip chip-carry">Viene de <?= esc(Board::monthName($d['CarriedFromMonth'])) ?></span></div><?php endif ?>
+                                        <?php if ($d['IsProject'] || $d['CarriedFromMonth']): ?>
+                                            <div>
+                                                <?= dev_kind_chip($d) ?>
+                                                <?php if ($d['CarriedFromMonth']): ?><span class="chip chip-carry">Viene de <?= esc(Board::monthName($d['CarriedFromMonth'])) ?></span><?php endif ?>
+                                            </div>
+                                        <?php endif ?>
                                     </td>
                                     <td><?= esc($d['ProgrammerName'] ?? 'Sin asignar') ?></td>
                                     <td><div><?= dev_state_badge($d) ?></div></td>
@@ -112,7 +121,7 @@ $next    = Board::shiftMonth($month, 1);
     <?php if ($isAdmin): ?>
         <aside class="card">
             <h2>Por planear</h2>
-            <p class="dev-sub">Tickets de desarrollo sin mes. Al agregarlo, el programador queda como responsable del ticket. La entrega puede quedar en este mes o en uno posterior: el desarrollo aparece en cada mes hasta su entrega.</p>
+            <p class="dev-sub">Tickets de desarrollo y de proyecto sin mes. Al agregarlo, el programador queda como responsable del ticket. La entrega puede quedar en este mes o en uno posterior: el desarrollo aparece en cada mes hasta su entrega.</p>
 
             <?php if ($closedMonth): ?>
                 <p class="muted small">Este mes ya está cerrado. Planea en <a href="<?= site_url('panel/desarrollos?mes=' . $next) ?>"><?= esc(Board::monthName($next)) ?></a>.</p>
@@ -123,7 +132,7 @@ $next    = Board::shiftMonth($month, 1);
                     <?php foreach ($backlog as $b): $key = $b['IdDevelopment'] ? 'd' . $b['IdDevelopment'] : 't' . $b['IdTicket']; ?>
                         <li>
                             <span class="mono muted small"><?= $b['IdDevelopment'] ? esc($b['Code']) . ' · ' : '' ?><?= ticket_code($b['IdTicket']) ?> · Cía <?= esc($b['CodCompanies']) ?></span>
-                            <div><a href="<?= site_url('panel/tickets/' . $b['IdTicket']) ?>"><strong><?= esc($b['Subject']) ?></strong></a></div>
+                            <div><a href="<?= site_url('panel/tickets/' . $b['IdTicket']) ?>"><strong><?= esc($b['Subject']) ?></strong></a> <?= dev_kind_chip($b) ?></div>
                             <form method="post" action="<?= site_url('panel/desarrollos/planear') ?>">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="PlanMonth" value="<?= esc($month, 'attr') ?>">
@@ -142,6 +151,13 @@ $next    = Board::shiftMonth($month, 1);
                                     <input type="date" name="CommittedDate" class="input" id="due-<?= $key ?>" required aria-label="Entrega del proyecto"
                                            min="<?= $month ?>-01" value="<?= Board::lastDay($month) ?>" title="Entrega del proyecto: en este mes o en uno posterior">
                                 </div>
+                                <?php if (Board::projectsAvailable()): ?>
+                                    <select name="Kind" class="select" aria-label="Tipo">
+                                        <?php foreach (Board::KINDS as $k => $label): ?>
+                                            <option value="<?= $k ?>" <?= ($b['Kind'] ?? 'desarrollo') === $k ? 'selected' : '' ?>><?= $label ?></option>
+                                        <?php endforeach ?>
+                                    </select>
+                                <?php endif ?>
                                 <button type="submit" class="btn btn-primary btn-sm">Agregar a <?= esc(Board::monthName($month)) ?></button>
                             </form>
                         </li>

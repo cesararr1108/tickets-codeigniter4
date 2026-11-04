@@ -18,6 +18,12 @@ use CodeIgniter\HTTP\RedirectResponse;
  * inconvenientes, marca recursos disponibles, aprueba y cierra el mes.
  * El programador asignado registra tareas, recursos, inconvenientes, la
  * fecha estimada y la evidencia.
+ *
+ * Proyectos (tickets con formulario o categoría de proyecto): además llevan
+ * lo que se requiere, presupuesto por rubro, responsable por actividad y
+ * reprogramaciones de la entrega por incidentes. Reporte de estado en
+ * /panel/desarrollos/proyectos e informe de fin de mes imprimible en
+ * /panel/desarrollos/cierre/informe.
  */
 class Developments extends BasePanelController
 {
@@ -66,10 +72,14 @@ class Developments extends BasePanelController
             return $missing;
         }
 
+        $kind = $this->request->getGet('tipo');
+        $kind = isset(DevelopmentBoard::KINDS[$kind]) ? $kind : null;
+
         return $this->render('developments/list', [
             'active' => 'developments',
             'title'  => 'Desarrollos',
-            'rows'   => $this->board()->list(null, panel_is_admin() ? null : panel_user_id()),
+            'kind'   => $kind,
+            'rows'   => $this->board()->list(null, panel_is_admin() ? null : panel_user_id(), $kind),
         ]);
     }
 
@@ -102,6 +112,12 @@ class Developments extends BasePanelController
             'evidence'  => $db->table('DevelopmentEvidence')->where('IdDevelopment', $id)->orderBy('IdEvidence')->get()->getResultArray(),
             'agents'    => $this->lookups()['agents'],
             'goal'      => $this->board()->withMonthGoal([$dev], $dev['PlanMonth'] ?? DevelopmentBoard::currentMonth())[0],
+            'projects'  => DevelopmentBoard::projectsAvailable(),
+            'budget'    => DevelopmentBoard::projectsAvailable()
+                ? $db->table('DevelopmentBudgetItems')->where('IdDevelopment', $id)->orderBy('IdBudgetItem')->get()->getResultArray()
+                : [],
+            'reschedules' => $this->board()->reschedules([$id]),
+            'answers'   => $this->board()->formAnswers((int) $dev['IdTicket']),
         ]);
     }
 
@@ -143,6 +159,15 @@ class Developments extends BasePanelController
             'CommittedDate'  => $committed,
             'EstimatedDate'  => $committed,
         ];
+
+        if (DevelopmentBoard::projectsAvailable()) {
+            $kind = (string) $this->request->getPost('Kind');
+            $data['OriginalCommittedDate'] = $committed;
+
+            if (isset(DevelopmentBoard::KINDS[$kind])) {
+                $data['Kind'] = $kind;
+            }
+        }
 
         if ($devId > 0) {
             $dev = $this->board()->find($devId);
@@ -190,7 +215,8 @@ class Developments extends BasePanelController
         }
 
         db_connect()->table('Developments')->where('IdDevelopment', $id)
-            ->update(['PlanMonth' => null, 'CommittedDate' => null, 'EstimatedDate' => null]);
+            ->update(['PlanMonth' => null, 'CommittedDate' => null, 'EstimatedDate' => null]
+                + (DevelopmentBoard::projectsAvailable() ? ['OriginalCommittedDate' => null] : []));
 
         return redirect()->back()->with('success', $dev['Code'] . ' volvió a "Por planear".');
     }
@@ -209,6 +235,26 @@ class Developments extends BasePanelController
 
         $data = [];
 
+        if (DevelopmentBoard::projectsAvailable()) {
+            $requirements = $this->request->getPost('Requirements');
+            if ($requirements !== null) {
+                $requirements = trim((string) $requirements);
+
+                if (mb_strlen($requirements) > 4000) {
+                    return $this->back($id, 'Lo que se requiere admite máximo 4000 caracteres.', false, 'requiere');
+                }
+
+                if ($requirements !== (string) ($dev['Requirements'] ?? '')) {
+                    $data['Requirements'] = $requirements === '' ? null : $requirements;
+                }
+            }
+
+            $kind = $this->request->getPost('Kind');
+            if (panel_is_admin() && isset(DevelopmentBoard::KINDS[$kind]) && $kind !== $dev['Kind']) {
+                $data['Kind'] = $kind;
+            }
+        }
+
         $estimated = $this->request->getPost('EstimatedDate');
         if ($estimated !== null && ($estimated = DevelopmentBoard::validDate($estimated)) !== null) {
             $data['EstimatedDate'] = $estimated;
@@ -221,7 +267,9 @@ class Developments extends BasePanelController
                     return $this->back($id, 'La entrega comprometida no puede ser antes de ' . DevelopmentBoard::monthName($dev['PlanMonth']) . ', el mes del plan.', false);
                 }
 
-                $data['CommittedDate'] = $committed;
+                if ($committed !== $dev['CommittedDate']) {
+                    $data['CommittedDate'] = $committed;
+                }
             }
 
             $userId = $this->request->getPost('AssignedUserId');
@@ -236,8 +284,29 @@ class Developments extends BasePanelController
             }
         }
 
+        // Sin cambios reales en lo que se envió.
+        foreach (['EstimatedDate', 'AssignedUserId'] as $k) {
+            if (array_key_exists($k, $data) && (string) $data[$k] === (string) ($dev[$k] ?? '')) {
+                unset($data[$k]);
+            }
+        }
+
         if ($data === []) {
             return $this->back($id, 'No hubo cambios.');
+        }
+
+        if (isset($data['CommittedDate']) && $dev['CommittedDate'] !== null) {
+            $reason = trim((string) $this->request->getPost('RescheduleReason'));
+
+            if ($reason === '' && $dev['IsProject']) {
+                return $this->back($id, 'Indica el motivo de la reprogramación de la entrega.', false);
+            }
+
+            $this->board()->logReschedule($id, $dev['CommittedDate'], $data['CommittedDate'], $reason !== '' ? $reason : 'Cambio de la entrega comprometida', $this->userName());
+        }
+
+        if (isset($data['CommittedDate']) && DevelopmentBoard::projectsAvailable() && $dev['OriginalCommittedDate'] === null) {
+            $data['OriginalCommittedDate'] = $data['CommittedDate'];
         }
 
         db_connect()->table('Developments')->where('IdDevelopment', $id)->update($data);
@@ -290,9 +359,163 @@ class Developments extends BasePanelController
             $data['DueDate'] = $due;
         }
 
+        if (DevelopmentBoard::projectsAvailable()) {
+            $responsible             = mb_substr(trim((string) $this->request->getPost('ResponsibleName')), 0, 150);
+            $data['ResponsibleName'] = $responsible !== '' ? $responsible : ($dev['ProgrammerName'] ?? null);
+        }
+
         db_connect()->table('DevelopmentTasks')->insert($data);
 
-        return $this->back($id, 'Tarea agregada.', true, 'tareas');
+        return $this->back($id, $dev['IsProject'] ? 'Actividad agregada.' : 'Tarea agregada.', true, 'tareas');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/tareas/{task}/responsable
+     */
+    public function taskResponsible(int $id, int $taskId)
+    {
+        [, $error] = $this->workable($id);
+
+        if ($error) {
+            return $error;
+        }
+
+        if (! DevelopmentBoard::projectsAvailable()) {
+            return $this->back($id, 'Falta ejecutar app/Database/sql/Proyectos.sql.', false);
+        }
+
+        $name = mb_substr(trim((string) $this->request->getPost('ResponsibleName')), 0, 150);
+
+        db_connect()->table('DevelopmentTasks')
+            ->where('IdTask', $taskId)->where('IdDevelopment', $id)
+            ->update(['ResponsibleName' => $name !== '' ? $name : null]);
+
+        return $this->back($id, 'Responsable actualizado.', true, 'tareas');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/presupuesto
+     * Agrega un rubro (concepto, presupuestado y ejecutado).
+     */
+    public function addBudget(int $id)
+    {
+        [, $error] = $this->workable($id);
+
+        if ($error) {
+            return $error;
+        }
+
+        if (! DevelopmentBoard::projectsAvailable()) {
+            return $this->back($id, 'Falta ejecutar app/Database/sql/Proyectos.sql.', false);
+        }
+
+        $concept = mb_substr(trim((string) $this->request->getPost('Concept')), 0, 255);
+        $planned = DevelopmentBoard::parseMoney($this->request->getPost('Planned'));
+        $spent   = DevelopmentBoard::parseMoney($this->request->getPost('Spent')) ?? 0.0;
+
+        if ($concept === '' || $planned === null || $planned < 0 || $spent < 0 || $planned > 999999999999 || $spent > 999999999999) {
+            return $this->back($id, 'Escribe el rubro y su valor presupuestado (y el ejecutado, si ya hay).', false, 'presupuesto');
+        }
+
+        db_connect()->table('DevelopmentBudgetItems')->insert([
+            'IdDevelopment' => $id,
+            'Concept'       => $concept,
+            'Planned'       => $planned,
+            'Spent'         => $spent,
+            'CreatedByName' => $this->userName(),
+        ]);
+
+        return $this->back($id, 'Rubro agregado al presupuesto.', true, 'presupuesto');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/presupuesto/{item}
+     * Actualiza el presupuestado y el ejecutado de un rubro.
+     */
+    public function updateBudget(int $id, int $itemId)
+    {
+        [, $error] = $this->workable($id);
+
+        if ($error) {
+            return $error;
+        }
+
+        $planned = DevelopmentBoard::parseMoney($this->request->getPost('Planned'));
+        $spent   = DevelopmentBoard::parseMoney($this->request->getPost('Spent'));
+
+        if ($planned === null || $spent === null || $planned < 0 || $spent < 0 || $planned > 999999999999 || $spent > 999999999999) {
+            return $this->back($id, 'Revisa los valores del rubro.', false, 'presupuesto');
+        }
+
+        db_connect()->table('DevelopmentBudgetItems')
+            ->where('IdBudgetItem', $itemId)->where('IdDevelopment', $id)
+            ->update(['Planned' => $planned, 'Spent' => $spent]);
+
+        return $this->back($id, 'Presupuesto actualizado.', true, 'presupuesto');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/presupuesto/{item}/eliminar
+     */
+    public function deleteBudget(int $id, int $itemId)
+    {
+        [, $error] = $this->workable($id);
+
+        if ($error) {
+            return $error;
+        }
+
+        db_connect()->table('DevelopmentBudgetItems')->where('IdBudgetItem', $itemId)->where('IdDevelopment', $id)->delete();
+
+        return $this->back($id, 'Rubro eliminado.', true, 'presupuesto');
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/inconvenientes/{issue}/reprogramar
+     * El administrador corre la entrega comprometida los días de impacto del
+     * incidente (una vez por incidente). La estimada nunca queda antes.
+     */
+    public function rescheduleFromIssue(int $id, int $issueId)
+    {
+        [$dev, $error] = $this->workable($id, true);
+
+        if ($error) {
+            return $error;
+        }
+
+        if (! DevelopmentBoard::projectsAvailable()) {
+            return $this->back($id, 'Falta ejecutar app/Database/sql/Proyectos.sql.', false);
+        }
+
+        $db    = db_connect();
+        $issue = $db->table('DevelopmentIssues')->where('IdIssue', $issueId)->where('IdDevelopment', $id)->get()->getRowArray();
+
+        if ($issue === null || (int) $issue['ImpactDays'] <= 0) {
+            return $this->back($id, 'El incidente no existe o no tiene días de impacto.', false, 'inconvenientes');
+        }
+
+        if ($dev['CommittedDate'] === null) {
+            return $this->back($id, 'Primero planea el desarrollo con una entrega comprometida.', false, 'inconvenientes');
+        }
+
+        if ($db->table('DevelopmentReschedules')->where('IdIssue', $issueId)->countAllResults() > 0) {
+            return $this->back($id, 'Este incidente ya reprogramó la entrega.', false, 'inconvenientes');
+        }
+
+        $new  = (new \DateTimeImmutable($dev['CommittedDate']))->modify('+' . (int) $issue['ImpactDays'] . ' day')->format('Y-m-d');
+        $data = ['CommittedDate' => $new];
+
+        if ($dev['EstimatedDate'] === null || $dev['EstimatedDate'] < $new) {
+            $data['EstimatedDate'] = $new;
+        }
+
+        $db->transStart();
+        $db->table('Developments')->where('IdDevelopment', $id)->update($data);
+        $this->board()->logReschedule($id, $dev['CommittedDate'], $new,
+            'Incidente: ' . mb_substr((string) $issue['Description'], 0, 900), $this->userName(), $issueId);
+        $db->transComplete();
+
+        return $this->back($id, 'Entrega reprogramada al ' . DevelopmentBoard::formatDate($new) . ' (+' . (int) $issue['ImpactDays'] . ' días por el incidente).', true, 'inconvenientes');
     }
 
     /**
@@ -704,7 +927,7 @@ class Developments extends BasePanelController
         $put([]);
         $put(['Desarrollo', 'Ticket', 'Compañía', 'Asunto', 'Programador', 'Clasificación', 'Estado', 'Entrega comprometida',
             'Hitos del mes', 'Hitos cumplidos', 'Meta del mes (%)', 'Avance del proyecto (%)', 'Requerimiento',
-            'Cuenta para cumplimiento', 'Cumplió', 'Pasa al mes siguiente']);
+            'Cuenta para cumplimiento', 'Cumplió', 'Pasa al mes siguiente', 'Tipo', 'Presupuesto', 'Ejecutado', 'Días reprogramados']);
 
         foreach ($rows as $d) {
             $put([
@@ -724,6 +947,10 @@ class Developments extends BasePanelController
                 $d['Eligible'] ? 'Sí' : 'No',
                 $d['Eligible'] ? ($d['Met'] ? 'Sí' : 'No') : '',
                 $d['State'] !== 'terminado' ? 'Sí' : 'No',
+                DevelopmentBoard::KINDS[$d['Kind'] ?? 'desarrollo'] ?? 'Desarrollo',
+                ! empty($d['IsProject']) ? DevelopmentBoard::money($d['BudgetPlanned'] ?? 0) : '',
+                ! empty($d['IsProject']) ? DevelopmentBoard::money($d['BudgetSpent'] ?? 0) : '',
+                $d['RescheduledDays'] ?? 0,
             ]);
         }
 
@@ -734,6 +961,177 @@ class Developments extends BasePanelController
         return $this->response
             ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
             ->setHeader('Content-Disposition', 'attachment; filename="desarrollos-' . $month . '.csv"')
+            ->setBody($csv);
+    }
+
+    /**
+     * GET /panel/desarrollos/proyectos?estado=abiertos|todos&formato=csv
+     * Reporte de cómo van los proyectos: semáforo, avance, actividades,
+     * presupuesto, incidentes y reprogramaciones de la entrega.
+     */
+    public function projects()
+    {
+        if ($missing = $this->missingTables()) {
+            return $missing;
+        }
+
+        if (! DevelopmentBoard::projectsAvailable()) {
+            return redirect()->to(site_url('panel/desarrollos'))->with('error', 'Falta ejecutar app/Database/sql/Proyectos.sql (proyectos, presupuesto y reprogramaciones).');
+        }
+
+        $scope = $this->request->getGet('estado') === 'todos' ? 'todos' : 'abiertos';
+        $rows  = $this->board()->list(null, panel_is_admin() ? null : panel_user_id(), 'proyecto');
+
+        if ($scope === 'abiertos') {
+            $rows = array_values(array_filter($rows, static fn ($d) => $d['State'] !== 'terminado'));
+        }
+
+        // Atrasados primero, luego en riesgo, en tiempo y entregados.
+        $order = array_flip(['atrasado', 'en_riesgo', 'en_tiempo', 'entregado']);
+        usort($rows, static fn ($a, $b) => [$order[$a['Health']], $a['CommittedDate'] ?? '9999'] <=> [$order[$b['Health']], $b['CommittedDate'] ?? '9999']);
+
+        $ids  = array_map('intval', array_column($rows, 'IdDevelopment'));
+        $db   = db_connect();
+        $next = [];
+        $open = [];
+
+        if ($ids !== []) {
+            // Próxima actividad pendiente de cada proyecto.
+            foreach ($db->table('DevelopmentTasks')->whereIn('IdDevelopment', $ids)->where('DoneAt', null)
+                ->orderBy('DueDate')->orderBy('IdTask')->get()->getResultArray() as $t) {
+                $next[$t['IdDevelopment']] ??= $t;
+            }
+
+            // Incidente abierto más reciente.
+            foreach ($db->table('DevelopmentIssues')->whereIn('IdDevelopment', $ids)->where('ResolvedAt', null)
+                ->orderBy('CreatedAt', 'DESC')->get()->getResultArray() as $i) {
+                $open[$i['IdDevelopment']] ??= $i;
+            }
+        }
+
+        $summary = [
+            'total'   => count($rows),
+            'health'  => array_map(static fn ($h) => count(array_filter($rows, static fn ($d) => $d['Health'] === $h)), array_combine(array_keys(DevelopmentBoard::HEALTH), array_keys(DevelopmentBoard::HEALTH))),
+            'planned' => array_sum(array_column($rows, 'BudgetPlanned')),
+            'spent'   => array_sum(array_column($rows, 'BudgetSpent')),
+            'progress' => $rows === [] ? 0 : (int) round(array_sum(array_column($rows, 'Progress')) / count($rows)),
+            'impact'  => array_sum(array_column($rows, 'ImpactDaysTotal')),
+            'rescheduled' => count(array_filter($rows, static fn ($d) => $d['RescheduledDays'] > 0)),
+        ];
+
+        if ($this->request->getGet('formato') === 'csv') {
+            return $this->csv('proyectos-' . DevelopmentBoard::today() . '.csv', static function (callable $put) use ($rows, $next, $open, $summary) {
+                $put(['Reporte de proyectos', 'Al ' . DevelopmentBoard::formatDate(DevelopmentBoard::today())]);
+                $put(['Proyectos', $summary['total']]);
+                foreach (DevelopmentBoard::HEALTH as $k => $label) {
+                    $put([$label, $summary['health'][$k]]);
+                }
+                $put(['Presupuesto total', DevelopmentBoard::money($summary['planned'])]);
+                $put(['Ejecutado', DevelopmentBoard::money($summary['spent'])]);
+                $put([]);
+                $put(['Proyecto', 'Ticket', 'Compañía', 'Nombre', 'Responsable', 'Semáforo', 'Estado', 'Avance (%)',
+                    'Actividades terminadas', 'Actividades totales', 'Actividades vencidas', 'Próxima actividad', 'Responsable próxima', 'Fecha próxima',
+                    'Entrega original', 'Entrega vigente', 'Entrega estimada', 'Días reprogramados', 'Reprogramaciones',
+                    'Presupuesto', 'Ejecutado', 'Ejecución (%)', 'Incidentes', 'Incidentes abiertos', 'Días de impacto', 'Último incidente abierto']);
+
+                foreach ($rows as $d) {
+                    $n = $next[$d['IdDevelopment']] ?? null;
+                    $i = $open[$d['IdDevelopment']] ?? null;
+                    $put([
+                        $d['Code'], ticket_code((int) $d['IdTicket']), $d['CodCompanies'] ?? '', $d['Subject'] ?? '',
+                        $d['ProgrammerName'] ?? 'Sin asignar',
+                        DevelopmentBoard::HEALTH[$d['Health']], DevelopmentBoard::STATES[$d['State']], $d['Progress'],
+                        $d['TasksDone'], $d['TasksTotal'], $d['OverdueTasks'],
+                        $n['Description'] ?? '', $n['ResponsibleName'] ?? '', DevelopmentBoard::formatDate($n['DueDate'] ?? null),
+                        DevelopmentBoard::formatDate($d['OriginalCommittedDate']), DevelopmentBoard::formatDate($d['CommittedDate']),
+                        DevelopmentBoard::formatDate($d['EstimatedDate']), $d['RescheduledDays'], $d['RescheduleCount'],
+                        DevelopmentBoard::money($d['BudgetPlanned']), DevelopmentBoard::money($d['BudgetSpent']), $d['BudgetPct'] ?? '',
+                        $d['IssuesTotal'], $d['OpenIssues'], $d['ImpactDaysTotal'], $i['Description'] ?? '',
+                    ]);
+                }
+            });
+        }
+
+        return $this->render('developments/projects', [
+            'active'  => 'developments',
+            'title'   => 'Reporte de proyectos',
+            'scope'   => $scope,
+            'rows'    => $rows,
+            'next'    => $next,
+            'open'    => $open,
+            'summary' => $summary,
+        ]);
+    }
+
+    /**
+     * GET /panel/desarrollos/cierre/informe?mes=AAAA-MM
+     * Informe de fin de mes para imprimir o guardar en PDF: estadística,
+     * entregas por programador, detalle, proyectos, incidentes y
+     * reprogramaciones del mes.
+     */
+    public function monthReport()
+    {
+        if ($missing = $this->missingTables()) {
+            return $missing;
+        }
+
+        $month = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
+        [$closure, $rows, $summary] = $this->monthData($month);
+
+        if (! panel_is_admin()) {
+            $rows = array_values(array_filter($rows, static fn ($d) => (string) ($d['AssignedUserId'] ?? '') === panel_user_id()));
+        }
+
+        $ids    = array_map('intval', array_column($rows, 'IdDevelopment'));
+        $issues = $ids === [] ? [] : db_connect()->table('DevelopmentIssues')
+            ->whereIn('IdDevelopment', $ids)
+            ->groupStart()
+                ->groupStart()
+                    ->where('CreatedAt >=', $month . '-01 00:00:00')
+                    ->where('CreatedAt <', DevelopmentBoard::shiftMonth($month, 1) . '-01 00:00:00')
+                ->groupEnd()
+                ->orWhere('ResolvedAt', null)
+            ->groupEnd()
+            ->orderBy('CreatedAt', 'DESC')
+            ->get()
+            ->getResultArray();
+
+        // Datos vivos del proyecto (presupuesto, línea base) para el detalle.
+        $live = [];
+        foreach ($ids === [] ? [] : $this->board()->builder()->whereIn('d.IdDevelopment', $ids)->get()->getResultArray() as $r) {
+            $live[$r['IdDevelopment']] = DevelopmentBoard::decorate($r);
+        }
+
+        return $this->render('developments/report', [
+            'active'      => 'developments',
+            'title'       => 'Informe de ' . DevelopmentBoard::monthName($month),
+            'month'       => $month,
+            'closure'     => $closure,
+            'summary'     => $summary,
+            'rows'        => $rows,
+            'live'        => $live,
+            'issues'      => $issues,
+            'reschedules' => $this->board()->reschedules($ids, $month),
+        ]);
+    }
+
+    /**
+     * Respuesta CSV para Excel (UTF-8 con BOM, separador ;).
+     *
+     * @param callable(callable(list<mixed>): void): void $write
+     */
+    private function csv(string $filename, callable $write)
+    {
+        $out = fopen('php://temp', 'w+b');
+        $write(static fn (array $line) => fputcsv($out, $line, ';', '"', ''));
+
+        rewind($out);
+        $csv = "\xEF\xBB\xBF" . stream_get_contents($out);
+        fclose($out);
+
+        return $this->response
+            ->setHeader('Content-Type', 'text/csv; charset=UTF-8')
+            ->setHeader('Content-Disposition', 'attachment; filename="' . $filename . '"')
             ->setBody($csv);
     }
 
@@ -777,6 +1175,7 @@ class Developments extends BasePanelController
         $next    = DevelopmentBoard::shiftMonth($month, 1);
         $nextEnd = DevelopmentBoard::lastDay($next);
         $db      = db_connect();
+        $itemsHaveKind = DevelopmentBoard::projectsAvailable() && $db->fieldExists('Kind', 'DevelopmentMonthClosureItems');
 
         $db->transStart();
 
@@ -821,7 +1220,12 @@ class Developments extends BasePanelController
                 'ProjectPct'     => $dev['Progress'],
                 'CarriedOver'    => $open ? 1 : 0,
                 'ApprovedAt'     => $dev['ApprovedAt'],
-            ]);
+            ] + ($itemsHaveKind ? [
+                'Kind'            => $dev['Kind'],
+                'BudgetPlanned'   => $dev['BudgetPlanned'],
+                'BudgetSpent'     => $dev['BudgetSpent'],
+                'RescheduledDays' => $dev['RescheduledDays'],
+            ] : []));
 
             if (! $open) {
                 continue;
@@ -843,6 +1247,11 @@ class Developments extends BasePanelController
             }
 
             $db->table('Developments')->where('IdDevelopment', $dev['IdDevelopment'])->update($data);
+
+            if (isset($data['CommittedDate'])) {
+                $this->board()->logReschedule((int) $dev['IdDevelopment'], $dev['CommittedDate'], $data['CommittedDate'],
+                    'Cierre de ' . DevelopmentBoard::monthName($month) . ': la entrega venció sin aprobarse', $this->userName());
+            }
 
             // 4. Hitos vencidos sin terminar pasan al mes siguiente.
             $taskDue = min($nextEnd, $data['CommittedDate'] ?? $dev['CommittedDate'] ?? $nextEnd);
@@ -918,6 +1327,11 @@ class Developments extends BasePanelController
         }
 
         return [$dev, null];
+    }
+
+    private function userName(): string
+    {
+        return mb_substr((string) ($this->user['name'] ?? panel_user_id()), 0, 150);
     }
 
     private function back(int $id, string $message, bool $ok = true, string $anchor = ''): RedirectResponse

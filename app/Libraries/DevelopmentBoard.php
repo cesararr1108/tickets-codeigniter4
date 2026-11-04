@@ -25,6 +25,10 @@ use CodeIgniter\Database\BaseConnection;
  *    hitos en el mes, o que tienen requerimiento y su entrega vence en el mes
  *    (ahí la meta es la entrega aprobada).
  *  - Al cerrar el mes todos los abiertos pasan al mes siguiente.
+ *  - Proyectos (Proyectos.sql): un desarrollo de tipo "proyecto" suma lo que
+ *    se requiere, presupuesto (presupuestado vs. ejecutado), responsable por
+ *    actividad y reprogramaciones de la entrega. OriginalCommittedDate es la
+ *    línea base; los incidentes con días de impacto pueden reprogramarla.
  */
 class DevelopmentBoard
 {
@@ -43,6 +47,19 @@ class DevelopmentBoard
         'sin_asignar' => 'Sin asignar',
         'sin_empezar' => 'Sin empezar',
         'en_curso'    => 'En curso',
+    ];
+
+    public const KINDS = [
+        'desarrollo' => 'Desarrollo',
+        'proyecto'   => 'Proyecto',
+    ];
+
+    /** Semáforo del reporte de proyectos. */
+    public const HEALTH = [
+        'en_tiempo' => 'En tiempo',
+        'en_riesgo' => 'En riesgo',
+        'atrasado'  => 'Atrasado',
+        'entregado' => 'Entregado',
     ];
 
     public const MONTHS = [
@@ -79,6 +96,21 @@ class DevelopmentBoard
             && db_connect()->tableExists('DevelopmentMonthClosureItems');
     }
 
+    /**
+     * ¿Se ejecutó Proyectos.sql? (tipo, presupuesto, responsables y
+     * reprogramaciones).
+     */
+    public static function projectsAvailable(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= self::milestonesAvailable()
+            && db_connect()->fieldExists('Kind', 'Developments')
+            && db_connect()->fieldExists('ResponsibleName', 'DevelopmentTasks')
+            && db_connect()->tableExists('DevelopmentBudgetItems')
+            && db_connect()->tableExists('DevelopmentReschedules');
+    }
+
     private static function requirementsAvailable(): bool
     {
         static $exists = null;
@@ -105,7 +137,7 @@ class DevelopmentBoard
             $requirement = "CASE WHEN EXISTS (SELECT 1 FROM TicketFormAnswers fa WHERE fa.IdTicket = d.IdTicket AND fa.FormKey IN ({$forms})) THEN 1 ELSE 0 END";
         }
 
-        return $this->db->table('Developments d')
+        $builder = $this->db->table('Developments d')
             ->select($requirement . ' AS HasRequirement', false)
             ->select('d.*, t.Subject, t.CodCompanies, t.RequesterEmail, t.Status AS TicketStatus, t.IdCategory,
                 c.Companies, cat.Category, u.FullName AS ProgrammerName')
@@ -118,6 +150,23 @@ class DevelopmentBoard
             ->join('Companies c', 'c.CodCompanies = t.CodCompanies', 'left')
             ->join('Category cat', 'cat.IdCategory = t.IdCategory', 'left')
             ->join('Users u', 'u.IdUser = d.AssignedUserId', 'left');
+
+        if (self::milestonesAvailable()) {
+            $today = $this->db->escape(self::today());
+            $builder->select($sub("SELECT COUNT(*) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment AND k.DoneAt IS NULL AND k.DueDate < {$today}") . ' AS OverdueTasks', false)
+                ->select($sub('SELECT COUNT(*) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment') . ' AS TasksTotal', false)
+                ->select($sub('SELECT COUNT(*) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment AND k.DoneAt IS NOT NULL') . ' AS TasksDone', false)
+                ->select($sub('SELECT COALESCE(SUM(i.ImpactDays), 0) FROM DevelopmentIssues i WHERE i.IdDevelopment = d.IdDevelopment') . ' AS ImpactDaysTotal', false)
+                ->select($sub('SELECT COUNT(*) FROM DevelopmentIssues i WHERE i.IdDevelopment = d.IdDevelopment') . ' AS IssuesTotal', false);
+        }
+
+        if (self::projectsAvailable()) {
+            $builder->select($sub('SELECT COALESCE(SUM(b.Planned), 0) FROM DevelopmentBudgetItems b WHERE b.IdDevelopment = d.IdDevelopment') . ' AS BudgetPlanned', false)
+                ->select($sub('SELECT COALESCE(SUM(b.Spent), 0) FROM DevelopmentBudgetItems b WHERE b.IdDevelopment = d.IdDevelopment') . ' AS BudgetSpent', false)
+                ->select($sub('SELECT COUNT(*) FROM DevelopmentReschedules r WHERE r.IdDevelopment = d.IdDevelopment') . ' AS RescheduleCount', false);
+        }
+
+        return $builder;
     }
 
     /**
@@ -155,9 +204,13 @@ class DevelopmentBoard
      *
      * @return list<array<string, mixed>>
      */
-    public function list(?string $month = null, ?string $userId = null): array
+    public function list(?string $month = null, ?string $userId = null, ?string $kind = null): array
     {
         $builder = $this->builder();
+
+        if ($kind !== null && self::projectsAvailable()) {
+            $builder->where('d.Kind', $kind);
+        }
 
         if ($month !== null) {
             $builder->groupStart()
@@ -204,15 +257,35 @@ class DevelopmentBoard
      */
     public function backlog(): array
     {
-        $names = array_map('mb_strtolower', config('Tickets')->developmentCategories);
-        $out   = [];
+        $cfg      = config('Tickets');
+        $esc      = fn (array $list) => implode(', ', array_map([$this->db, 'escape'], array_map('mb_strtolower', $list)));
+        $devCats  = $cfg->developmentCategories;
+        $projCats = self::projectsAvailable() ? $cfg->projectCategories : [];
+        $forms    = self::projectsAvailable() && $this->db->tableExists('TicketFormAnswers') ? $cfg->projectForms : [];
+        $out      = [];
 
-        if ($names !== []) {
+        $conditions = [];
+        if ($devCats !== []) {
+            $conditions[] = 'LOWER(cat.Category) IN (' . $esc($devCats) . ')';
+        }
+        if ($projCats !== []) {
+            $conditions[] = 'LOWER(cat.Category) IN (' . $esc($projCats) . ')';
+            $conditions[] = 'LOWER(sub.SubCategory) IN (' . $esc($projCats) . ')';
+        }
+        $hasForm = '0';
+        if ($forms !== []) {
+            $hasForm      = 'CASE WHEN EXISTS (SELECT 1 FROM TicketFormAnswers fa WHERE fa.IdTicket = t.IdTicket AND fa.FormKey IN (' . $esc($forms) . ')) THEN 1 ELSE 0 END';
+            $conditions[] = 'EXISTS (SELECT 1 FROM TicketFormAnswers fa WHERE fa.IdTicket = t.IdTicket AND fa.FormKey IN (' . $esc($forms) . '))';
+        }
+
+        if ($conditions !== []) {
             $tickets = $this->db->table('Tickets t')
-                ->select('t.IdTicket, t.Subject, t.CodCompanies, t.RequesterEmail, t.AssignedUserId, t.CreatedAt, cat.Category, c.Companies')
+                ->select('t.IdTicket, t.Subject, t.CodCompanies, t.RequesterEmail, t.AssignedUserId, t.CreatedAt, cat.Category, sub.SubCategory, c.Companies')
+                ->select($hasForm . ' AS HasProjectForm', false)
                 ->join('Category cat', 'cat.IdCategory = t.IdCategory')
+                ->join('SubCategory sub', 'sub.IdSubCategory = t.IdSubCategory', 'left')
                 ->join('Companies c', 'c.CodCompanies = t.CodCompanies', 'left')
-                ->where('LOWER(cat.Category) IN (' . implode(', ', array_map([$this->db, 'escape'], $names)) . ')', null, false)
+                ->where('(' . implode(' OR ', $conditions) . ')', null, false)
                 ->where('t.Status !=', 'cerrado')
                 ->where('NOT EXISTS (SELECT 1 FROM Developments d WHERE d.IdTicket = t.IdTicket)', null, false)
                 ->orderBy('t.CreatedAt', 'ASC')
@@ -220,7 +293,7 @@ class DevelopmentBoard
                 ->getResultArray();
 
             foreach ($tickets as $t) {
-                $out[] = $t + ['IdDevelopment' => null];
+                $out[] = $t + ['IdDevelopment' => null, 'Kind' => self::detectKind($t)];
             }
         }
 
@@ -395,6 +468,11 @@ class DevelopmentBoard
             $r['Met']           = (bool) $r['Met'];
             $r['GoalPct']       = $r['GoalPct'] === null ? null : (int) $r['GoalPct'];
             $r['CommittedDate'] = self::dateOnly($r['CommittedDate']);
+            $r['Kind']          = ($r['Kind'] ?? 'desarrollo') === 'proyecto' ? 'proyecto' : 'desarrollo';
+            $r['IsProject']     = $r['Kind'] === 'proyecto';
+            $r['BudgetPlanned'] = (float) ($r['BudgetPlanned'] ?? 0);
+            $r['BudgetSpent']   = (float) ($r['BudgetSpent'] ?? 0);
+            $r['RescheduledDays'] = (int) ($r['RescheduledDays'] ?? 0);
 
             return $r;
         }, $rows);
@@ -428,6 +506,15 @@ class DevelopmentBoard
         $row['Code']     = self::code((int) $row['IdDevelopment']);
         $row['HasRequirement'] = (int) ($row['HasRequirement'] ?? 0);
         $row['DelayDays'] = 0;
+        $row['Kind']      = (string) ($row['Kind'] ?? 'desarrollo') === 'proyecto' ? 'proyecto' : 'desarrollo';
+        $row['IsProject'] = $row['Kind'] === 'proyecto';
+
+        foreach (['OverdueTasks', 'TasksTotal', 'TasksDone', 'ImpactDaysTotal', 'IssuesTotal', 'RescheduleCount'] as $k) {
+            $row[$k] = (int) ($row[$k] ?? 0);
+        }
+        $row['BudgetPlanned'] = (float) ($row['BudgetPlanned'] ?? 0);
+        $row['BudgetSpent']   = (float) ($row['BudgetSpent'] ?? 0);
+        $row['BudgetPct']     = $row['BudgetPlanned'] > 0 ? (int) round($row['BudgetSpent'] / $row['BudgetPlanned'] * 100) : null;
 
         $committed = self::dateOnly($row['CommittedDate'] ?? null);
         $estimated = self::dateOnly($row['EstimatedDate'] ?? null);
@@ -447,7 +534,177 @@ class DevelopmentBoard
             default                           => 'planeado',
         };
 
+        // Línea base de la entrega y cuánto se ha corrido.
+        $original = self::dateOnly($row['OriginalCommittedDate'] ?? null) ?? $committed;
+        $row['OriginalCommittedDate'] = $original;
+        $row['RescheduledDays']       = $original !== null && $committed !== null && $committed > $original
+            ? self::daysBetween($original, $committed) : 0;
+
+        $row['Health'] = self::health($row);
+
         return $row;
+    }
+
+    /**
+     * Semáforo: entregado; atrasado (bloqueado, entrega vencida, estimada
+     * después de la comprometida o actividades vencidas); en riesgo
+     * (inconvenientes abiertos, entrega reprogramada o presupuesto
+     * sobrepasado); si no, en tiempo.
+     *
+     * @param array<string, mixed> $d Fila de decorate()
+     */
+    public static function health(array $d): string
+    {
+        if ($d['State'] === 'terminado') {
+            return 'entregado';
+        }
+
+        $today = self::today();
+
+        if ($d['State'] === 'bloqueado'
+            || ($d['CommittedDate'] !== null && $d['CommittedDate'] < $today)
+            || $d['DelayDays'] > 0
+            || $d['OverdueTasks'] > 0) {
+            return 'atrasado';
+        }
+
+        if ((int) ($d['OpenIssues'] ?? 0) > 0
+            || $d['RescheduledDays'] > 0
+            || ($d['BudgetPlanned'] > 0 && $d['BudgetSpent'] > $d['BudgetPlanned'])) {
+            return 'en_riesgo';
+        }
+
+        return 'en_tiempo';
+    }
+
+    /**
+     * Tipo sugerido de un ticket del backlog: proyecto si la subcategoría o
+     * la categoría lo dicen (o están en $projectCategories), o si llegó con
+     * el formulario de proyecto y no es de una categoría de desarrollo.
+     *
+     * @param array<string, mixed> $t Category, SubCategory, HasProjectForm
+     */
+    public static function detectKind(array $t): string
+    {
+        $cfg   = config('Tickets');
+        $lower = static fn ($v) => mb_strtolower(trim((string) $v));
+        $cat   = $lower($t['Category'] ?? '');
+        $sub   = $lower($t['SubCategory'] ?? '');
+        $says  = static fn (string $name) => $name !== '' && str_contains($name, 'proyecto') && ! str_contains($name, 'desarrollo');
+        $projects = array_map($lower, $cfg->projectCategories);
+
+        if ($says($sub) || in_array($sub, $projects, true)) {
+            return 'proyecto';
+        }
+
+        if ($sub !== '' && str_contains($sub, 'desarrollo')) {
+            return 'desarrollo';
+        }
+
+        if ($says($cat) || in_array($cat, $projects, true)) {
+            return 'proyecto';
+        }
+
+        $isDevCategory = in_array($cat, array_map($lower, $cfg->developmentCategories), true);
+
+        return (int) ($t['HasProjectForm'] ?? 0) === 1 && ! $isDevCategory ? 'proyecto' : 'desarrollo';
+    }
+
+    /**
+     * Registra un cambio de la entrega comprometida (si Proyectos.sql existe).
+     */
+    public function logReschedule(int $devId, ?string $previous, string $new, string $reason, string $byName, ?int $issueId = null): void
+    {
+        if (! self::projectsAvailable() || $previous === $new) {
+            return;
+        }
+
+        $this->db->table('DevelopmentReschedules')->insert([
+            'IdDevelopment' => $devId,
+            'IdIssue'       => $issueId,
+            'PreviousDate'  => $previous,
+            'NewDate'       => $new,
+            'Reason'        => mb_substr($reason, 0, 1000),
+            'ChangedByName' => mb_substr($byName, 0, 150),
+        ]);
+    }
+
+    /**
+     * Reprogramaciones de la entrega de uno o varios desarrollos (más
+     * recientes primero). $month limita a las registradas en ese mes.
+     *
+     * @param list<int> $ids
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function reschedules(array $ids, ?string $month = null): array
+    {
+        if ($ids === [] || ! self::projectsAvailable()) {
+            return [];
+        }
+
+        $builder = $this->db->table('DevelopmentReschedules')->whereIn('IdDevelopment', $ids);
+
+        if ($month !== null) {
+            $builder->where('CreatedAt >=', $month . '-01 00:00:00')
+                ->where('CreatedAt <', self::shiftMonth($month, 1) . '-01 00:00:00');
+        }
+
+        return $builder->orderBy('CreatedAt', 'DESC')->orderBy('IdReschedule', 'DESC')->get()->getResultArray();
+    }
+
+    /**
+     * Respuestas del formulario de proyecto/desarrollo del ticket (lo que
+     * pidió el solicitante: alcance, requerimientos, presupuesto...).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function formAnswers(int $ticketId): array
+    {
+        if (! $this->db->tableExists('TicketFormAnswers')) {
+            return [];
+        }
+
+        $forms = array_values(array_unique(array_merge(config('Tickets')->projectForms, config('Tickets')->developmentRequirementForms)));
+
+        if ($forms === []) {
+            return [];
+        }
+
+        return $this->db->table('TicketFormAnswers')
+            ->where('IdTicket', $ticketId)
+            ->whereIn('FormKey', $forms)
+            ->where("Value IS NOT NULL AND Value <> ''", null, false)
+            ->orderBy('SortOrder')
+            ->get()
+            ->getResultArray();
+    }
+
+    public static function money(float|int|string|null $amount): string
+    {
+        return config('Tickets')->currencySymbol . ' ' . number_format((float) $amount, 0, ',', '.');
+    }
+
+    /**
+     * Monto escrito por el usuario ("1.250.000", "1250000,50", "$ 3.000").
+     */
+    public static function parseMoney(mixed $value): ?float
+    {
+        $v = preg_replace('/[^\d.,-]/', '', (string) $value) ?? '';
+
+        if ($v === '' || $v === '-') {
+            return null;
+        }
+
+        // La coma es decimal; los puntos, miles (formato colombiano). Si solo
+        // hay un punto seguido de 1 o 2 dígitos, también es decimal.
+        if (str_contains($v, ',')) {
+            $v = str_replace(['.', ','], ['', '.'], $v);
+        } elseif (preg_match('/^-?\d+\.\d{1,2}$/', $v) !== 1) {
+            $v = str_replace('.', '', $v);
+        }
+
+        return is_numeric($v) ? round((float) $v, 2) : null;
     }
 
     public static function code(int $id): string

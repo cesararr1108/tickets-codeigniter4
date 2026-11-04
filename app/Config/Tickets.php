@@ -87,6 +87,29 @@ class Tickets extends BaseConfig
     public array $developmentRequirementForms = ['requerimiento'];
 
     /**
+     * Categorías o subcategorías cuyos tickets son proyectos (por nombre, sin
+     * distinguir mayúsculas). También es proyecto todo ticket que llegó con
+     * un formulario de $projectForms. Aparecen en "Desarrollos > Por planear"
+     * y su ficha agrega presupuesto, lo que se requiere, responsables por
+     * actividad y reprogramaciones de la entrega.
+     *
+     * @var list<string>
+     */
+    public array $projectCategories = ['Proyecto', 'Proyectos'];
+
+    /**
+     * Formularios del widget (TicketFormAnswers.FormKey) de proyectos.
+     *
+     * @var list<string>
+     */
+    public array $projectForms = ['proyecto'];
+
+    /**
+     * Moneda con que se muestra el presupuesto de los proyectos.
+     */
+    public string $currencySymbol = '$';
+
+    /**
      * Campos que llena el área de TI desde el panel (el solicitante no los
      * ve en el widget), por formulario (TicketFormAnswers.FormKey).
      * Se guardan en TicketFormAnswers junto a las respuestas del formulario.

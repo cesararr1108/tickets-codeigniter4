@@ -350,3 +350,27 @@ if (! function_exists('dev_goal')) {
             . '<div class="small muted">' . esc($detail) . ' · ' . $tag . '</div>';
     }
 }
+
+if (! function_exists('dev_kind_chip')) {
+    /**
+     * Chip "Proyecto" (los desarrollos no llevan chip).
+     */
+    function dev_kind_chip(array $dev): string
+    {
+        return ! empty($dev['IsProject']) || ($dev['Kind'] ?? '') === 'proyecto'
+            ? '<span class="chip chip-project">Proyecto</span>'
+            : '';
+    }
+}
+
+if (! function_exists('dev_health_badge')) {
+    /**
+     * Semáforo de un proyecto (App\Libraries\DevelopmentBoard::health()).
+     */
+    function dev_health_badge(array $dev): string
+    {
+        $h = (string) ($dev['Health'] ?? 'en_tiempo');
+
+        return '<span class="dev-health health-' . esc($h, 'attr') . '">' . esc(\App\Libraries\DevelopmentBoard::HEALTH[$h] ?? $h) . '</span>';
+    }
+}

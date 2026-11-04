@@ -1017,6 +1017,37 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .dev-link h2 { display: flex; align-items: center; gap: 8px; margin: 0; }
 .dev-link .dev-state { align-self: flex-start; }
 
+/* Proyectos */
+.chip-project { background: var(--primary-soft); color: var(--primary); border-color: transparent; font-weight: 600; }
+.dev-health { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.dev-health::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.health-en_tiempo, .health-entregado { background: var(--good-soft); color: var(--good-text); }
+.health-en_riesgo { background: var(--warning-soft); color: var(--warning-text); }
+.health-atrasado { background: var(--critical-soft); color: var(--critical-text); }
+.dev-bad, .dev-kpis .dev-bad { color: var(--critical-text); }
+.dev-tasks .task-due .icon { width: 12px; height: 12px; vertical-align: -2px; }
+.dev-inline-task.has-responsible { grid-template-columns: minmax(0, 1fr) 160px 150px 96px auto; }
+.dev-inline-budget { grid-template-columns: minmax(0, 1fr) 130px 130px auto; }
+.dev-budget .num, .table .num { text-align: right; font-variant-numeric: tabular-nums; }
+.dev-budget .input { width: 120px; text-align: right; padding-top: 6px; padding-bottom: 6px; }
+.dev-budget tfoot th { border-top: 1px solid var(--border); }
+.nowrap { white-space: nowrap; }
+.dev-answers summary { cursor: pointer; }
+.dev-answers .details { margin-top: 10px; }
+
+@media print {
+    .topbar, .sidebar, .sidebar-backdrop, .flash, .no-print, .month-nav { display: none !important; }
+    .app { display: block !important; }
+    .main { padding: 0 !important; margin: 0 !important; max-width: none !important; }
+    body { background: #fff !important; }
+    .card { box-shadow: none !important; break-inside: avoid; }
+    .report-block { break-inside: auto; }
+    .table tr { break-inside: avoid; }
+    .dev-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    .dev-layout { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+    .table-wrap { overflow: visible !important; }
+}
+
 @media (max-width: 1100px) {
     .dev-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .dev-layout { grid-template-columns: minmax(0, 1fr); }
@@ -1027,6 +1058,8 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
     .dev-inline, .dev-inline-task { grid-template-columns: minmax(0, 1fr) 80px; }
     .dev-inline-task .input[type=date] { grid-column: 1 / -1; }
     .dev-inline .btn { grid-column: 1 / -1; }
+    .dev-inline-task.has-responsible, .dev-inline-budget { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .dev-inline-task.has-responsible .input[name=Description], .dev-inline-budget .input[name=Concept] { grid-column: 1 / -1; }
     .dev-backlog .row2 { grid-template-columns: minmax(0, 1fr); }
     .dev-bar-row { grid-template-columns: 100px minmax(0, 1fr) 56px; }
 }

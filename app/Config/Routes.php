@@ -44,6 +44,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('desarrollos/todos', 'Developments::all');
     $routes->get('desarrollos/cierre', 'Developments::closing');
     $routes->get('desarrollos/cierre/reporte', 'Developments::report');
+    $routes->get('desarrollos/cierre/informe', 'Developments::monthReport');
+    $routes->get('desarrollos/proyectos', 'Developments::projects');
     $routes->post('desarrollos/cierre', 'Developments::closeMonth');
     $routes->post('desarrollos/planear', 'Developments::plan');
     $routes->get('desarrollos/(:num)', 'Developments::show/$1');
@@ -54,10 +56,15 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('desarrollos/(:num)/tareas/(:num)/marcar', 'Developments::toggleTask/$1/$2');
     $routes->post('desarrollos/(:num)/tareas/(:num)/fecha', 'Developments::taskDate/$1/$2');
     $routes->post('desarrollos/(:num)/tareas/(:num)/eliminar', 'Developments::deleteTask/$1/$2');
+    $routes->post('desarrollos/(:num)/tareas/(:num)/responsable', 'Developments::taskResponsible/$1/$2');
+    $routes->post('desarrollos/(:num)/presupuesto', 'Developments::addBudget/$1');
+    $routes->post('desarrollos/(:num)/presupuesto/(:num)', 'Developments::updateBudget/$1/$2');
+    $routes->post('desarrollos/(:num)/presupuesto/(:num)/eliminar', 'Developments::deleteBudget/$1/$2');
     $routes->post('desarrollos/(:num)/recursos', 'Developments::addResource/$1');
     $routes->post('desarrollos/(:num)/recursos/(:num)/disponible', 'Developments::resourceReady/$1/$2');
     $routes->post('desarrollos/(:num)/inconvenientes', 'Developments::addIssue/$1');
     $routes->post('desarrollos/(:num)/inconvenientes/(:num)/resolver', 'Developments::resolveIssue/$1/$2');
+    $routes->post('desarrollos/(:num)/inconvenientes/(:num)/reprogramar', 'Developments::rescheduleFromIssue/$1/$2');
     $routes->post('desarrollos/(:num)/evidencia', 'Developments::addEvidence/$1');
     $routes->get('desarrollos/(:num)/evidencia/(:num)', 'Developments::evidence/$1/$2');
 

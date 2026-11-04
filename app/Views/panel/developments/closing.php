@@ -50,6 +50,7 @@ $lostDays  = array_sum(array_map(static fn ($i) => (int) $i['ImpactDays'], $issu
         <strong><?= esc(Board::monthName($month)) ?></strong>
         <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/cierre?mes=' . $next) ?>" aria-label="Mes siguiente">›</a>
         <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/cierre/reporte?mes=' . $month) ?>"><?= icon('download') ?> Reporte (Excel)</a>
+        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/cierre/informe?mes=' . $month) ?>">Informe (imprimir / PDF)</a>
         <?php if ($closure !== null): ?>
             <span class="chip">Cerrado el <?= format_date($closure['ClosedAt'], 'd/m/Y') ?> por <?= esc($closure['ClosedByName']) ?></span>
         <?php elseif (panel_is_admin()): ?>
@@ -140,7 +141,7 @@ $lostDays  = array_sum(array_map(static fn ($i) => (int) $i['ImpactDays'], $issu
                                 }
                             ?>
                                 <tr data-href="<?= site_url('panel/desarrollos/' . $d['IdDevelopment']) ?>">
-                                    <td class="cell-main"><span class="mono muted small"><?= esc($d['Code']) ?></span><span class="cell-title"><?= esc($d['Subject']) ?></span></td>
+                                    <td class="cell-main"><span class="mono muted small"><?= esc($d['Code']) ?></span><span class="cell-title"><?= esc($d['Subject']) ?></span><?= ! empty($d['IsProject']) ? '<div><span class="chip chip-project">Proyecto</span></div>' : '' ?></td>
                                     <td><span class="chip"><?= esc(Board::BUCKETS[$d['Bucket']] ?? $d['Bucket']) ?></span></td>
                                     <td><?= esc($d['ProgrammerName'] ?? 'Sin asignar') ?></td>
                                     <td><?= dev_progress($d) ?></td>

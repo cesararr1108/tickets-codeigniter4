@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="ProjectsSmokeTest" file="/tmp/claude-0/-home-user-tickets-codeigniter4/5b3898a2-076d-53fa-acbf-e7331d2330ce/scratchpad/smoke/ProjectsSmokeTest.php" tests="1" assertions="47" errors="0" failures="0" skipped="0" time="0.211041">
+    <testcase name="testFlow" file="/tmp/claude-0/-home-user-tickets-codeigniter4/5b3898a2-076d-53fa-acbf-e7331d2330ce/scratchpad/smoke/ProjectsSmokeTest.php" line="67" class="ProjectsSmokeTest" classname="ProjectsSmokeTest" assertions="47" time="0.211041"/>
+  </testsuite>
+</testsuites>

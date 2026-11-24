@@ -360,9 +360,17 @@ class TicketController extends BaseApiController
             'createdAt' => $m['CreatedAt'],
         ], model(TicketMessageModel::class)->forTicket((int) $id));
 
-        $attachments = array_map(static fn ($a) => $a['FileName'], model(TicketAttachmentModel::class)
+        $attachmentRows = model(TicketAttachmentModel::class)
             ->where('TicketId', (int) $id)
-            ->findAll());
+            ->findAll();
+
+        // Nombres (formato de siempre) y, aparte, los archivos para poder abrirlos.
+        $attachments = array_map(static fn ($a) => $a['FileName'], $attachmentRows);
+        $files       = array_map(static fn ($a) => [
+            'id'        => (int) $a['AttachmentId'],
+            'name'      => $a['FileName'],
+            'createdAt' => $a['CreatedAt'] ?? null,
+        ], $attachmentRows);
 
         unset($ticket['RequesterEmail']);
 
@@ -377,7 +385,67 @@ class TicketController extends BaseApiController
             'followUp'    => $followUp,
             'messages'    => $messages,
             'attachments' => $attachments,
+            'files'       => $files,
         ]);
+    }
+
+    /**
+     * GET /tickets/{id}/adjuntos/{attachmentId}?email=...[&descargar=1]
+     *
+     * Entrega un adjunto del ticket a su solicitante (incluye los que suben
+     * los técnicos). Solo si el correo coincide con el del ticket. Por
+     * defecto se envía "en línea" para verlo en el widget; con descargar=1
+     * se envía como descarga.
+     */
+    public function requesterAttachment($id = null, $attachmentId = null)
+    {
+        $email  = trim((string) $this->request->getGet('email'));
+        $ticket = $this->model()->find((int) $id);
+
+        if ($ticket === null || $email === '' || strcasecmp((string) $ticket['RequesterEmail'], $email) !== 0) {
+            return $this->failNotFound('Ticket no encontrado.');
+        }
+
+        $file = model(TicketAttachmentModel::class)
+            ->where('TicketId', (int) $id)
+            ->where('AttachmentId', (int) $attachmentId)
+            ->first();
+
+        if ($file === null) {
+            return $this->failNotFound('El adjunto no existe.');
+        }
+
+        $base = realpath(WRITEPATH . 'uploads');
+        $path = realpath(WRITEPATH . 'uploads/' . ltrim((string) $file['FilePath'], '/\\'));
+
+        // Evita salir de writable/uploads con rutas manipuladas.
+        if ($base === false || $path === false || ! str_starts_with($path, $base . DIRECTORY_SEPARATOR) || ! is_file($path)) {
+            return $this->failNotFound('El archivo del adjunto no se encuentra en el servidor.');
+        }
+
+        if ($this->request->getGet('descargar') === '1') {
+            return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+        }
+
+        $mime = [
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf'  => 'application/pdf',
+            'txt'  => 'text/plain; charset=UTF-8',
+        ][strtolower(pathinfo((string) $file['FileName'], PATHINFO_EXTENSION))] ?? null;
+
+        if ($mime === null) {
+            return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+        }
+
+        return $this->response
+            ->setHeader('Content-Type', $mime)
+            ->setHeader('Content-Disposition', 'inline; filename="' . rawurlencode((string) $file['FileName']) . '"')
+            ->setHeader('X-Content-Type-Options', 'nosniff')
+            ->setBody((string) file_get_contents($path));
     }
 
     /**

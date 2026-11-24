@@ -56,6 +56,25 @@ export async function apiGet(apiUrl, endpoint) {
 
 
 // ==========================================
+// GET de un archivo (adjuntos): devuelve un Blob
+// ==========================================
+export async function apiBlob(apiUrl, endpoint) {
+
+    const response = await fetch(buildUrl(apiUrl, endpoint), {
+        method: "GET",
+        headers: getHeaders()
+    });
+
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(body?.message || `Error HTTP ${response.status}`);
+    }
+
+    return response.blob();
+}
+
+
+// ==========================================
 // POST
 // ==========================================
 export async function apiPost(apiUrl, endpoint, body) {

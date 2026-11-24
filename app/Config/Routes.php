@@ -38,6 +38,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('tickets/(:num)/escalamiento', 'Tickets::resolveEscalation/$1');
     $routes->post('tickets/(:num)/datos', 'Tickets::editData/$1');
     $routes->post('tickets/(:num)/reabrir', 'Tickets::reopen/$1');
+    $routes->post('tickets/(:num)/resolver', 'Tickets::dismiss/$1');
+    $routes->post('tickets/(:num)/eliminar', 'Tickets::delete/$1');
 
     // Seguimiento de desarrollos (plan del mes, ficha y cierre de mes).
     $routes->get('desarrollos', 'Developments::index');
@@ -205,6 +207,7 @@ $routes->group('api', ['namespace' => 'App\Controllers\Api', 'filter' => 'apiaut
     $routes->get('tickets/mine', 'TicketController::mine');
     $routes->get('tickets/(:num)/detalle', 'TicketController::requesterDetail/$1');
     $routes->post('tickets/(:num)/responder', 'TicketController::requesterReply/$1');
+    $routes->get('tickets/(:num)/adjuntos/(:num)', 'TicketController::requesterAttachment/$1/$2');
     $routes->get('tickets', 'TicketController::index');
     $routes->get('tickets/(:num)', 'TicketController::show/$1');
     $routes->post('tickets', 'TicketController::create');

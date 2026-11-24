@@ -6,7 +6,7 @@
  * el widget.
  */
 
-import { apiGet, apiPost } from "./api.js";
+import { apiBlob, apiGet, apiPost } from "./api.js";
 
 /*
  * GET /tickets/mine?email=&status=pendientes|resueltos&from=&to=&page=&perPage=
@@ -46,5 +46,17 @@ export async function responderTicket(apiUrl, id, { email, name, message }) {
         apiUrl,
         "/tickets/" + encodeURIComponent(id) + "/responder",
         { email, name, message }
+    );
+}
+
+/*
+ * GET /tickets/{id}/adjuntos/{fileId}?email=
+ * Devuelve el archivo (Blob) para verlo en el modal o descargarlo.
+ */
+export async function obtenerAdjuntoTicket(apiUrl, id, fileId, email) {
+
+    return await apiBlob(
+        apiUrl,
+        "/tickets/" + encodeURIComponent(id) + "/adjuntos/" + encodeURIComponent(fileId) + "?email=" + encodeURIComponent(email)
     );
 }

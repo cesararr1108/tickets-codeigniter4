@@ -3,6 +3,19 @@
 <?php
 /** @var array $filters @var array $lookups */
 $statusOptions = ['' => 'Todos los estados', 'pendientes' => 'Pendientes'] + $config->statuses;
+
+// Encabezado ordenable: un clic ordena ascendente, otro clic descendente.
+$sortDir = in_array(strtolower($filters['dir'] ?? ''), ['asc', 'desc'], true) ? strtolower($filters['dir']) : '';
+$sortHeader = static function (string $key, string $label) use ($filters, $sortDir): string {
+    $active = ($filters['sort'] ?? '') === $key && $sortDir !== '';
+    $next   = $active && $sortDir === 'asc' ? 'desc' : 'asc';
+    $arrow  = $active ? ($sortDir === 'asc' ? '▲' : '▼') : '↕';
+    $aria   = $active ? ($sortDir === 'asc' ? 'ascending' : 'descending') : 'none';
+
+    return '<th aria-sort="' . $aria . '"><a class="th-sort' . ($active ? ' is-active' : '') . '" href="'
+        . esc(query_with(['sort' => $key, 'dir' => $next, 'page' => null]), 'attr') . '" title="Ordenar por ' . esc(mb_strtolower($label), 'attr') . '">'
+        . esc($label) . ' <span class="th-arrow" aria-hidden="true">' . $arrow . '</span></a></th>';
+};
 ?>
 <div class="page-head">
     <div>
@@ -82,14 +95,14 @@ $statusOptions = ['' => 'Todos los estados', 'pendientes' => 'Pendientes'] + $co
             <table class="table">
                 <thead>
                     <tr>
-                        <th>Ticket</th>
-                        <th>Asunto</th>
-                        <th>Compañía / sucursal</th>
-                        <th>Categoría</th>
-                        <th>Prioridad</th>
-                        <th>Estado</th>
-                        <th>Agente</th>
-                        <th>Antigüedad</th>
+                        <?= $sortHeader('ticket', 'Ticket') ?>
+                        <?= $sortHeader('asunto', 'Asunto') ?>
+                        <?= $sortHeader('compania', 'Compañía / sucursal') ?>
+                        <?= $sortHeader('categoria', 'Categoría') ?>
+                        <?= $sortHeader('prioridad', 'Prioridad') ?>
+                        <?= $sortHeader('estado', 'Estado') ?>
+                        <?= $sortHeader('agente', 'Agente') ?>
+                        <?= $sortHeader('fecha', 'Antigüedad') ?>
                     </tr>
                 </thead>
                 <tbody>

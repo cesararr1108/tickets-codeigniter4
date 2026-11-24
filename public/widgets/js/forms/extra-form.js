@@ -29,6 +29,7 @@ import { apiGet, toList } from "../api.js";
 // Listas compartidas (ajústalas a tu empresa).
 export const AREAS = [
     "Comercial",
+    "Mercadeo",
     "Tecnología",
     "Cartera",
     "Financiera",
@@ -132,7 +133,7 @@ export class ExtraForm {
     }
 
     /*
-     * context: { requester, email, area, sede, perfil }
+     * context: { requester, email, area, phone, sede, perfil }
      */
     async templateData(context) {
         return context;

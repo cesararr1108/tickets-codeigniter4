@@ -20,6 +20,7 @@ export class IncidentForm extends ExtraForm {
         return {
             requester: context.requester,
             sede: context.sede,
+            phone: context.phone ?? "",
             areaOptions: options(AREAS, context.area)
         };
     }

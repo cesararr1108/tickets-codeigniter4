@@ -179,6 +179,39 @@
     }
 
     // ==========================================
+    // ADJUNTOS EN MODAL (imágenes, PDF y texto; el resto se descarga)
+    // ==========================================
+    const modal = $('[data-preview-modal]');
+
+    if (modal && typeof modal.showModal === 'function') {
+        const body = $('[data-preview-body]', modal);
+        const close = () => { if (modal.open) modal.close(); };
+
+        modal.addEventListener('close', () => { body.innerHTML = ''; });
+        $('[data-preview-close]', modal).addEventListener('click', close);
+        // Clic en el fondo oscuro cierra el modal.
+        modal.addEventListener('click', event => { if (event.target === modal) close(); });
+
+        document.addEventListener('click', event => {
+            const link = event.target.closest('a[data-preview]');
+            if (!link || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+
+            event.preventDefault();
+
+            body.innerHTML = '';
+            const src = link.dataset.previewSrc;
+            const node = document.createElement(link.dataset.preview === 'image' ? 'img' : 'iframe');
+            node.src = src;
+            node.title = node.alt = link.dataset.previewName || 'Adjunto';
+            body.appendChild(node);
+
+            $('[data-preview-title]', modal).textContent = link.dataset.previewName || '';
+            $('[data-preview-download]', modal).href = link.href;
+            modal.showModal();
+        });
+    }
+
+    // ==========================================
     // CHAT DEL TICKET
     // ==========================================
     const thread = $('[data-chat]');
@@ -234,6 +267,19 @@
 
         textarea.addEventListener('input', autoresize);
 
+        // Adjuntos de la respuesta: se pueden enviar solos o con texto.
+        const fileInput = $('[data-chat-files]', chatForm);
+        const fileLabel = $('[data-chat-files-label]', chatForm);
+
+        const syncFiles = () => {
+            const count = fileInput?.files.length || 0;
+            if (!fileLabel) return;
+            fileLabel.hidden = count === 0;
+            fileLabel.textContent = count === 1 ? fileInput.files[0].name : `${count} archivos`;
+        };
+
+        fileInput?.addEventListener('change', syncFiles);
+
         textarea.addEventListener('keydown', event => {
             if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
                 event.preventDefault();
@@ -245,7 +291,7 @@
             event.preventDefault();
 
             const text = textarea.value.trim();
-            if (!text || button.disabled) return;
+            if ((!text && !(fileInput?.files.length)) || button.disabled) return;
 
             button.disabled = true;
 
@@ -265,6 +311,7 @@
                 if (!response.ok) throw new Error(data.message || 'No se pudo enviar el mensaje.');
 
                 textarea.value = '';
+                if (fileInput) { fileInput.value = ''; syncFiles(); }
                 autoresize();
                 append(data.message);
                 scrollToBottom(true);

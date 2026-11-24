@@ -54,6 +54,7 @@ export class ProjectForm extends ExtraForm {
     async templateData(context) {
         return {
             requester: context.requester,
+            phone: context.phone ?? "",
             areaOptions: options(AREAS, context.area),
             areaChips: await chipsHtml(AREAS),
             systemChips: await chipsHtml(SYSTEMS)

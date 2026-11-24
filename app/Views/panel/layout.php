@@ -132,6 +132,14 @@ if (panel_is_admin()) {
     </main>
 </div>
 
+<dialog class="preview-modal" data-preview-modal aria-label="Vista previa del adjunto">
+    <div class="preview-bar">
+        <strong class="preview-name" data-preview-title></strong>
+        <a class="btn btn-outline btn-sm" data-preview-download download>Descargar</a>
+        <button type="button" class="btn btn-primary btn-sm" data-preview-close>Cerrar</button>
+    </div>
+    <div class="preview-body" data-preview-body></div>
+</dialog>
 <script src="<?= base_url('assets/panel/panel.js') ?>" defer></script>
 <script type="module" src="<?= base_url('assets/panel/push.js') ?>"></script>
 <?= $this->renderSection('scripts') ?>

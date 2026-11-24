@@ -23,6 +23,16 @@ $attachmentsByName = [];
 foreach ($attachments as $f) {
     $attachmentsByName[$f['FileName']] ??= $f;
 }
+
+// Enlace a un adjunto: imágenes, PDF y texto se ven en un modal; el resto se descarga.
+$attachmentLink = static function (array $f, string $label, string $icon = 'paperclip') use ($ticket): string {
+    $url     = site_url('panel/tickets/' . $ticket['IdTicket'] . '/adjuntos/' . $f['AttachmentId']);
+    $ext     = strtolower(pathinfo((string) $f['FileName'], PATHINFO_EXTENSION));
+    $kind    = in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'], true) ? 'image' : (in_array($ext, ['pdf', 'txt'], true) ? 'frame' : '');
+    $preview = $kind === '' ? '' : ' data-preview="' . $kind . '" data-preview-src="' . esc($url . '?ver=1', 'attr') . '" data-preview-name="' . esc((string) $f['FileName'], 'attr') . '"';
+
+    return '<a href="' . esc($url, 'attr') . '"' . $preview . ($kind === '' ? ' download' : '') . '>' . icon($icon) . ' ' . esc($label) . '</a>';
+};
 ?>
 <a class="back-link" href="<?= site_url('panel/tickets?status=pendientes') ?>"><?= icon('arrow-left') ?> Tickets</a>
 
@@ -43,7 +53,10 @@ foreach ($attachments as $f) {
     <section class="card closed-card">
         <?= icon('lock') ?>
         <div>
-            <strong>Ticket cerrado</strong>
+            <strong>Ticket <?= ! empty($outcome) ? esc(mb_strtolower($outcome['label'])) : 'cerrado' ?></strong>
+            <?php if (! empty($outcome)): ?>
+                <span class="muted small"><?= esc($outcome['label']) ?> por <?= esc((string) $outcome['by']) ?> · <?= format_date($outcome['at']) ?>. El motivo quedó en la conversación.</span>
+            <?php endif ?>
             <span class="muted small">Está en solo lectura: no se pueden cambiar sus datos, estado, responsable ni la conversación.</span>
         </div>
         <?php if ($perm['canReopen']): ?>
@@ -120,7 +133,7 @@ foreach ($attachments as $f) {
                                 <dd class="answer-files">
                                     <?php foreach (array_map('trim', explode(',', $value)) as $name): $file = $attachmentsByName[$name] ?? null; ?>
                                         <?php if ($file !== null): ?>
-                                            <a href="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/adjuntos/' . $file['AttachmentId']) ?>" target="_blank" rel="noopener"><?= icon('paperclip') ?> <?= esc($name) ?></a>
+                                            <?= $attachmentLink($file, $name) ?>
                                         <?php else: ?>
                                             <span><?= esc($name) ?></span>
                                         <?php endif ?>
@@ -159,8 +172,14 @@ foreach ($attachments as $f) {
         <?php if ($perm['canChat']): ?>
             <form class="chat-composer" method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/messages') ?>" data-chat-form>
                 <?= csrf_field() ?>
-                <textarea name="Message" rows="2" placeholder="Escribe una respuesta… (Enter para enviar, Shift+Enter para salto de línea)" required></textarea>
+                <label class="btn btn-outline chat-attach" title="Adjuntar archivos" aria-label="Adjuntar archivos">
+                    <?= icon('paperclip') ?>
+                    <input type="file" name="files[]" multiple hidden data-chat-files
+                           accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.png,.jpg,.jpeg,.gif,.webp,.zip,.rar,.msg,.eml">
+                </label>
+                <textarea name="Message" rows="2" placeholder="Escribe una respuesta… (Enter para enviar, Shift+Enter para salto de línea)"></textarea>
                 <button type="submit" class="btn btn-primary" aria-label="Enviar"><?= icon('send') ?> <span class="hide-mobile">Enviar</span></button>
+                <span class="chat-files muted small" data-chat-files-label hidden></span>
             </form>
         <?php else: ?>
             <div class="chat-locked">
@@ -389,6 +408,39 @@ foreach ($attachments as $f) {
             </form>
         <?php endif ?>
 
+        <?php if ($perm['canDismiss'] || $perm['canDelete']): ?>
+            <div class="card">
+                <h2>Cancelar, rechazar o eliminar</h2>
+
+                <?php if ($perm['canDismiss']): ?>
+                    <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/resolver') ?>"
+                          data-confirm="¿Dar por terminado este ticket sin resolverlo? Quedará cerrado y el solicitante verá el motivo.">
+                        <?= csrf_field() ?>
+                        <label class="field">
+                            <span class="field-label">Acción</span>
+                            <select name="Outcome" class="select" required>
+                                <option value="cancelado">Cancelar (ya no se necesita)</option>
+                                <option value="rechazado">Rechazar (no procede)</option>
+                            </select>
+                        </label>
+                        <label class="field">
+                            <span class="field-label">Motivo <span class="muted">(lo ve el solicitante)</span></span>
+                            <textarea name="Reason" class="input" rows="3" maxlength="2000" required placeholder="Ej.: duplicado del TK-00012, fuera del alcance de TI, el solicitante ya no lo necesita…"></textarea>
+                        </label>
+                        <button type="submit" class="btn btn-outline btn-block">Cancelar / rechazar ticket</button>
+                    </form>
+                <?php endif ?>
+
+                <?php if ($perm['canDelete']): ?>
+                    <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/eliminar') ?>"
+                          data-confirm="¿Eliminar este ticket definitivamente? Se borran también su conversación, adjuntos e historial. No se puede deshacer.">
+                        <?= csrf_field() ?>
+                        <button type="submit" class="btn btn-danger btn-block"><?= icon('trash') ?> Eliminar ticket</button>
+                    </form>
+                <?php endif ?>
+            </div>
+        <?php endif ?>
+
         <?php if ($areaDefs !== [] && ! $perm['isOpen'] && ($perm['isAdmin'] || $perm['isAssignee']) && array_filter($areaValues) !== []): ?>
             <div class="card">
                 <h2>Seguimiento del área</h2>
@@ -468,8 +520,7 @@ foreach ($attachments as $f) {
                 <ul class="files">
                     <?php foreach ($attachments as $f): ?>
                         <li>
-                            <?= icon('paperclip') ?>
-                            <a href="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/adjuntos/' . $f['AttachmentId']) ?>" target="_blank" rel="noopener"><?= esc($f['FileName']) ?></a>
+                            <?= $attachmentLink($f, (string) $f['FileName']) ?>
                             <span class="muted small"><?= format_date($f['CreatedAt'], 'd/m/Y') ?></span>
                         </li>
                     <?php endforeach ?>

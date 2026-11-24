@@ -113,7 +113,7 @@ class TicketRepository
 
         $builder = $this->applyFilters($this->builder(), $filters, $currentUserId);
 
-        $this->applySort($builder, $filters['sort'] ?? '');
+        $this->applySort($builder, $filters['sort'] ?? '', $filters['dir'] ?? '');
 
         $rows = $builder
             ->limit($perPage, max(0, ($page - 1) * $perPage))
@@ -123,15 +123,60 @@ class TicketRepository
         return ['rows' => $rows, 'total' => $total];
     }
 
-    public function applySort(BaseBuilder $builder, string $sort): void
+    /**
+     * Columnas del listado que se pueden ordenar (clave de ?sort= => expresiones SQL).
+     * Con ?dir=asc|desc el usuario elige el sentido; sin él se usa el de siempre.
+     *
+     * @var array<string, list<array{0: string, 1: bool}>> [expresión, ¿es SQL crudo?]
+     */
+    public const SORTABLE = [
+        'ticket'    => [['t.IdTicket', false]],
+        'asunto'    => [['t.Subject', false]],
+        'compania'  => [['c.Companies', false], ['b.Branches', false]],
+        'categoria' => [['cat.Category', false], ['sc.SubCategory', false]],
+        'prioridad' => [['@priority', true]],
+        'estado'    => [['@status', true]],
+        'agente'    => [['u.FullName', false]],
+        'fecha'     => [['t.CreatedAt', false]],
+    ];
+
+    /**
+     * @param string $dir 'asc' | 'desc' ('' = el sentido por defecto de cada orden)
+     */
+    public function applySort(BaseBuilder $builder, string $sort, string $dir = ''): void
     {
-        match ($sort) {
-            'antiguos'  => $builder->orderBy('t.CreatedAt', 'ASC'),
-            'prioridad' => $builder
-                ->orderBy(self::priorityOrderSql('t.Priority'), '', false)
-                ->orderBy('t.CreatedAt', 'ASC'),
-            default     => $builder->orderBy('t.CreatedAt', 'DESC'),
-        };
+        $dir = strtolower($dir);
+
+        // Órdenes de siempre (también los usa el selector "Más recientes / Más antiguos / Prioridad").
+        if (! isset(self::SORTABLE[$sort]) || ! in_array($dir, ['asc', 'desc'], true)) {
+            match ($sort) {
+                'antiguos'  => $builder->orderBy('t.CreatedAt', 'ASC'),
+                'prioridad' => $builder
+                    ->orderBy(self::priorityOrderSql('t.Priority'), '', false)
+                    ->orderBy('t.CreatedAt', 'ASC'),
+                default     => $builder->orderBy('t.CreatedAt', 'DESC'),
+            };
+
+            return;
+        }
+
+        $direction = strtoupper($dir);
+
+        foreach (self::SORTABLE[$sort] as [$expression, $raw]) {
+            if ($raw) {
+                $expression = $expression === '@priority'
+                    ? self::priorityOrderSql('t.Priority')
+                    : "CASE t.Status WHEN 'abierto' THEN 1 WHEN 'en_progreso' THEN 2 ELSE 3 END";
+                $builder->orderBy($expression, $direction, false);
+            } else {
+                $builder->orderBy($expression, $direction);
+            }
+        }
+
+        // Desempate estable: lo más reciente primero (salvo que ya se ordene por fecha o número).
+        if (! in_array($sort, ['fecha', 'ticket'], true)) {
+            $builder->orderBy('t.CreatedAt', 'DESC');
+        }
     }
 
     /**

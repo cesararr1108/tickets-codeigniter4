@@ -24,7 +24,7 @@ import {
     obtenerTodasSubcategorias
 } from "./categories.js";
 import { crearTicket } from "./tickets.js";
-import { obtenerDetalleTicket, obtenerMisTickets, responderTicket } from "./my-tickets.js";
+import { obtenerAdjuntoTicket, obtenerDetalleTicket, obtenerMisTickets, responderTicket } from "./my-tickets.js";
 import { ProjectForm } from "./forms/project-form.js";
 import { RequirementForm } from "./forms/requirement-form.js";
 import { IncidentForm } from "./forms/incident-form.js";
@@ -550,6 +550,7 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
             requester: perfil.name || el.email.value.trim() || perfil.email || "",
             email: el.email.value.trim() || perfil.email || "",
             area: perfil.area || "",
+            phone: perfil.phone || "",
             sede: state.branch?.name || "",
             perfil
         };
@@ -1173,9 +1174,14 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
 
         const closed = t.Status === "cerrado";
 
-        const files = detail.attachments?.length
+        // Con "files" (servidor nuevo) cada adjunto se puede abrir; si no, solo se listan los nombres.
+        const fileItems = detail.files?.length
+            ? detail.files.map(f => `<li><button type="button" class="tw-file-open" data-file="${Number(f.id)}" data-ticket="${Number(t.IdTicket)}" data-name="${escapeHtml(f.name)}">${escapeHtml(f.name)}</button></li>`)
+            : (detail.attachments ?? []).map(name => `<li><span>${escapeHtml(name)}</span></li>`);
+
+        const files = fileItems.length
             ? `<section class="tw-detail-block"><p class="tw-section-label">Adjuntos</p><ul class="tw-file-list">`
-                + detail.attachments.map(name => `<li><span>${escapeHtml(name)}</span></li>`).join("")
+                + fileItems.join("")
                 + "</ul></section>"
             : "";
 
@@ -1204,6 +1210,62 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
                 closedHidden: closed ? "" : "hidden"
             })
         );
+    }
+
+    /*
+     * Abre un adjunto del ticket en un modal (imágenes, PDF y texto) o lo descarga.
+     */
+    async function openAttachment(button) {
+
+        const name = button.dataset.name || "adjunto";
+        const ext = name.split(".").pop().toLowerCase();
+        const kind = ["png", "jpg", "jpeg", "gif", "webp"].includes(ext) ? "image" : ["pdf", "txt"].includes(ext) ? "frame" : "";
+
+        button.disabled = true;
+
+        try {
+            const blob = await obtenerAdjuntoTicket(apiUrl, button.dataset.ticket, button.dataset.file, mineEmail());
+            const url = URL.createObjectURL(blob);
+
+            if (kind === "") {
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = name;
+                a.click();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+                return;
+            }
+
+            const viewer = document.createElement("div");
+            viewer.className = "tw-viewer";
+            viewer.innerHTML = `
+                <div class="tw-viewer-box" role="dialog" aria-modal="true" aria-label="${escapeHtml(name)}">
+                    <div class="tw-viewer-bar">
+                        <strong>${escapeHtml(name)}</strong>
+                        <a class="tw-btn" download="${escapeHtml(name)}">Descargar</a>
+                        <button type="button" class="tw-btn tw-btn-primary" data-viewer-close>Cerrar</button>
+                    </div>
+                    <div class="tw-viewer-body"></div>
+                </div>`;
+
+            const media = document.createElement(kind === "image" ? "img" : "iframe");
+            media.src = kind === "frame" && blob.type === "" ? URL.createObjectURL(new Blob([blob], { type: ext === "pdf" ? "application/pdf" : "text/plain" })) : url;
+            media.alt = media.title = name;
+            viewer.querySelector(".tw-viewer-body").append(media);
+            viewer.querySelector("a[download]").href = url;
+
+            const close = () => { viewer.remove(); URL.revokeObjectURL(url); };
+            viewer.addEventListener("click", event => {
+                if (event.target === viewer || event.target.closest("[data-viewer-close]")) close();
+            });
+
+            shadow.append(viewer);
+        } catch (err) {
+            console.error("[Tickets Widget] Error abriendo el adjunto:", err);
+            alert(err.message || "No fue posible abrir el adjunto.");
+        } finally {
+            button.disabled = false;
+        }
     }
 
     function messageHtml(m) {
@@ -1526,6 +1588,11 @@ export async function mountWidget(container, { apiUrl, version = "",perfil }) {
     el.mineBack.addEventListener("click", loadTickets);
 
     // Respuesta del solicitante en el detalle del ticket.
+    el.mineDetailView.addEventListener("click", event => {
+        const button = event.target.closest("button[data-file]");
+        if (button) openAttachment(button);
+    });
+
     el.mineDetailView.addEventListener("submit", event => {
         const form = event.target.closest("form[data-reply]");
 

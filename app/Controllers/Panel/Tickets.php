@@ -19,7 +19,7 @@ class Tickets extends BasePanelController
     /** Mensaje cuando se intenta modificar un ticket cerrado. */
     private const CLOSED_MESSAGE = 'El ticket está cerrado y no se puede modificar.';
 
-    private const FILTER_KEYS = ['q', 'status', 'priority', 'company', 'branch', 'category', 'subcategory', 'assigned', 'escalated', 'sort'];
+    private const FILTER_KEYS = ['q', 'status', 'priority', 'company', 'branch', 'category', 'subcategory', 'assigned', 'escalated', 'sort', 'dir'];
 
     /**
      * GET /panel/tickets
@@ -99,9 +99,13 @@ class Tickets extends BasePanelController
                 'canAssign'   => $isOpen && $isAdmin,
                 'canEscalate' => $isOpen && $isAssignee && TicketEscalationModel::available(),
                 'canReopen'   => ! $isOpen && $isAdmin,
+                // Cancelar / rechazar: el administrador o el responsable. Eliminar: solo el administrador.
+                'canDismiss'  => $isOpen && ($isAdmin || $isAssignee),
+                'canDelete'   => $isAdmin,
                 'isAssignee'  => $isAssignee,
             ],
-            'changes'     => model(TicketChangeModel::class)->forTicket($id),
+            'changes'     => $changes = model(TicketChangeModel::class)->forTicket($id),
+            'outcome'     => $isOpen ? null : $this->outcomeFrom($changes),
             'development' => (new DevelopmentBoard())->findByTicket($id),
             'timer'       => $timer === null ? null : [
                 'running' => $timer->runningFor($id),
@@ -291,12 +295,43 @@ class Tickets extends BasePanelController
                 : redirect()->back()->with('error', $error);
         }
 
-        if ($ticket === null || $message === '') {
-            $error = $message === '' ? 'Escribe un mensaje.' : 'El ticket no existe.';
+        // Adjuntos de la respuesta (el solicitante los ve en su ticket).
+        $files = AttachmentStore::uploaded('files');
+
+        foreach ($files as $file) {
+            if ($error = AttachmentStore::error($file)) {
+                return $isAjax
+                    ? $this->response->setStatusCode(422)->setJSON(['message' => $error, 'csrf' => csrf_hash()])
+                    : redirect()->back()->with('error', $error);
+            }
+        }
+
+        if ($ticket === null || ($message === '' && $files === [])) {
+            $error = $ticket === null ? 'El ticket no existe.' : 'Escribe un mensaje.';
 
             return $isAjax
                 ? $this->response->setStatusCode(422)->setJSON(['message' => $error, 'csrf' => csrf_hash()])
                 : redirect()->back()->with('error', $error);
+        }
+
+        try {
+            foreach ($files as $file) {
+                AttachmentStore::store($id, $file);
+            }
+        } catch (\Throwable $e) {
+            log_message('error', '[Panel] Adjuntos de la respuesta: ' . $e->getMessage());
+
+            $error = 'No se pudieron guardar los adjuntos.';
+
+            return $isAjax
+                ? $this->response->setStatusCode(500)->setJSON(['message' => $error, 'csrf' => csrf_hash()])
+                : redirect()->back()->with('error', $error);
+        }
+
+        // La conversación deja constancia de qué archivos se enviaron.
+        if ($files !== []) {
+            $names   = implode(', ', array_map(static fn ($f) => $f->getClientName(), $files));
+            $message = trim($message . "\n\n📎 Adjuntos: " . $names);
         }
 
         $model = model(TicketMessageModel::class);
@@ -739,6 +774,171 @@ class Tickets extends BasePanelController
         return $back->with('success', 'Ticket reabierto.');
     }
 
+    /** Resultados con los que se da por terminado un ticket sin resolverlo. */
+    private const OUTCOMES = [
+        'cancelado' => ['label' => 'Cancelado', 'verb' => 'cancelado'],
+        'rechazado' => ['label' => 'Rechazado', 'verb' => 'rechazado'],
+    ];
+
+    /**
+     * Si el último cambio de estado fue un cancelado/rechazado, devuelve su etiqueta.
+     *
+     * @param list<array<string, mixed>> $changes Historial (más reciente primero)
+     */
+    private function outcomeFrom(array $changes): ?array
+    {
+        foreach ($changes as $change) {
+            if ($change['Field'] !== 'Status') {
+                continue;
+            }
+
+            foreach (self::OUTCOMES as $key => $outcome) {
+                if ($change['NewValue'] === $outcome['label']) {
+                    return $outcome + ['key' => $key, 'by' => $change['UserName'], 'at' => $change['CreatedAt']];
+                }
+            }
+
+            return null;
+        }
+
+        return null;
+    }
+
+    /**
+     * POST /panel/tickets/{id}/resolver
+     * Cancela o rechaza un ticket explicando el motivo. El ticket queda
+     * cerrado (solo lectura, el administrador puede reabrirlo) y el
+     * solicitante ve el motivo en la conversación.
+     */
+    public function dismiss(int $id)
+    {
+        $model   = model(TicketModel::class);
+        $ticket  = $model->find($id);
+        $back    = redirect()->to(site_url("panel/tickets/{$id}"));
+        $outcome = (string) $this->request->getPost('Outcome');
+        $reason  = trim((string) $this->request->getPost('Reason'));
+
+        if ($ticket === null) {
+            return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return $back->with('error', self::CLOSED_MESSAGE);
+        }
+
+        if (! panel_is_admin() && (string) ($ticket['AssignedUserId'] ?? '') !== panel_user_id()) {
+            return $back->with('error', 'Solo el administrador o el responsable pueden cancelar o rechazar el ticket.');
+        }
+
+        if (! isset(self::OUTCOMES[$outcome])) {
+            return $back->with('error', 'Elige si el ticket se cancela o se rechaza.');
+        }
+
+        if ($reason === '' || mb_strlen($reason) > 2000) {
+            return $back->with('error', 'Escribe el motivo (máximo 2000 caracteres): el solicitante lo verá.');
+        }
+
+        $label = self::OUTCOMES[$outcome]['label'];
+        $verb  = self::OUTCOMES[$outcome]['verb'];
+
+        $model->skipValidation(true)->update($id, ['Status' => 'cerrado']);
+
+        if (TicketTimeLogModel::available()) {
+            model(TicketTimeLogModel::class)->stop($id);
+        }
+
+        if (\App\Models\TicketChangeModel::available()) {
+            model(TicketChangeModel::class)->insert([
+                'IdTicket' => $id,
+                'IdUser'   => (string) $this->user['id'],
+                'UserName' => mb_substr((string) ($this->user['name'] ?? $this->user['id']), 0, 150),
+                'Field'    => 'Status',
+                'OldValue' => config('Tickets')->statuses[$ticket['Status']] ?? $ticket['Status'],
+                'NewValue' => $label,
+            ]);
+        }
+
+        $text = 'Tu solicitud fue ' . $verb . '. Motivo: ' . $reason;
+
+        model(TicketMessageModel::class)->insert([
+            'IdTicket'   => $id,
+            'SenderType' => 'agente',
+            'SenderName' => $this->user['name'],
+            'Message'    => $text,
+        ]);
+
+        (new TicketNotifier())->chatFromAgent($ticket, $text, (string) $this->user['name']);
+
+        return $back->with('success', 'Ticket ' . $verb . '.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/eliminar
+     * Borra el ticket y todo lo que depende de él (solo el administrador).
+     * Es irreversible; si el ticket ya es un desarrollo/proyecto hay que
+     * quitarlo primero de ese seguimiento.
+     */
+    public function delete(int $id)
+    {
+        $ticket = model(TicketModel::class)->find($id);
+
+        if ($ticket === null) {
+            return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if (! panel_is_admin()) {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'Solo el administrador puede eliminar tickets.');
+        }
+
+        $db = db_connect();
+
+        if ($db->tableExists('Developments') && $db->table('Developments')->where('IdTicket', $id)->countAllResults() > 0) {
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El ticket tiene seguimiento de desarrollo/proyecto. Elimina primero ese seguimiento.');
+        }
+
+        $files = $db->table('TicketAttachments')->select('FilePath')->where('TicketId', $id)->get()->getResultArray();
+
+        $db->transBegin();
+
+        try {
+            foreach (['TicketMessages', 'TicketAttachments', 'TicketEscalations', 'TicketFormAnswers', 'TicketTimeLogs', 'TicketChanges'] as $table) {
+                if ($db->tableExists($table)) {
+                    $db->table($table)->where($table === 'TicketAttachments' ? 'TicketId' : 'IdTicket', $id)->delete();
+                }
+            }
+
+            $db->table('Tickets')->where('IdTicket', $id)->delete();
+
+            if ($db->transStatus() === false) {
+                throw new \RuntimeException('Error de base de datos al eliminar el ticket.');
+            }
+
+            $db->transCommit();
+        } catch (\Throwable $e) {
+            $db->transRollback();
+            log_message('error', '[Panel] Eliminar ticket: ' . $e->getMessage());
+
+            return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'No fue posible eliminar el ticket.');
+        }
+
+        // Los archivos se borran después de confirmar la transacción.
+        $base = realpath(WRITEPATH . 'uploads');
+
+        foreach ($files as $file) {
+            if (preg_match('#^https?://#i', (string) $file['FilePath']) || $base === false) {
+                continue;
+            }
+
+            $path = realpath(WRITEPATH . 'uploads/' . ltrim((string) $file['FilePath'], '/\\'));
+
+            if ($path !== false && str_starts_with($path, $base . DIRECTORY_SEPARATOR) && is_file($path)) {
+                @unlink($path);
+            }
+        }
+
+        return redirect()->to(site_url('panel/tickets'))->with('success', 'Ticket ' . ticket_code($id) . ' eliminado.');
+    }
+
     /**
      * La categoría debe ofrecerse en la compañía y la subcategoría
      * pertenecer a la categoría.
@@ -789,7 +989,34 @@ class Tickets extends BasePanelController
             return redirect()->to(site_url("panel/tickets/{$id}"))->with('error', 'El archivo del adjunto no se encuentra en el servidor.');
         }
 
+        // ?ver=1: se muestra dentro del modal (imágenes, PDF y texto); sin él se descarga.
+        $mime = $this->previewMime((string) $file['FileName']);
+
+        if ($mime !== null && $this->request->getGet('ver') === '1') {
+            return $this->response
+                ->setHeader('Content-Type', $mime)
+                ->setHeader('Content-Disposition', 'inline; filename="' . rawurlencode((string) $file['FileName']) . '"')
+                ->setHeader('X-Content-Type-Options', 'nosniff')
+                ->setBody((string) file_get_contents($path));
+        }
+
         return $this->response->download($path, null)->setFileName((string) $file['FileName']);
+    }
+
+    /**
+     * Tipo MIME de los adjuntos que el navegador puede mostrar en el modal.
+     */
+    private function previewMime(string $fileName): ?string
+    {
+        return [
+            'png'  => 'image/png',
+            'jpg'  => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'gif'  => 'image/gif',
+            'webp' => 'image/webp',
+            'pdf'  => 'application/pdf',
+            'txt'  => 'text/plain; charset=UTF-8',
+        ][strtolower(pathinfo($fileName, PATHINFO_EXTENSION))] ?? null;
     }
 
     /**

@@ -202,6 +202,7 @@ if (! function_exists('icon')) {
             'alert'     => '<path d="M12 3l10 18H2z"/><path d="M12 10v4M12 17.5v.5"/>',
             'flag'      => '<path d="M4 22V4M4 4h12l-2 4 2 4H4"/>',
             'send'      => '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+            'trash'     => '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/>',
             'paperclip' => '<path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7L14 4.5a3.3 3.3 0 0 1 4.7 4.7L10.2 17.7a1.7 1.7 0 0 1-2.4-2.4L15.5 7.6"/>',
             'arrow-left'=> '<path d="M19 12H5M11 18l-6-6 6-6"/>',
             'chat'      => '<path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>',

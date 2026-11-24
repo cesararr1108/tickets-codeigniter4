@@ -43,6 +43,7 @@ export class RequirementForm extends ExtraForm {
         return {
             requester: context.requester,
             sede: context.sede,
+            phone: context.phone ?? "",
             today,
             areaOptions: options(AREAS, context.area),
             impactoOptions: options(IMPACTOS),

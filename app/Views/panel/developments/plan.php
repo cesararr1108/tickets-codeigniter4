@@ -40,7 +40,11 @@ $canPrio = static fn (array $d) => $d['TicketStatus'] !== 'cerrado' && ($isAdmin
     </div>
 </div>
 
-<?= view('panel/developments/_kpis', ['summary' => $summary, 'month' => $month, 'closed' => false]) ?>
+<?php if ($isAdmin && ! Board::orderAvailable()): ?>
+    <div class="flash flash-error"><?= icon('alert') ?> Para ordenar los desarrollos arrastrándolos falta ejecutar <strong>app/Database/sql/OrdenDesarrollosYCompras.sql</strong> en la base TicketsDB. Al ejecutarlo aparece el asa ⠿ en cada fila.</div>
+<?php endif ?>
+
+<?= view('panel/developments/_kpis',['summary' => $summary, 'month' => $month, 'closed' => false]) ?>
 
 <?php if ($closure !== null): ?>
     <div class="dev-note" style="margin-top:16px">

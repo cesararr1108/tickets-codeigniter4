@@ -111,7 +111,7 @@ $oldPriority = old('Priority');
     </div>
 
     <div class="card">
-        <h2>Impacto y urgencia</h2>
+        <h2>Impacto en la venta y urgencia</h2>
         <p class="muted">Selecciona una celda para calcular la prioridad.</p>
 
         <div class="matrix" data-matrix>
@@ -120,10 +120,10 @@ $oldPriority = old('Priority');
             <span class="matrix-col">Media</span>
             <span class="matrix-col">Baja</span>
             <?php foreach ($matrix as $impact => $row): ?>
-                <span class="matrix-row">Impacto <?= $impact ?></span>
+                <span class="matrix-row">Impacto en la venta <?= $impact ?></span>
                 <?php foreach ($row as $urgency => $prio): ?>
                     <button type="button" class="matrix-cell prio-<?= $prio ?>" data-priority="<?= $prio ?>"
-                            title="Impacto <?= $impact ?> × urgencia <?= $urgency ?>"><?= priority_label($prio) ?></button>
+                            title="Impacto en la venta <?= $impact ?> × urgencia <?= $urgency ?>"><?= priority_label($prio) ?></button>
                 <?php endforeach ?>
             <?php endforeach ?>
         </div>

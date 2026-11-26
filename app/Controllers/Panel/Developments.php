@@ -152,6 +152,46 @@ class Developments extends BasePanelController
     }
 
     /**
+     * POST /panel/desarrollos/orden  (arrastrar y soltar)
+     * Body: mes, ids[] = desarrollos visibles en el nuevo orden. Los visibles
+     * se reparten, en ese orden, los puestos que ya ocupaban en el mes y se
+     * renumera todo. Solo el administrador. Responde JSON.
+     */
+    public function reorder()
+    {
+        if (! panel_is_admin() || ! DevelopmentBoard::orderAvailable()) {
+            return $this->response->setStatusCode(403)->setJSON(['ok' => false, 'csrf' => csrf_hash(), 'message' => 'No se puede reordenar (falta OrdenDesarrollosYCompras.sql o no eres administrador).']);
+        }
+
+        $month   = DevelopmentBoard::validMonth($this->request->getPost('mes')) ?? DevelopmentBoard::currentMonth();
+        $posted  = array_values(array_unique(array_map('intval', (array) $this->request->getPost('ids'))));
+        $ids     = array_map('intval', array_column($this->board()->list($month), 'IdDevelopment'));
+        $visible = array_values(array_intersect($posted, $ids));
+
+        if (count($visible) !== count($posted) || count($visible) < 2) {
+            return $this->response->setStatusCode(422)->setJSON(['ok' => false, 'csrf' => csrf_hash(), 'message' => 'Orden inválido.']);
+        }
+
+        // Puestos que ocupan hoy los desarrollos visibles, de arriba abajo.
+        $slots = array_keys(array_filter($ids, static fn ($id) => in_array($id, $visible, true)));
+
+        foreach ($slots as $n => $slot) {
+            $ids[$slot] = $visible[$n];
+        }
+
+        $db = db_connect();
+        $db->transStart();
+
+        foreach ($ids as $i => $devId) {
+            $db->table('Developments')->where('IdDevelopment', $devId)->update(['SortOrder' => $i + 1]);
+        }
+
+        $db->transComplete();
+
+        return $this->response->setJSON(['ok' => $db->transStatus(), 'csrf' => csrf_hash()]);
+    }
+
+    /**
      * POST /panel/desarrollos/{id}/prioridad
      * Cambia la prioridad (urgencia) del ticket del desarrollo, elegida con la
      * matriz impacto × urgencia. Administrador o programador asignado.

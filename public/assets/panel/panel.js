@@ -179,6 +179,83 @@
     }
 
     // ==========================================
+    // ORDEN DE DESARROLLOS (arrastrar y soltar; el administrador)
+    // ==========================================
+    const reorder = $('tbody[data-reorder]');
+
+    if (reorder) {
+        let dragging = null;
+
+        // Las flechas de los extremos se deshabilitan según la posición.
+        const refreshArrows = () => {
+            const rows = $$('tr[data-id]', reorder);
+            rows.forEach((row, i) => {
+                const [up, down] = $$('.order-btn', row);
+                if (up) up.disabled = i === 0;
+                if (down) down.disabled = i === rows.length - 1;
+            });
+        };
+
+        const save = async () => {
+            const body = new FormData();
+            body.set(csrf.name(), csrf.value());
+            body.set('mes', reorder.dataset.month);
+            $$('tr[data-id]', reorder).forEach(row => body.append('ids[]', row.dataset.id));
+
+            try {
+                const response = await fetch(reorder.dataset.url, {
+                    method: 'POST',
+                    body,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json().catch(() => ({}));
+                csrf.update(data.csrf);
+                if (!response.ok || !data.ok) throw new Error(data.message || 'No se pudo guardar el orden.');
+                refreshArrows();
+            } catch (error) {
+                alert(error.message);
+                location.reload();
+            }
+        };
+
+        // Solo se arrastra desde el asa ⠿ (para no estorbar al seleccionar texto ni al hacer clic).
+        const armRows = event => {
+            const onHandle = !!event.target.closest('[data-drag-handle]');
+            $$('tr[data-id]', reorder).forEach(row => { row.draggable = onHandle && row.contains(event.target); });
+        };
+        reorder.addEventListener('mousedown', armRows);
+
+        reorder.addEventListener('dragstart', event => {
+            dragging = event.target.closest?.('tr[data-id]') ?? null;
+            if (!dragging) return;
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', dragging.dataset.id);
+            requestAnimationFrame(() => dragging?.classList.add('is-dragging'));
+        });
+
+        reorder.addEventListener('dragover', event => {
+            if (!dragging) return;
+            event.preventDefault();
+
+            const over = event.target.closest('tr[data-id]');
+            if (!over || over === dragging) return;
+
+            const box = over.getBoundingClientRect();
+            reorder.insertBefore(dragging, event.clientY < box.top + box.height / 2 ? over : over.nextSibling);
+        });
+
+        reorder.addEventListener('drop', event => { if (dragging) event.preventDefault(); });
+
+        reorder.addEventListener('dragend', () => {
+            if (!dragging) return;
+            dragging.classList.remove('is-dragging');
+            dragging.draggable = false;
+            dragging = null;
+            save();
+        });
+    }
+
+    // ==========================================
     // PRIORIDAD DE UN DESARROLLO (matriz impacto × urgencia en un modal)
     // ==========================================
     const prioModal = $('[data-prio-modal]');

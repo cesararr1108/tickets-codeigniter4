@@ -57,7 +57,7 @@ $canPrio = static fn (array $d) => $d['TicketStatus'] !== 'cerrado' && ($isAdmin
             <div class="card-head" style="padding:20px 20px 0">
                 <div>
                     <h2>Desarrollos del mes</h2>
-                    <p class="muted">Meta del mes: tareas con fecha de cumplimiento en el mes. Proyecto: horas de todas las tareas terminadas.<?= $canReorder ? ' Ordénalos con las flechas.' : '' ?></p>
+                    <p class="muted">Meta del mes: tareas con fecha de cumplimiento en el mes. Proyecto: horas de todas las tareas terminadas.<?= $canReorder ? ' Arrastra ⠿ (o usa las flechas) para ordenarlos.' : '' ?></p>
                 </div>
                 <?php if ($isAdmin): ?>
                     <form method="get" class="period" data-autosubmit>
@@ -96,11 +96,12 @@ $canPrio = static fn (array $d) => $d['TicketStatus'] !== 'cerrado' && ($isAdmin
                                 <?php if ($isAdmin): ?><th></th><?php endif ?>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody<?= $canReorder ? ' data-reorder data-url="' . site_url('panel/desarrollos/orden') . '" data-month="' . esc($month, 'attr') . '"' : '' ?>>
                             <?php foreach ($rows as $i => $d): ?>
-                                <tr data-href="<?= site_url('panel/desarrollos/' . $d['IdDevelopment']) ?>">
+                                <tr data-href="<?= site_url('panel/desarrollos/' . $d['IdDevelopment']) ?>" data-id="<?= (int) $d['IdDevelopment'] ?>">
                                     <?php if ($canReorder): ?>
                                         <td class="order-cell">
+                                            <span class="drag-handle" data-drag-handle title="Arrastra para reordenar" aria-hidden="true">⠿</span>
                                             <form method="post" action="<?= site_url('panel/desarrollos/' . $d['IdDevelopment'] . '/orden') ?>">
                                                 <?= csrf_field() ?>
                                                 <input type="hidden" name="mes" value="<?= esc($month, 'attr') ?>">

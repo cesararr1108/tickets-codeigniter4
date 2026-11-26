@@ -111,7 +111,7 @@ class Tickets extends BasePanelController
             // Compras creadas desde este ticket (o, si es una compra, su ticket original).
             'purchases'   => Purchases::forTicket($id),
             'parentTicket' => ! empty($ticket['ParentTicketId']) ? (new TicketRepository())->find((int) $ticket['ParentTicketId']) : null,
-            'canPurchase' => Purchases::available() && empty($ticket['IsPurchase']) && $isOpen && ($isAdmin || $isAssignee),
+            'canPurchase' => $isOpen && ($isAdmin || $isAssignee) && Purchases::canCreateFrom($ticket),
             'timer'       => $timer === null ? null : [
                 'running' => $timer->runningFor($id),
                 'total'   => $timer->totalSeconds($id),
@@ -467,8 +467,8 @@ class Tickets extends BasePanelController
             return redirect()->back()->with('error', 'Solo el administrador o el responsable del ticket crea compras.');
         }
 
-        if (! empty($ticket['IsPurchase'])) {
-            return redirect()->back()->with('error', 'Una compra no puede generar otra compra.');
+        if (! Purchases::canCreateFrom($ticket)) {
+            return redirect()->back()->with('error', 'Solo se crean compras desde tickets de tipo incidente o requerimiento.');
         }
 
         if ($ticket['Status'] === 'cerrado') {

@@ -23,6 +23,28 @@ class Purchases
     }
 
     /**
+     * ¿Se puede crear una compra desde este ticket? Solo desde tickets de tipo
+     * incidente o requerimiento (formulario del widget) que no sean compras.
+     */
+    public static function canCreateFrom(array $ticket): bool
+    {
+        if (! self::available() || ! empty($ticket['IsPurchase'])) {
+            return false;
+        }
+
+        $forms = config('Tickets')->purchaseSourceForms;
+
+        if ($forms === [] || ! db_connect()->tableExists('TicketFormAnswers')) {
+            return true;
+        }
+
+        return db_connect()->table('TicketFormAnswers')
+            ->where('IdTicket', (int) $ticket['IdTicket'])
+            ->whereIn('FormKey', $forms)
+            ->countAllResults() > 0;
+    }
+
+    /**
      * Excluye las compras de una consulta sobre Tickets ($alias = 't' o '').
      */
     public static function exclude(BaseBuilder $builder, string $alias = ''): BaseBuilder

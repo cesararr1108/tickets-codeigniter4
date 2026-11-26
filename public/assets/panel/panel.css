@@ -1093,6 +1093,11 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .prio-modal::backdrop { background: rgba(0, 0, 0, .55); }
 .prio-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .order-cell { width: 1%; white-space: nowrap; }
+.order-cell > * { vertical-align: middle; }
+.order-cell form { display: inline-flex; }
+.drag-handle { cursor: grab; color: var(--text-2); font-size: 18px; user-select: none; padding: 0 6px; touch-action: none; }
+.drag-handle:hover { color: var(--text); }
+tr.is-dragging { opacity: .45; }
 .order-cell form { display: flex; flex-direction: column; gap: 2px; }
 .order-btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text-2); cursor: pointer; font-size: 10px; line-height: 1; padding: 4px 8px; }
 .order-btn:hover:not(:disabled) { color: var(--text); border-color: var(--border-strong); }

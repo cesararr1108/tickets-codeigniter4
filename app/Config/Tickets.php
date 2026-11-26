@@ -87,6 +87,14 @@ class Tickets extends BaseConfig
     public array $developmentRequirementForms = ['requerimiento'];
 
     /**
+     * Formularios del widget (TicketFormAnswers.FormKey) de los tickets desde
+     * los que se puede crear una compra.
+     *
+     * @var list<string>
+     */
+    public array $purchaseSourceForms = ['incidente', 'requerimiento'];
+
+    /**
      * Categorías o subcategorías cuyos tickets son proyectos (por nombre, sin
      * distinguir mayúsculas). También es proyecto todo ticket que llegó con
      * un formulario de $projectForms. Aparecen en "Desarrollos > Por planear"

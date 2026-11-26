@@ -279,7 +279,7 @@ $attachmentLink = static function (array $f, string $label, string $icon = 'pape
                         <?php endforeach ?>
                     </ul>
                 <?php else: ?>
-                    <p class="muted small">Si la solución requiere comprar algo (diadema, mouse…), créala aquí: queda en la pestaña Compras y no cuenta en los reportes.</p>
+                    <p class="muted small">Si la solución requiere comprar algo (diadema, mouse…), créala aquí: queda como compra pendiente en la pestaña Compras, aparte de la métrica del mes.</p>
                 <?php endif ?>
                 <?php if (! empty($canPurchase)): ?>
                     <details class="escalate-box">

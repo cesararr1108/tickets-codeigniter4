@@ -54,6 +54,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('desarrollos/(:num)', 'Developments::show/$1');
     $routes->post('desarrollos/(:num)', 'Developments::update/$1');
     $routes->post('desarrollos/(:num)/quitar-plan', 'Developments::unplan/$1');
+    $routes->post('desarrollos/orden', 'Developments::reorder');
     $routes->post('desarrollos/(:num)/orden', 'Developments::move/$1');
     $routes->post('desarrollos/(:num)/prioridad', 'Developments::priority/$1');
     $routes->post('desarrollos/(:num)/aprobar', 'Developments::approve/$1');

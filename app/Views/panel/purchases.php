@@ -11,7 +11,7 @@ $statusOptions = ['' => 'Todos los estados', 'pendientes' => 'Pendientes'] + $co
 <div class="page-head">
     <div>
         <h1>Compras</h1>
-        <p class="muted"><?= number_format($total) ?> compra<?= $total === 1 ? '' : 's' ?> · diademas, mouse y otros insumos. Nacen de un ticket y no cuentan en dashboard ni reportes.</p>
+        <p class="muted"><?= number_format($total) ?> compra<?= $total === 1 ? '' : 's' ?> · diademas, mouse y otros insumos. Nacen de un incidente o requerimiento, quedan como compra pendiente y no cuentan en la métrica del mes, dashboard ni reportes.</p>
     </div>
 </div>
 

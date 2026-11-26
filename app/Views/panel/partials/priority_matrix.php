@@ -14,7 +14,7 @@ $matrix = [
     <form method="post" action="">
         <?= csrf_field() ?>
         <input type="hidden" name="Priority" value="">
-        <h2>Impacto en venta y urgencia</h2>
+        <h2>Impacto en la venta y urgencia</h2>
         <p class="muted" data-prio-title></p>
         <p class="muted small">Selecciona una celda: define si el desarrollo es urgente.</p>
 
@@ -24,10 +24,10 @@ $matrix = [
             <span class="matrix-col">Media</span>
             <span class="matrix-col">Baja</span>
             <?php foreach ($matrix as $impact => $row): ?>
-                <span class="matrix-row">Impacto <?= $impact ?></span>
+                <span class="matrix-row">Impacto en la venta <?= $impact ?></span>
                 <?php foreach ($row as $urgency => $prio): ?>
                     <button type="button" class="matrix-cell prio-<?= $prio ?>" data-priority="<?= $prio ?>"
-                            title="Impacto <?= $impact ?> × urgencia <?= $urgency ?>"><?= priority_label($prio) ?></button>
+                            title="Impacto en la venta <?= $impact ?> × urgencia <?= $urgency ?>"><?= priority_label($prio) ?></button>
                 <?php endforeach ?>
             <?php endforeach ?>
         </div>

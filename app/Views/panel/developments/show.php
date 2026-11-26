@@ -58,6 +58,12 @@ foreach ($answers as $a) {
         <div class="head-badges">
             <?= dev_state_badge($dev) ?>
             <?= $isProject ? dev_kind_chip($dev) . ' ' . dev_health_badge($dev) : '' ?>
+            <?php if ($dev['TicketStatus'] !== 'cerrado' && ($isAdmin || (string) ($dev['AssignedUserId'] ?? '') === panel_user_id())): ?>
+                <button type="button" class="prio-btn" data-prio-open data-action="<?= $base ?>/prioridad"
+                        data-title="<?= esc($dev['Code'] . ' · ' . $dev['Subject'], 'attr') ?>" title="Cambiar prioridad (impacto × urgencia)"><?= priority_badge($dev['Priority']) ?></button>
+            <?php else: ?>
+                <?= priority_badge($dev['Priority']) ?>
+            <?php endif ?>
             <span class="chip"><?= $dev['PlanMonth'] ? 'Plan de ' . esc(Board::monthName($dev['PlanMonth'])) : 'Sin mes' ?></span>
             <?php if ($dev['CarriedFromMonth']): ?><span class="chip chip-carry">Viene de <?= esc(Board::monthName($dev['CarriedFromMonth'])) ?></span><?php endif ?>
             <?php if ($dev['DelayDays'] > 0 && ! $approved): ?><span class="chip chip-late">Retraso de <?= $dev['DelayDays'] ?> días</span><?php endif ?>
@@ -487,4 +493,5 @@ foreach ($answers as $a) {
         </section>
     </div>
 </div>
+<?= view('panel/partials/priority_matrix') ?>
 <?= $this->endSection() ?>

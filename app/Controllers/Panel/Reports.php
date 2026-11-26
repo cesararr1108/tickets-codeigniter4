@@ -11,21 +11,31 @@ class Reports extends BasePanelController
         '90'  => 'Últimos 90 días',
         '365' => 'Último año',
         'all' => 'Todo el historial',
+        'custom' => 'Entre fechas…',
     ];
 
     public function index()
     {
         $period = (string) ($this->request->getGet('period') ?? '90');
-        $period = array_key_exists($period, self::PERIODS) ? $period : '90';
-        $since  = TicketStats::sinceUtc($period === 'all' ? null : (int) $period);
+        [$from, $to] = $this->dateRange();
 
-        $stats = new TicketStats();
+        // Con fechas en la URL el periodo es el rango elegido.
+        if ($from !== null || $to !== null) {
+            $period = 'custom';
+        }
+
+        $period = array_key_exists($period, self::PERIODS) ? $period : '90';
+        $since  = $period === 'custom' || $period === 'all' ? null : TicketStats::sinceUtc((int) $period);
+
+        $stats = (new TicketStats())->between($period === 'custom' ? $from : null, $period === 'custom' ? $to : null);
 
         return $this->render('reports', [
             'active'     => 'reports',
             'title'      => 'Reportes',
             'periods'    => self::PERIODS,
             'period'     => $period,
+            'from'       => $period === 'custom' ? $from : null,
+            'to'         => $period === 'custom' ? $to : null,
             'status'     => $stats->countByStatus($since),
             'byPriority' => $stats->byPriority($since),
             'byCategory' => $stats->byCategory(false, $since),

@@ -5,6 +5,7 @@ namespace App\Controllers\Panel;
 use App\Libraries\AttachmentStore;
 use App\Libraries\CategoryCompanies;
 use App\Libraries\DevelopmentBoard;
+use App\Libraries\Purchases;
 use App\Libraries\TicketRepository;
 use App\Models\TicketChangeModel;
 use App\Models\TicketEscalationModel;
@@ -107,6 +108,10 @@ class Tickets extends BasePanelController
             'changes'     => $changes = model(TicketChangeModel::class)->forTicket($id),
             'outcome'     => $isOpen ? null : $this->outcomeFrom($changes),
             'development' => (new DevelopmentBoard())->findByTicket($id),
+            // Compras creadas desde este ticket (o, si es una compra, su ticket original).
+            'purchases'   => Purchases::forTicket($id),
+            'parentTicket' => ! empty($ticket['ParentTicketId']) ? (new TicketRepository())->find((int) $ticket['ParentTicketId']) : null,
+            'canPurchase' => Purchases::available() && empty($ticket['IsPurchase']) && $isOpen && ($isAdmin || $isAssignee),
             'timer'       => $timer === null ? null : [
                 'running' => $timer->runningFor($id),
                 'total'   => $timer->totalSeconds($id),
@@ -436,6 +441,79 @@ class Tickets extends BasePanelController
 
         return redirect()->to(site_url("panel/tickets/{$id}"))
             ->with('success', 'Ticket ' . ticket_code($id) . ' creado.');
+    }
+
+    /**
+     * POST /panel/tickets/{id}/compra
+     * Crea un ticket de compra (diadema, mouse, etc.) a partir del ticket
+     * original. Queda en la pestaña "Compras" y no cuenta en reportes.
+     */
+    public function createPurchase(int $id)
+    {
+        $model  = model(TicketModel::class);
+        $ticket = $model->find($id);
+
+        if ($ticket === null) {
+            return redirect()->to(site_url('panel/tickets'))->with('error', 'El ticket no existe.');
+        }
+
+        if (! Purchases::available()) {
+            return redirect()->back()->with('error', 'Falta ejecutar app/Database/sql/OrdenDesarrollosYCompras.sql para usar compras.');
+        }
+
+        $isAssignee = $ticket['AssignedUserId'] !== null && (string) $ticket['AssignedUserId'] === panel_user_id();
+
+        if (! panel_is_admin() && ! $isAssignee) {
+            return redirect()->back()->with('error', 'Solo el administrador o el responsable del ticket crea compras.');
+        }
+
+        if (! empty($ticket['IsPurchase'])) {
+            return redirect()->back()->with('error', 'Una compra no puede generar otra compra.');
+        }
+
+        if ($ticket['Status'] === 'cerrado') {
+            return redirect()->back()->with('error', self::CLOSED_MESSAGE);
+        }
+
+        $item = trim((string) $this->request->getPost('Item'));
+        $note = trim((string) $this->request->getPost('Description'));
+
+        if ($item === '' || mb_strlen($item) > 120) {
+            return redirect()->back()->withInput()->with('error', 'Indica qué se va a comprar (máximo 120 caracteres).');
+        }
+
+        $data = [
+            'CodCompanies'   => $ticket['CodCompanies'],
+            'CodBranches'    => $ticket['CodBranches'],
+            'RequesterEmail' => $ticket['RequesterEmail'],
+            'Subject'        => 'Compra: ' . $item,
+            'IdCategory'     => $ticket['IdCategory'],
+            'Priority'       => $ticket['Priority'],
+            'Status'         => 'abierto',
+            'AssignedUserId' => panel_user_id(),
+            'IsPurchase'     => 1,
+            'ParentTicketId' => $id,
+        ];
+
+        if (! empty($ticket['IdSubCategory'])) {
+            $data['IdSubCategory'] = $ticket['IdSubCategory'];
+        }
+
+        if (! $model->skipValidation(true)->insert($data)) {
+            return redirect()->back()->with('error', 'No se pudo crear la compra.');
+        }
+
+        $purchaseId = (int) $model->getInsertID();
+
+        model(TicketMessageModel::class)->insert([
+            'IdTicket'   => $purchaseId,
+            'SenderType' => 'agente',
+            'SenderName' => $this->user['name'],
+            'Message'    => 'Compra generada desde ' . ticket_code($id) . ' (' . $ticket['Subject'] . ').' . ($note !== '' ? "\n" . $note : ''),
+        ]);
+
+        return redirect()->to(site_url("panel/tickets/{$purchaseId}"))
+            ->with('success', 'Compra ' . ticket_code($purchaseId) . ' creada desde ' . ticket_code($id) . '.');
     }
 
     /**

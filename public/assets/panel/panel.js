@@ -179,6 +179,44 @@
     }
 
     // ==========================================
+    // PRIORIDAD DE UN DESARROLLO (matriz impacto × urgencia en un modal)
+    // ==========================================
+    const prioModal = $('[data-prio-modal]');
+
+    if (prioModal && typeof prioModal.showModal === 'function') {
+        const form  = $('form', prioModal);
+        const input = $('input[name="Priority"]', prioModal);
+        const cells = $$('.matrix-cell', prioModal);
+        const save  = $('[data-prio-save]', prioModal);
+        const title = $('[data-prio-title]', prioModal);
+
+        document.addEventListener('click', event => {
+            const opener = event.target.closest('[data-prio-open]');
+            if (!opener) return;
+
+            event.preventDefault();
+            form.action = opener.dataset.action;
+            title.textContent = opener.dataset.title || '';
+            input.value = '';
+            save.disabled = true;
+            cells.forEach(c => c.classList.remove('selected'));
+            prioModal.showModal();
+        });
+
+        $('[data-dev-matrix]', prioModal).addEventListener('click', event => {
+            const cell = event.target.closest('.matrix-cell');
+            if (!cell) return;
+
+            cells.forEach(c => c.classList.toggle('selected', c === cell));
+            input.value = cell.dataset.priority;
+            save.disabled = false;
+        });
+
+        $('[data-prio-cancel]', prioModal).addEventListener('click', () => prioModal.close());
+        prioModal.addEventListener('click', event => { if (event.target === prioModal) prioModal.close(); });
+    }
+
+    // ==========================================
     // ADJUNTOS EN MODAL (imágenes, PDF y texto; el resto se descarga)
     // ==========================================
     const modal = $('[data-preview-modal]');

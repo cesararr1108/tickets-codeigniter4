@@ -13,9 +13,14 @@ $navItems = [
     ['key' => 'mine',       'url' => 'panel/tickets?assigned=me&status=pendientes', 'icon' => 'user', 'label' => 'Mis asignados', 'count' => $nav['mine']],
     ['key' => 'unassigned', 'url' => 'panel/tickets?assigned=none&status=pendientes', 'icon' => 'inbox', 'label' => 'Sin asignar', 'count' => $nav['unassigned'], 'alert' => true],
     ['key' => 'developments', 'url' => 'panel/desarrollos',             'icon' => 'code',      'label' => 'Desarrollos',   'count' => $nav['developments'] ?? 0],
+    ['key' => 'purchases',  'url' => 'panel/compras',                   'icon' => 'cart',      'label' => 'Compras',       'count' => $nav['purchases'] ?? 0],
     ['key' => 'reports',    'url' => 'panel/reportes',                  'icon' => 'chart',     'label' => 'Reportes'],
     ['key' => 'catalog',    'url' => 'panel/catalogo',                  'icon' => 'grid',      'label' => 'Catálogo'],
 ];
+
+if (! \App\Libraries\Purchases::available()) {
+    $navItems = array_values(array_filter($navItems, static fn ($i) => $i['key'] !== 'purchases'));
+}
 
 if (panel_is_admin()) {
     array_splice($navItems, 5, 0, [

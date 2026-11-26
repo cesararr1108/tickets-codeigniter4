@@ -6,7 +6,9 @@
  * el widget.
  */
 
-import { apiBlob, apiGet, apiPost } from "./api.js";
+// api.js se pide con la misma versión (?v=) con la que se cargó este archivo,
+// para que una copia vieja de api.js en caché no rompa el import de apiBlob.
+const { apiBlob, apiGet, apiPost } = await import("./api.js" + new URL(import.meta.url).search);
 
 /*
  * GET /tickets/mine?email=&status=pendientes|resueltos&from=&to=&page=&perPage=

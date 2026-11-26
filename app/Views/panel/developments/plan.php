@@ -11,12 +11,16 @@
  * @var array|null $closure Cierre de este mes o del anterior
  * @var bool $closedMonth
  * @var list<array> $agents
+ * @var string $responsable Filtro por programador ('' | 'none' | IdUser)
+ * @var bool $canReorder
  */
 use App\Libraries\DevelopmentBoard as Board;
 
 $isAdmin = panel_is_admin();
 $prev    = Board::shiftMonth($month, -1);
 $next    = Board::shiftMonth($month, 1);
+$keep    = $responsable !== '' ? '&responsable=' . rawurlencode($responsable) : '';
+$canPrio = static fn (array $d) => $d['TicketStatus'] !== 'cerrado' && ($isAdmin || (string) ($d['AssignedUserId'] ?? '') === panel_user_id());
 ?>
 <div class="page-head">
     <div>
@@ -24,9 +28,9 @@ $next    = Board::shiftMonth($month, 1);
         <p class="muted"><?= $isAdmin ? 'Elige qué desarrollos se comprometen este mes y sigue su avance.' : 'Tus desarrollos comprometidos este mes.' ?></p>
     </div>
     <div class="month-nav">
-        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos?mes=' . $prev) ?>" aria-label="Mes anterior">‹</a>
+        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos?mes=' . $prev . $keep) ?>" aria-label="Mes anterior">‹</a>
         <strong><?= esc(Board::monthName($month)) ?></strong>
-        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos?mes=' . $next) ?>" aria-label="Mes siguiente">›</a>
+        <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos?mes=' . $next . $keep) ?>" aria-label="Mes siguiente">›</a>
         <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/todos') ?>">Todos</a>
         <?php if (Board::projectsAvailable()): ?>
             <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/proyectos') ?>">Proyectos</a>
@@ -53,8 +57,21 @@ $next    = Board::shiftMonth($month, 1);
             <div class="card-head" style="padding:20px 20px 0">
                 <div>
                     <h2>Desarrollos del mes</h2>
-                    <p class="muted">Meta del mes: tareas con fecha de cumplimiento en el mes. Proyecto: horas de todas las tareas terminadas.</p>
+                    <p class="muted">Meta del mes: tareas con fecha de cumplimiento en el mes. Proyecto: horas de todas las tareas terminadas.<?= $canReorder ? ' Ordénalos con las flechas.' : '' ?></p>
                 </div>
+                <?php if ($isAdmin): ?>
+                    <form method="get" class="period" data-autosubmit>
+                        <input type="hidden" name="mes" value="<?= esc($month, 'attr') ?>">
+                        <select name="responsable" class="select" aria-label="Filtrar por responsable">
+                            <option value="">Todos los responsables</option>
+                            <option value="none" <?= $responsable === 'none' ? 'selected' : '' ?>>Sin asignar</option>
+                            <?php foreach ($agents as $a): ?>
+                                <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $responsable === (string) $a['IdUser'] ? 'selected' : '' ?>><?= esc($a['FullName']) ?></option>
+                            <?php endforeach ?>
+                        </select>
+                        <noscript><button class="btn btn-outline btn-sm">Filtrar</button></noscript>
+                    </form>
+                <?php endif ?>
             </div>
 
             <?php if ($rows === []): ?>
@@ -68,7 +85,9 @@ $next    = Board::shiftMonth($month, 1);
                     <table class="table">
                         <thead>
                             <tr>
+                                <?php if ($canReorder): ?><th aria-label="Orden"></th><?php endif ?>
                                 <th>Desarrollo</th>
+                                <th>Prioridad</th>
                                 <th>Programador</th>
                                 <th>Estado</th>
                                 <th>Meta del mes</th>
@@ -78,8 +97,19 @@ $next    = Board::shiftMonth($month, 1);
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($rows as $d): ?>
+                            <?php foreach ($rows as $i => $d): ?>
                                 <tr data-href="<?= site_url('panel/desarrollos/' . $d['IdDevelopment']) ?>">
+                                    <?php if ($canReorder): ?>
+                                        <td class="order-cell">
+                                            <form method="post" action="<?= site_url('panel/desarrollos/' . $d['IdDevelopment'] . '/orden') ?>">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="mes" value="<?= esc($month, 'attr') ?>">
+                                                <input type="hidden" name="responsable" value="<?= esc($responsable, 'attr') ?>">
+                                                <button type="submit" name="dir" value="up" class="order-btn" title="Subir" aria-label="Subir" <?= $i === 0 ? 'disabled' : '' ?>>▲</button>
+                                                <button type="submit" name="dir" value="down" class="order-btn" title="Bajar" aria-label="Bajar" <?= $i === count($rows) - 1 ? 'disabled' : '' ?>>▼</button>
+                                            </form>
+                                        </td>
+                                    <?php endif ?>
                                     <td class="cell-main">
                                         <span class="mono muted small"><?= esc($d['Code']) ?> · <?= ticket_code($d['IdTicket']) ?> · Cía <?= esc($d['CodCompanies']) ?></span>
                                         <span class="cell-title"><?= esc($d['Subject']) ?></span>
@@ -88,6 +118,14 @@ $next    = Board::shiftMonth($month, 1);
                                                 <?= dev_kind_chip($d) ?>
                                                 <?php if ($d['CarriedFromMonth']): ?><span class="chip chip-carry">Viene de <?= esc(Board::monthName($d['CarriedFromMonth'])) ?></span><?php endif ?>
                                             </div>
+                                        <?php endif ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($canPrio($d)): ?>
+                                            <button type="button" class="prio-btn" data-prio-open data-action="<?= site_url('panel/desarrollos/' . $d['IdDevelopment'] . '/prioridad') ?>"
+                                                    data-title="<?= esc($d['Code'] . ' · ' . $d['Subject'], 'attr') ?>" title="Cambiar prioridad (impacto × urgencia)"><?= priority_badge($d['Priority']) ?></button>
+                                        <?php else: ?>
+                                            <?= priority_badge($d['Priority']) ?>
                                         <?php endif ?>
                                     </td>
                                     <td><?= esc($d['ProgrammerName'] ?? 'Sin asignar') ?></td>
@@ -167,4 +205,5 @@ $next    = Board::shiftMonth($month, 1);
         </aside>
     <?php endif ?>
 </div>
+<?= view('panel/partials/priority_matrix') ?>
 <?= $this->endSection() ?>

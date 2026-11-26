@@ -24,7 +24,42 @@ import {
     obtenerTodasSubcategorias
 } from "./categories.js";
 import { crearTicket } from "./tickets.js";
-import { obtenerAdjuntoTicket, obtenerDetalleTicket, obtenerMisTickets, responderTicket } from "./my-tickets.js";
+
+/*
+ * "Mis tickets" se carga con import() dinámico y se valida (ver cargarMisTickets):
+ * así un my-tickets.js viejo en la caché del navegador no tumba todo el widget
+ * con "does not provide an export named ...".
+ */
+let obtenerAdjuntoTicket, obtenerDetalleTicket, obtenerMisTickets, responderTicket;
+
+const MY_TICKETS_EXPORTS = ["obtenerAdjuntoTicket", "obtenerDetalleTicket", "obtenerMisTickets", "responderTicket"];
+
+async function cargarMisTickets(version) {
+
+    const faltan = module => MY_TICKETS_EXPORTS.filter(name => typeof module[name] !== "function");
+
+    const url = (extra = "") => new URL(
+        "./my-tickets.js" + (version ? "?v=" + encodeURIComponent(version) : "") + extra,
+        import.meta.url
+    ).href;
+
+    const query = version ? "&" : "?";
+
+    let module = await import(url());
+    let missing = faltan(module);
+
+    // Copia vieja en caché: se vuelve a pedir saltándose la caché.
+    if (missing.length) {
+        module = await import(url(query + "t=" + Date.now()));
+        missing = faltan(module);
+    }
+
+    if (missing.length) {
+        throw new Error("my-tickets.js desactualizado en el servidor, faltan: " + missing.join(", "));
+    }
+
+    ({ obtenerAdjuntoTicket, obtenerDetalleTicket, obtenerMisTickets, responderTicket } = module);
+}
 import { ProjectForm } from "./forms/project-form.js";
 import { RequirementForm } from "./forms/requirement-form.js";
 import { IncidentForm } from "./forms/incident-form.js";
@@ -62,6 +97,8 @@ const PRIORITY_LABELS = {
 export async function mountWidget(container, { apiUrl, version = "",perfil }) {
   //  console.log( { apiUrl, version = "",CompanieUrl,BarancheUrl })
     setAssetVersion(version);
+
+    await cargarMisTickets(version);
 
     const [css, html] = await Promise.all([
         loadText("css/widget.css"),

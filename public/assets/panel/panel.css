@@ -1085,3 +1085,15 @@ a.kpi:hover { text-decoration: none; border-color: var(--border-strong); }
 .chat-composer textarea { flex: 1; min-width: 0; }
 .chat-attach { cursor: pointer; align-self: flex-end; }
 .chat-files { flex-basis: 100%; }
+
+/* Prioridad de desarrollos: botón del badge, modal de la matriz y orden manual */
+.prio-btn { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 999px; }
+.prio-btn:hover, .prio-btn:focus-visible { outline: 2px solid var(--border-strong); outline-offset: 2px; }
+.prio-modal { border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface); color: var(--text); padding: 24px; width: min(460px, calc(100vw - 32px)); }
+.prio-modal::backdrop { background: rgba(0, 0, 0, .55); }
+.prio-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+.order-cell { width: 1%; white-space: nowrap; }
+.order-cell form { display: flex; flex-direction: column; gap: 2px; }
+.order-btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; color: var(--text-2); cursor: pointer; font-size: 10px; line-height: 1; padding: 4px 8px; }
+.order-btn:hover:not(:disabled) { color: var(--text); border-color: var(--border-strong); }
+.order-btn:disabled { opacity: .3; cursor: default; }

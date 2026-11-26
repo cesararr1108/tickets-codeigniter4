@@ -23,6 +23,8 @@ class TicketModel extends Model
         'IdSubCategory',
         'Priority',
         'Status',
+        'IsPurchase',
+        'ParentTicketId',
     ];
 
     protected $useTimestamps = false;

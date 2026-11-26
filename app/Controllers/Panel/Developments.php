@@ -49,13 +49,25 @@ class Developments extends BasePanelController
         $month   = DevelopmentBoard::validMonth($this->request->getGet('mes')) ?? DevelopmentBoard::currentMonth();
         $isAdmin = panel_is_admin();
         $all     = $this->board()->withMonthGoal($this->board()->list($month), $month);
+        $resp    = $this->responsibleFilter();
+
+        // Filtro por programador responsable ('' = todos, 'none' = sin asignar).
+        $rows = $isAdmin ? $all : array_values(array_filter($all, static fn ($d) => (string) $d['AssignedUserId'] === panel_user_id()));
+
+        if ($resp !== '') {
+            $rows = array_values(array_filter($rows, static fn ($d) => $resp === 'none'
+                ? (string) ($d['AssignedUserId'] ?? '') === ''
+                : (string) $d['AssignedUserId'] === $resp));
+        }
 
         return $this->render('developments/plan', [
             'active'   => 'developments',
             'title'    => 'Plan de desarrollos',
             'month'    => $month,
-            'summary'  => DevelopmentBoard::summary($all, $month),
-            'rows'     => $isAdmin ? $all : array_values(array_filter($all, static fn ($d) => (string) $d['AssignedUserId'] === panel_user_id())),
+            'summary'  => DevelopmentBoard::summary($resp !== '' ? $rows : $all, $month),
+            'rows'     => $rows,
+            'responsable' => $resp,
+            'canReorder'  => $isAdmin && DevelopmentBoard::orderAvailable(),
             'backlog'  => $isAdmin ? $this->board()->backlog() : [],
             'closure'  => $this->board()->closure($month) ?? $this->board()->closure(DevelopmentBoard::shiftMonth($month, -1)),
             'closedMonth' => $this->board()->closure($month) !== null,
@@ -79,8 +91,104 @@ class Developments extends BasePanelController
             'active' => 'developments',
             'title'  => 'Desarrollos',
             'kind'   => $kind,
-            'rows'   => $this->board()->list(null, panel_is_admin() ? null : panel_user_id(), $kind),
+            'rows'   => $this->board()->list(null, panel_is_admin() ? ($this->responsibleFilter() ?: null) : panel_user_id(), $kind),
+            'responsable' => $this->responsibleFilter(),
+            'agents' => $this->lookups()['agents'],
         ]);
+    }
+
+    /**
+     * Filtro ?responsable=: '' (todos), 'none' (sin asignar) o el id del programador.
+     */
+    private function responsibleFilter(): string
+    {
+        return panel_is_admin() ? substr(trim((string) $this->request->getGet('responsable')), 0, 20) : '';
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/orden
+     * Sube o baja un desarrollo en el plan del mes (dir = up | down). Respeta el
+     * filtro por responsable: se intercambia con el vecino visible. Solo el administrador.
+     */
+    public function move(int $id)
+    {
+        $month = DevelopmentBoard::validMonth($this->request->getPost('mes')) ?? DevelopmentBoard::currentMonth();
+        $resp  = substr(trim((string) $this->request->getPost('responsable')), 0, 20);
+        $url   = site_url('panel/desarrollos?mes=' . $month . ($resp !== '' ? '&responsable=' . rawurlencode($resp) : ''));
+
+        if (! panel_is_admin() || ! DevelopmentBoard::orderAvailable()) {
+            return redirect()->to($url)->with('error', 'Solo el administrador reordena, y falta ejecutar app/Database/sql/OrdenDesarrollosYCompras.sql si no aparece el orden.');
+        }
+
+        $step = $this->request->getPost('dir') === 'up' ? -1 : 1;
+        $all  = $this->board()->list($month);
+        $ids  = array_map('intval', array_column($all, 'IdDevelopment'));
+
+        $visible = array_values(array_filter($all, static fn ($d) => $resp === ''
+            || ($resp === 'none' ? (string) ($d['AssignedUserId'] ?? '') === '' : (string) $d['AssignedUserId'] === $resp)));
+        $visible = array_map('intval', array_column($visible, 'IdDevelopment'));
+
+        $at = array_search($id, $visible, true);
+
+        if ($at === false || ! isset($visible[$at + $step])) {
+            return redirect()->to($url);
+        }
+
+        // Se intercambian los dos en la lista completa y se renumera todo el mes.
+        $a = array_search($id, $ids, true);
+        $b = array_search($visible[$at + $step], $ids, true);
+        [$ids[$a], $ids[$b]] = [$ids[$b], $ids[$a]];
+
+        $db = db_connect();
+        $db->transStart();
+
+        foreach ($ids as $i => $devId) {
+            $db->table('Developments')->where('IdDevelopment', $devId)->update(['SortOrder' => $i + 1]);
+        }
+
+        $db->transComplete();
+
+        return redirect()->to($url);
+    }
+
+    /**
+     * POST /panel/desarrollos/{id}/prioridad
+     * Cambia la prioridad (urgencia) del ticket del desarrollo, elegida con la
+     * matriz impacto × urgencia. Administrador o programador asignado.
+     */
+    public function priority(int $id)
+    {
+        $dev = $this->board()->find($id);
+
+        if ($dev === null) {
+            return redirect()->to(site_url('panel/desarrollos'))->with('error', 'El desarrollo no existe.');
+        }
+
+        if (! panel_is_admin() && (string) ($dev['AssignedUserId'] ?? '') !== panel_user_id()) {
+            return redirect()->back()->with('error', 'Solo el administrador o el programador asignado cambia la prioridad.');
+        }
+
+        $priority = (string) $this->request->getPost('Priority');
+
+        if (! isset($this->config->priorities[$priority])) {
+            return redirect()->back()->with('error', 'Elige una celda de la matriz de impacto y urgencia.');
+        }
+
+        $model  = model(TicketModel::class);
+        $ticket = $model->find((int) $dev['IdTicket']);
+
+        if ($ticket === null || $ticket['Status'] === 'cerrado') {
+            return redirect()->back()->with('error', 'El ticket está cerrado: no se puede cambiar su prioridad.');
+        }
+
+        if ($ticket['Priority'] !== $priority) {
+            $data = ['Priority' => $priority];
+
+            $model->skipValidation(true)->update((int) $ticket['IdTicket'], $data);
+            model(TicketChangeModel::class)->record((int) $ticket['IdTicket'], $ticket, $data, $this->user);
+        }
+
+        return redirect()->back()->with('success', 'Prioridad de ' . $dev['Code'] . ': ' . priority_label($priority) . '.');
     }
 
     /**

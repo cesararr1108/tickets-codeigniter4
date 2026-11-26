@@ -3,6 +3,7 @@
 namespace App\Controllers\Api;
 
 use App\Libraries\CategoryCompanies;
+use App\Libraries\Purchases;
 use App\Libraries\TicketNotifier;
 use App\Models\TicketAttachmentModel;
 use App\Models\TicketEscalationModel;
@@ -189,7 +190,8 @@ class TicketController extends BaseApiController
             return $builder;
         };
 
-        $count = static fn (array $statuses) => $inRange($db->table('Tickets')
+        // Las compras son internas de TI: no se muestran al solicitante.
+        $count = static fn (array $statuses) => $inRange(Purchases::exclude($db->table('Tickets'))
             ->where('RequesterEmail', $email)
             ->whereIn('Status', $statuses), 'CreatedAt')
             ->countAllResults();
@@ -213,7 +215,7 @@ class TicketController extends BaseApiController
             $builder->select('(SELECT COUNT(*) FROM TicketEscalations e WHERE e.IdTicket = t.IdTicket AND e.ResolvedAt IS NULL) AS Escalated', false);
         }
 
-        $rows = $inRange($builder, 't.CreatedAt')
+        $rows = $inRange(Purchases::exclude($builder, 't'), 't.CreatedAt')
             ->where('t.RequesterEmail', $email)
             ->whereIn('t.Status', $status === 'resueltos' ? self::RESOLVED_STATUSES : self::PENDING_STATUSES)
             ->orderBy('t.CreatedAt', 'DESC')

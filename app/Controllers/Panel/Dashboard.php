@@ -8,7 +8,9 @@ class Dashboard extends BasePanelController
 {
     public function index()
     {
-        $stats = new TicketStats();
+        [$from, $to] = $this->dateRange();
+
+        $stats = (new TicketStats())->between($from, $to);
 
         return $this->render('dashboard', [
             'active'     => 'dashboard',
@@ -19,6 +21,8 @@ class Dashboard extends BasePanelController
             'topPending' => $stats->topPending(5),
             'activity'   => $stats->recentActivity(8),
             'byPriority' => $stats->byPriority(),
+            'from'       => $from,
+            'to'         => $to,
         ]);
     }
 }

@@ -4,8 +4,12 @@
 /**
  * @var list<array> $rows
  * @var string|null $kind Filtro por tipo (desarrollo | proyecto)
+ * @var string $responsable Filtro por programador ('' | 'none' | IdUser)
+ * @var list<array> $agents
  */
 use App\Libraries\DevelopmentBoard as Board;
+
+$isAdmin = panel_is_admin();
 ?>
 <a class="back-link" href="<?= site_url('panel/desarrollos') ?>"><?= icon('arrow-left') ?> Plan del mes</a>
 
@@ -16,9 +20,9 @@ use App\Libraries\DevelopmentBoard as Board;
     </div>
     <?php if (Board::projectsAvailable()): ?>
         <div class="month-nav">
-            <a class="btn btn-sm <?= $kind === null ? 'btn-primary' : 'btn-outline' ?>" href="<?= site_url('panel/desarrollos/todos') ?>">Todos</a>
+            <a class="btn btn-sm <?= $kind === null ? 'btn-primary' : 'btn-outline' ?>" href="<?= site_url('panel/desarrollos/todos' . ($responsable !== '' ? '?responsable=' . rawurlencode($responsable) : '')) ?>">Todos</a>
             <?php foreach (Board::KINDS as $k => $label): ?>
-                <a class="btn btn-sm <?= $kind === $k ? 'btn-primary' : 'btn-outline' ?>" href="<?= site_url('panel/desarrollos/todos?tipo=' . $k) ?>"><?= $label ?>s</a>
+                <a class="btn btn-sm <?= $kind === $k ? 'btn-primary' : 'btn-outline' ?>" href="<?= site_url('panel/desarrollos/todos?tipo=' . $k . ($responsable !== '' ? '&responsable=' . rawurlencode($responsable) : '')) ?>"><?= $label ?>s</a>
             <?php endforeach ?>
             <a class="btn btn-outline btn-sm" href="<?= site_url('panel/desarrollos/proyectos') ?>">Reporte de proyectos</a>
         </div>
@@ -26,6 +30,19 @@ use App\Libraries\DevelopmentBoard as Board;
 </div>
 
 <section class="card table-card">
+    <?php if ($isAdmin): ?>
+        <form method="get" class="period" data-autosubmit style="padding:16px 20px 0">
+            <?php if ($kind !== null): ?><input type="hidden" name="tipo" value="<?= esc($kind, 'attr') ?>"><?php endif ?>
+            <select name="responsable" class="select" aria-label="Filtrar por responsable">
+                <option value="">Todos los responsables</option>
+                <option value="none" <?= $responsable === 'none' ? 'selected' : '' ?>>Sin asignar</option>
+                <?php foreach ($agents as $a): ?>
+                    <option value="<?= esc($a['IdUser'], 'attr') ?>" <?= $responsable === (string) $a['IdUser'] ? 'selected' : '' ?>><?= esc($a['FullName']) ?></option>
+                <?php endforeach ?>
+            </select>
+            <noscript><button class="btn btn-outline btn-sm">Filtrar</button></noscript>
+        </form>
+    <?php endif ?>
     <?php if ($rows === []): ?>
         <div class="empty-state">
             <?= icon('code', 'icon icon-xl') ?>
@@ -39,6 +56,7 @@ use App\Libraries\DevelopmentBoard as Board;
                     <tr>
                         <th>Desarrollo</th>
                         <th>Mes</th>
+                        <th>Prioridad</th>
                         <th>Programador</th>
                         <th>Estado</th>
                         <th>Avance</th>
@@ -54,6 +72,7 @@ use App\Libraries\DevelopmentBoard as Board;
                                 <?php if ($d['IsProject']): ?><div><?= dev_kind_chip($d) ?></div><?php endif ?>
                             </td>
                             <td><?= esc(Board::monthName($d['PlanMonth'])) ?></td>
+                            <td><?= priority_badge($d['Priority']) ?></td>
                             <td><?= esc($d['ProgrammerName'] ?? 'Sin asignar') ?></td>
                             <td><div><?= dev_state_badge($d) ?></div></td>
                             <td><?= dev_progress($d) ?></td>

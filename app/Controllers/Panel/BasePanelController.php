@@ -2,6 +2,7 @@
 
 namespace App\Controllers\Panel;
 
+use App\Libraries\Purchases;
 use App\Controllers\BaseController;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -39,6 +40,31 @@ abstract class BasePanelController extends BaseController
     }
 
     /**
+     * Rango de fechas del query string (?desde=AAAA-MM-DD&hasta=AAAA-MM-DD).
+     * Descarta fechas inválidas e invierte el rango si viene al revés.
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    protected function dateRange(): array
+    {
+        $parse = static function ($value): ?string {
+            $value = trim((string) $value);
+            $date  = \DateTime::createFromFormat('!Y-m-d', $value);
+
+            return $date !== false && $date->format('Y-m-d') === $value ? $value : null;
+        };
+
+        $from = $parse($this->request->getGet('desde'));
+        $to   = $parse($this->request->getGet('hasta'));
+
+        if ($from !== null && $to !== null && $from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+
+        return [$from, $to];
+    }
+
+    /**
      * Renderiza una vista dentro del layout del panel.
      *
      * @param array<string, mixed> $data
@@ -49,15 +75,19 @@ abstract class BasePanelController extends BaseController
 
         $data['nav'] = [
             'active'     => $data['active'] ?? '',
-            'pending'    => $db->table('Tickets')->whereIn('Status', ['abierto', 'en_progreso'])->countAllResults(),
-            'mine'       => $this->user === null ? 0 : $db->table('Tickets')
+            'pending'    => Purchases::exclude($db->table('Tickets'))->whereIn('Status', ['abierto', 'en_progreso'])->countAllResults(),
+            'mine'       => $this->user === null ? 0 : Purchases::exclude($db->table('Tickets'))
                 ->whereIn('Status', ['abierto', 'en_progreso'])
                 ->where('AssignedUserId', $this->user['id'])
                 ->countAllResults(),
-            'unassigned' => $db->table('Tickets')
+            'unassigned' => Purchases::exclude($db->table('Tickets'))
                 ->whereIn('Status', ['abierto', 'en_progreso'])
                 ->where('AssignedUserId', null)
                 ->countAllResults(),
+            // Compras pendientes (pestaña "Compras").
+            'purchases'  => Purchases::available()
+                ? $db->table('Tickets')->where('IsPurchase', 1)->whereIn('Status', ['abierto', 'en_progreso'])->countAllResults()
+                : 0,
             'escalated'  => model(\App\Models\TicketEscalationModel::class)->countActive(),
             // Desarrollos del mes sin aprobar (los propios, para el programador).
             'developments' => \App\Libraries\DevelopmentBoard::available() && $this->user !== null

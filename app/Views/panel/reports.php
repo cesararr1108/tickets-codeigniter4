@@ -15,7 +15,13 @@ $prioMax  = max(1, ...array_values($byPriority));
                 <option value="<?= $value ?>" <?= $period === (string) $value ? 'selected' : '' ?>><?= esc($label) ?></option>
             <?php endforeach ?>
         </select>
-        <noscript><button class="btn btn-outline">Ver</button></noscript>
+        <?php if ($period === 'custom'): ?>
+            <input type="date" name="desde" class="input" value="<?= esc((string) $from, 'attr') ?>" aria-label="Desde">
+            <input type="date" name="hasta" class="input" value="<?= esc((string) $to, 'attr') ?>" aria-label="Hasta">
+            <button class="btn btn-primary btn-sm" type="submit">Aplicar</button>
+        <?php else: ?>
+            <noscript><button class="btn btn-outline">Ver</button></noscript>
+        <?php endif ?>
     </form>
 </div>
 
@@ -23,7 +29,9 @@ $prioMax  = max(1, ...array_values($byPriority));
     <div class="card kpi">
         <div class="kpi-head"><span>Tickets creados</span><span class="kpi-icon tone-primary"><?= icon('inbox') ?></span></div>
         <div class="kpi-value"><?= $total ?></div>
-        <div class="kpi-foot"><?= esc($periods[$period]) ?></div>
+        <div class="kpi-foot"><?= $period === 'custom'
+            ? esc(($from ? date('d/m/Y', strtotime($from)) : 'inicio') . ' al ' . ($to ? date('d/m/Y', strtotime($to)) : 'hoy'))
+            : esc($periods[$period]) ?> · sin compras</div>
     </div>
     <?php foreach (['abierto' => ['Abiertos', 'tone-warning', 'alert'], 'en_progreso' => ['En progreso', 'tone-primary', 'clock'], 'cerrado' => ['Cerrados', 'tone-good', 'check']] as $key => [$label, $tone, $ico]): ?>
         <div class="card kpi">

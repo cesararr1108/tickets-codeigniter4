@@ -259,6 +259,48 @@ $attachmentLink = static function (array $f, string $label, string $icon = 'pape
             <?php endif ?>
         </div>
 
+        <?php if (! empty($parentTicket)): ?>
+            <a class="card dev-link" href="<?= site_url('panel/tickets/' . $parentTicket['IdTicket']) ?>">
+                <h2><?= icon('cart') ?> Compra</h2>
+                <span class="muted small">Creada desde <?= ticket_code($parentTicket['IdTicket']) ?> · <?= esc($parentTicket['Subject']) ?></span>
+            </a>
+        <?php endif ?>
+
+        <?php if (! empty($purchases) || ! empty($canPurchase)): ?>
+            <div class="card">
+                <h2><?= icon('cart') ?> Compras</h2>
+                <?php if (! empty($purchases)): ?>
+                    <ul class="mini-list">
+                        <?php foreach ($purchases as $p): ?>
+                            <li>
+                                <a href="<?= site_url('panel/tickets/' . $p['IdTicket']) ?>"><?= ticket_code($p['IdTicket']) ?> · <?= esc($p['Subject']) ?></a>
+                                <?= status_badge($p['Status']) ?>
+                            </li>
+                        <?php endforeach ?>
+                    </ul>
+                <?php else: ?>
+                    <p class="muted small">Si la solución requiere comprar algo (diadema, mouse…), créala aquí: queda en la pestaña Compras y no cuenta en los reportes.</p>
+                <?php endif ?>
+                <?php if (! empty($canPurchase)): ?>
+                    <details class="escalate-box">
+                        <summary class="btn btn-outline btn-sm"><?= icon('plus') ?> Crear compra</summary>
+                        <form method="post" action="<?= site_url('panel/tickets/' . $ticket['IdTicket'] . '/compra') ?>">
+                            <?= csrf_field() ?>
+                            <label class="field">
+                                <span class="field-label">¿Qué se compra?</span>
+                                <input class="input" type="text" name="Item" maxlength="120" required placeholder="Ej. Diadema con micrófono">
+                            </label>
+                            <label class="field">
+                                <span class="field-label">Detalle <span class="muted">(opcional)</span></span>
+                                <textarea class="input" name="Description" rows="3" placeholder="Cantidad, referencia, justificación…"></textarea>
+                            </label>
+                            <button type="submit" class="btn btn-primary btn-sm">Crear compra</button>
+                        </form>
+                    </details>
+                <?php endif ?>
+            </div>
+        <?php endif ?>
+
         <?php if (! empty($development)): ?>
             <a class="card dev-link" href="<?= site_url('panel/desarrollos/' . $development['IdDevelopment']) ?>">
                 <h2><?= icon('code') ?> <?= ! empty($development['IsProject']) ? 'Proyecto' : 'Desarrollo' ?> <?= esc($development['Code']) ?></h2>

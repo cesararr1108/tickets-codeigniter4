@@ -3,6 +3,7 @@
 namespace App\Libraries;
 
 use App\Models\TicketTimeLogModel;
+use CodeIgniter\Database\BaseBuilder;
 use CodeIgniter\Database\BaseConnection;
 use Config\Tickets;
 use DateTimeImmutable;
@@ -19,10 +20,56 @@ class TicketStats
     private BaseConnection $db;
     private Tickets $config;
 
+    /** Rango de creación (UTC, [desde, hasta)) aplicado a todas las consultas. */
+    private ?string $fromUtc = null;
+    private ?string $toUtc   = null;
+
     public function __construct(?BaseConnection $db = null)
     {
         $this->db     = $db ?? db_connect();
         $this->config = config(Tickets::class);
+    }
+
+    /**
+     * Limita todas las consultas a los tickets creados entre dos fechas
+     * locales "AAAA-MM-DD" (inclusive). null = sin límite por ese lado.
+     */
+    public function between(?string $from, ?string $to): static
+    {
+        $tz  = new DateTimeZone($this->config->displayTimezone);
+        $utc = new DateTimeZone('UTC');
+
+        $this->fromUtc = $from === null ? null
+            : (new DateTimeImmutable($from . ' 00:00:00', $tz))->setTimezone($utc)->format('Y-m-d H:i:s');
+        $this->toUtc = $to === null ? null
+            : (new DateTimeImmutable($to . ' 00:00:00', $tz))->modify('+1 day')->setTimezone($utc)->format('Y-m-d H:i:s');
+
+        return $this;
+    }
+
+    public function hasRange(): bool
+    {
+        return $this->fromUtc !== null || $this->toUtc !== null;
+    }
+
+    /**
+     * Excluye las compras y aplica el rango de fechas. $alias = 't' o ''.
+     */
+    private function scope(BaseBuilder $builder, string $alias = '', bool $range = true): BaseBuilder
+    {
+        $p = $alias !== '' ? $alias . '.' : '';
+
+        Purchases::exclude($builder, $alias);
+
+        if ($range && $this->fromUtc !== null) {
+            $builder->where($p . 'CreatedAt >=', $this->fromUtc);
+        }
+
+        if ($range && $this->toUtc !== null) {
+            $builder->where($p . 'CreatedAt <', $this->toUtc);
+        }
+
+        return $builder;
     }
 
     /**
@@ -44,6 +91,8 @@ class TicketStats
             ->select('Status')
             ->selectCount('IdTicket', 'total')
             ->groupBy('Status');
+
+        $this->scope($builder);
 
         if ($sinceUtc !== null) {
             $builder->where('CreatedAt >=', $sinceUtc);
@@ -78,7 +127,8 @@ class TicketStats
 
         $late = $this->countLate();
 
-        $last30  = $this->countByStatus(self::sinceUtc(30));
+        // Con un rango de fechas, "creados" es el total del rango; si no, los últimos 30 días.
+        $last30  = $this->hasRange() ? $status : $this->countByStatus(self::sinceUtc(30));
         $total30 = array_sum($last30);
 
         return [
@@ -120,7 +170,7 @@ class TicketStats
 
     private function pendingBuilder()
     {
-        return $this->db->table('Tickets')
+        return $this->scope($this->db->table('Tickets'))
             ->whereIn('Status', ['abierto', 'en_progreso']);
     }
 
@@ -137,6 +187,8 @@ class TicketStats
             ->join('Category cat', 'cat.IdCategory = t.IdCategory', 'left')
             ->groupBy('t.IdCategory, cat.Category')
             ->orderBy('total', 'DESC');
+
+        $this->scope($builder, 't');
 
         if ($onlyPending) {
             $builder->whereIn('t.Status', ['abierto', 'en_progreso']);
@@ -178,7 +230,7 @@ class TicketStats
             ];
         }
 
-        $rows = $this->db->table('Tickets')
+        $rows = $this->scope($this->db->table('Tickets'), '', false)
             ->select('CreatedAt, Status')
             ->where('CreatedAt >=', $start->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'))
             ->get()
@@ -208,7 +260,7 @@ class TicketStats
     public function topPending(int $limit = 5): array
     {
         $repo    = new TicketRepository($this->db);
-        $builder = $repo->builder()->whereIn('t.Status', ['abierto', 'en_progreso']);
+        $builder = $this->scope($repo->builder(), 't')->whereIn('t.Status', ['abierto', 'en_progreso']);
 
         $repo->applySort($builder, 'prioridad');
 
@@ -222,16 +274,16 @@ class TicketStats
      */
     public function recentActivity(int $limit = 8): array
     {
-        $tickets = $this->db->table('Tickets')
+        $tickets = $this->scope($this->db->table('Tickets'), '', false)
             ->select('IdTicket, Subject, Status, Priority, RequesterEmail, CreatedAt')
             ->orderBy('CreatedAt', 'DESC')
             ->limit($limit)
             ->get()
             ->getResultArray();
 
-        $messages = $this->db->table('TicketMessages m')
+        $messages = Purchases::exclude($this->db->table('TicketMessages m')
             ->select('m.MessageId, m.IdTicket, m.SenderType, m.SenderName, m.Message, m.CreatedAt, t.Subject')
-            ->join('Tickets t', 't.IdTicket = m.IdTicket', 'left')
+            ->join('Tickets t', 't.IdTicket = m.IdTicket', 'left'), 't')
             ->orderBy('m.CreatedAt', 'DESC')
             ->limit($limit)
             ->get()
@@ -264,6 +316,8 @@ class TicketStats
             ->selectCount('t.IdTicket', 'total')
             ->join($joinTable, $joinOn, 'left')
             ->groupBy("{$groupColumn}, {$nameColumn}, t.Status");
+
+        $this->scope($builder, 't');
 
         if ($sinceUtc !== null) {
             $builder->where('t.CreatedAt >=', $sinceUtc);
@@ -304,6 +358,8 @@ class TicketStats
         $builder = $this->db->table('Tickets t')
             ->select('t.IdTicket, t.Status, fa.Value AS AreaName')
             ->join('TicketFormAnswers fa', "fa.IdTicket = t.IdTicket AND fa.FieldKey IN ('area', 'area_solicitante')", 'left');
+
+        $this->scope($builder, 't');
 
         if ($sinceUtc !== null) {
             $builder->where('t.CreatedAt >=', $sinceUtc);
@@ -360,8 +416,18 @@ class TicketStats
             ->join('Tickets t', 't.IdTicket = l.IdTicket', 'left')
             ->join('Users u', 'u.IdUser = l.IdUser', 'left');
 
+        Purchases::exclude($builder, 't');
+
         if ($sinceUtc !== null) {
             $builder->where('l.StartedAt >=', $sinceUtc);
+        }
+
+        if ($this->fromUtc !== null) {
+            $builder->where('l.StartedAt >=', $this->fromUtc);
+        }
+
+        if ($this->toUtc !== null) {
+            $builder->where('l.StartedAt <', $this->toUtc);
         }
 
         if ($formKey !== null) {
@@ -416,6 +482,8 @@ class TicketStats
             ->select('Priority')
             ->selectCount('IdTicket', 'total')
             ->groupBy('Priority');
+
+        $this->scope($builder);
 
         if ($sinceUtc !== null) {
             $builder->where('CreatedAt >=', $sinceUtc);

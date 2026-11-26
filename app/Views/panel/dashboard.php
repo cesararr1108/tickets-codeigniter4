@@ -9,8 +9,19 @@ $fmt   = new IntlDateFormatter('es', IntlDateFormatter::FULL, IntlDateFormatter:
 <div class="page-head">
     <div>
         <h1><?= esc($hello) ?>, <?= esc($first) ?></h1>
-        <p class="muted">Panorama de la mesa de ayuda — <?= esc($fmt->format(time())) ?>.</p>
+        <p class="muted">Panorama de la mesa de ayuda — <?= esc($fmt->format(time())) ?>.
+            <?php if ($from !== null || $to !== null): ?>
+                Tickets creados <?= $from ? 'desde el ' . date('d/m/Y', strtotime($from)) : '' ?> <?= $to ? 'hasta el ' . date('d/m/Y', strtotime($to)) : '' ?>.
+            <?php endif ?>
+            Las compras no se cuentan.
+        </p>
     </div>
+    <form method="get" class="period">
+        <input type="date" name="desde" class="input" value="<?= esc((string) $from, 'attr') ?>" aria-label="Desde">
+        <input type="date" name="hasta" class="input" value="<?= esc((string) $to, 'attr') ?>" aria-label="Hasta">
+        <button class="btn btn-primary btn-sm" type="submit">Filtrar</button>
+        <?php if ($from !== null || $to !== null): ?><a class="link" href="<?= site_url('panel') ?>">Limpiar</a><?php endif ?>
+    </form>
 </div>
 
 <section class="kpis">
@@ -38,7 +49,8 @@ $fmt   = new IntlDateFormatter('es', IntlDateFormatter::FULL, IntlDateFormatter:
         <div class="kpi-head"><span>Prioridad alta pendiente</span><span class="kpi-icon tone-critical"><?= icon('flag') ?></span></div>
         <div class="kpi-value"><?= $kpis['highPending'] ?></div>
         <div class="kpi-foot">
-            <?= $kpis['closeRate30'] === null ? 'Sin tickets en 30 días' : $kpis['closeRate30'] . '% cerrados de ' . $kpis['created30'] . ' creados (30 días)' ?>
+            <?php $span = ($from !== null || $to !== null) ? 'en el rango' : '30 días'; ?>
+            <?= $kpis['closeRate30'] === null ? 'Sin tickets en ' . $span : $kpis['closeRate30'] . '% cerrados de ' . $kpis['created30'] . ' creados (' . $span . ')' ?>
         </div>
     </a>
 </section>

@@ -33,6 +33,10 @@ class TicketRepository
             $builder->select('(SELECT COUNT(*) FROM TicketEscalations e WHERE e.IdTicket = t.IdTicket AND e.ResolvedAt IS NULL) AS Escalated', false);
         }
 
+        if (Purchases::available()) {
+            $builder->select('t.IsPurchase, t.ParentTicketId');
+        }
+
         return $builder
             ->select('t.IdTicket, t.CodCompanies, t.CodBranches, t.AssignedUserId, t.RequesterEmail,
                 t.Subject, t.IdCategory, t.IdSubCategory, t.Priority, t.Status, t.CreatedAt,
@@ -51,6 +55,15 @@ class TicketRepository
      */
     public function applyFilters(BaseBuilder $builder, array $filters, ?string $currentUserId = null): BaseBuilder
     {
+        // Las compras viven en su propia pestaña: fuera del listado normal.
+        if (($filters['purchases'] ?? '') === '1') {
+            if (Purchases::available()) {
+                $builder->where('t.IsPurchase', 1);
+            }
+        } else {
+            Purchases::exclude($builder, 't');
+        }
+
         $status = $filters['status'] ?? '';
 
         if ($status === 'pendientes') {

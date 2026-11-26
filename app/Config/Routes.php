@@ -34,6 +34,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('tickets/(:num)/tomar', 'Tickets::take/$1');
     $routes->post('tickets/(:num)/tiempo/iniciar', 'Tickets::startTimer/$1');
     $routes->post('tickets/(:num)/tiempo/finalizar', 'Tickets::stopTimer/$1');
+    $routes->post('tickets/(:num)/compra', 'Tickets::createPurchase/$1');
     $routes->post('tickets/(:num)/escalar', 'Tickets::escalate/$1');
     $routes->post('tickets/(:num)/escalamiento', 'Tickets::resolveEscalation/$1');
     $routes->post('tickets/(:num)/datos', 'Tickets::editData/$1');
@@ -53,6 +54,8 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->get('desarrollos/(:num)', 'Developments::show/$1');
     $routes->post('desarrollos/(:num)', 'Developments::update/$1');
     $routes->post('desarrollos/(:num)/quitar-plan', 'Developments::unplan/$1');
+    $routes->post('desarrollos/(:num)/orden', 'Developments::move/$1');
+    $routes->post('desarrollos/(:num)/prioridad', 'Developments::priority/$1');
     $routes->post('desarrollos/(:num)/aprobar', 'Developments::approve/$1');
     $routes->post('desarrollos/(:num)/tareas', 'Developments::addTask/$1');
     $routes->post('desarrollos/(:num)/tareas/(:num)/marcar', 'Developments::toggleTask/$1/$2');
@@ -70,6 +73,7 @@ $routes->group('panel', ['namespace' => 'App\\Controllers\\Panel', 'filter' => [
     $routes->post('desarrollos/(:num)/evidencia', 'Developments::addEvidence/$1');
     $routes->get('desarrollos/(:num)/evidencia/(:num)', 'Developments::evidence/$1/$2');
 
+    $routes->get('compras', 'Purchases::index');
     $routes->get('reportes', 'Reports::index');
     $routes->get('catalogo', 'Catalog::index');
 

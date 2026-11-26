@@ -111,6 +111,16 @@ class DevelopmentBoard
             && db_connect()->tableExists('DevelopmentReschedules');
     }
 
+    /**
+     * ¿Se ejecutó OrdenDesarrollosYCompras.sql? (orden manual de los desarrollos).
+     */
+    public static function orderAvailable(): bool
+    {
+        static $exists = null;
+
+        return $exists ??= self::available() && db_connect()->fieldExists('SortOrder', 'Developments');
+    }
+
     private static function requirementsAvailable(): bool
     {
         static $exists = null;
@@ -139,7 +149,7 @@ class DevelopmentBoard
 
         $builder = $this->db->table('Developments d')
             ->select($requirement . ' AS HasRequirement', false)
-            ->select('d.*, t.Subject, t.CodCompanies, t.RequesterEmail, t.Status AS TicketStatus, t.IdCategory,
+            ->select('d.*, t.Subject, t.CodCompanies, t.RequesterEmail, t.Status AS TicketStatus, t.IdCategory, t.Priority,
                 c.Companies, cat.Category, u.FullName AS ProgrammerName')
             ->select($sub('SELECT COALESCE(SUM(k.Hours), 0) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment') . ' AS HoursTotal', false)
             ->select($sub('SELECT COALESCE(SUM(k.Hours), 0) FROM DevelopmentTasks k WHERE k.IdDevelopment = d.IdDevelopment AND k.DoneAt IS NOT NULL') . ' AS HoursDone', false)
@@ -223,12 +233,26 @@ class DevelopmentBoard
             ->groupEnd();
         }
 
-        if ($userId !== null) {
+        // $userId = 'none': desarrollos sin programador.
+        if ($userId === 'none') {
+            $builder->where('d.AssignedUserId', null);
+        } elseif ($userId !== null) {
             $builder->where('d.AssignedUserId', $userId);
         }
 
+        // Todos los meses: primero el mes más reciente. Dentro de cada mes (o en
+        // el plan de un mes) manda el orden manual y luego la prioridad.
+        if ($month === null) {
+            $builder->orderBy('d.PlanMonth', 'DESC');
+        }
+
+        if (self::orderAvailable()) {
+            $builder->orderBy('CASE WHEN d.SortOrder IS NULL THEN 1 ELSE 0 END', 'ASC', false)
+                ->orderBy('d.SortOrder', 'ASC');
+        }
+
         $rows = $builder
-            ->orderBy('d.PlanMonth', 'DESC')
+            ->orderBy(TicketRepository::priorityOrderSql('t.Priority'), 'ASC', false)
             ->orderBy('d.CommittedDate', 'ASC')
             ->orderBy('d.IdDevelopment', 'ASC')
             ->get()
@@ -287,7 +311,11 @@ class DevelopmentBoard
                 ->join('Companies c', 'c.CodCompanies = t.CodCompanies', 'left')
                 ->where('(' . implode(' OR ', $conditions) . ')', null, false)
                 ->where('t.Status !=', 'cerrado')
-                ->where('NOT EXISTS (SELECT 1 FROM Developments d WHERE d.IdTicket = t.IdTicket)', null, false)
+                ->where('NOT EXISTS (SELECT 1 FROM Developments d WHERE d.IdTicket = t.IdTicket)', null, false);
+
+            Purchases::exclude($tickets, 't');
+
+            $tickets = $tickets
                 ->orderBy('t.CreatedAt', 'ASC')
                 ->get()
                 ->getResultArray();
